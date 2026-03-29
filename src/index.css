@@ -1,0 +1,339 @@
+@import 'tailwindcss';
+
+/* SaaS palette: gray neutrals + blue-600 primary */
+@theme {
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+
+  --color-canvas: #f9fafb;
+  --color-ink: #111827;
+  --color-ink-muted: #6b7280;
+  --color-border-subtle: #e5e7eb;
+  --color-brand: #2563eb;
+  --color-brand-hover: #1d4ed8;
+  --color-brand-soft: #eff6ff;
+
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(0.875rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes subtle-scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes shake-soft {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20%,
+  60% {
+    transform: translateX(-4px);
+  }
+  40%,
+  80% {
+    transform: translateX(4px);
+  }
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply font-sans bg-gray-50 text-gray-900 antialiased;
+  }
+}
+
+@layer utilities {
+  .bg-grid-saas {
+    background-color: var(--color-canvas);
+    background-image:
+      linear-gradient(to right, rgba(10, 37, 64, 0.04) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(10, 37, 64, 0.04) 1px, transparent 1px);
+    background-size: 48px 48px;
+    background-position: center top;
+  }
+
+  .bg-mesh-hero {
+    background:
+      radial-gradient(ellipse 80% 60% at 50% -30%, rgba(37, 99, 235, 0.12), transparent),
+      radial-gradient(ellipse 50% 40% at 100% 0%, rgba(17, 24, 39, 0.05), transparent),
+      radial-gradient(ellipse 40% 35% at 0% 20%, rgba(37, 99, 235, 0.06), transparent),
+      #f9fafb;
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  /* Entrance animations — use with motion-safe: */
+  .animate-enter-up {
+    animation: fade-in-up 0.65s var(--ease-out-expo) both;
+  }
+
+  .animate-enter {
+    animation: fade-in 0.45s ease-out both;
+  }
+
+  .animate-enter-scale {
+    animation: subtle-scale-in 0.45s var(--ease-out-expo) both;
+  }
+
+  .animate-shake-soft {
+    animation: shake-soft 0.45s ease-in-out both;
+  }
+
+  /* Stagger delays for list / grid children */
+  .animate-delay-1 {
+    animation-delay: 60ms;
+  }
+  .animate-delay-2 {
+    animation-delay: 120ms;
+  }
+  .animate-delay-3 {
+    animation-delay: 180ms;
+  }
+  .animate-delay-4 {
+    animation-delay: 240ms;
+  }
+  .animate-delay-5 {
+    animation-delay: 300ms;
+  }
+  .animate-delay-6 {
+    animation-delay: 360ms;
+  }
+
+  /* Interactive surfaces (respects reduced motion via media queries) */
+  .interactive-lift {
+    transition:
+      transform 0.3s var(--ease-out-expo),
+      box-shadow 0.3s ease-out,
+      border-color 0.3s ease,
+      background-color 0.3s ease;
+  }
+
+  .interactive-press {
+    transition: transform 0.2s ease-out;
+  }
+
+  .surface-card {
+    @apply rounded-2xl border border-gray-100 bg-white shadow-sm;
+    transition: box-shadow 0.35s ease-out;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .interactive-lift:hover {
+      transform: translateY(-2px);
+    }
+
+    .interactive-press:active {
+      transform: scale(0.985);
+    }
+
+    .surface-card:hover {
+      box-shadow: 0 12px 40px -20px rgba(10, 37, 64, 0.12);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animate-enter-up,
+    .animate-enter,
+    .animate-enter-scale,
+    .animate-shake-soft {
+      animation: none !important;
+      opacity: 1 !important;
+      transform: none !important;
+    }
+
+    .interactive-lift:hover {
+      transform: none !important;
+    }
+
+    .interactive-press:active {
+      transform: none !important;
+    }
+  }
+}
+
+/* react-datepicker — home plan (rounded cells, hover, selected) */
+.home-plan-calendar.react-datepicker {
+  border: none;
+  font-family: inherit;
+  width: 100%;
+}
+
+.home-plan-calendar .react-datepicker__month-container {
+  width: 100%;
+  padding: 0.25rem 0.15rem 0.5rem;
+}
+
+.home-plan-calendar .react-datepicker__month {
+  margin: 0.25rem 0;
+}
+
+.home-plan-calendar .react-datepicker__header {
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+  border-radius: 0.75rem 0.75rem 0 0;
+  padding-top: 0.65rem;
+}
+
+.home-plan-calendar .react-datepicker__current-month {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #111827;
+  padding-bottom: 0.35rem;
+}
+
+.home-plan-calendar .react-datepicker__day-names {
+  margin-top: 0.35rem;
+}
+
+.home-plan-calendar .react-datepicker__day-name {
+  color: #6b7280;
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.home-plan-calendar .react-datepicker__week {
+  display: flex;
+  justify-content: space-between;
+}
+
+.home-plan-calendar .react-datepicker__day {
+  border-radius: 0.625rem;
+  margin: 0.15rem 0.05rem;
+  line-height: 2.35rem;
+  width: 2.45rem;
+  flex: 0 0 auto;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+  cursor: pointer;
+}
+
+.home-plan-calendar .react-datepicker__day:hover:not(.react-datepicker__day--disabled):not(.react-datepicker__day--selected) {
+  background-color: #eff6ff !important;
+  color: #1d4ed8 !important;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .home-plan-calendar .react-datepicker__day:hover:not(.react-datepicker__day--disabled):not(.react-datepicker__day--selected) {
+    transform: scale(1.05);
+  }
+}
+
+.home-plan-calendar .react-datepicker__day--selected,
+.home-plan-calendar .react-datepicker__day--selected:hover {
+  background-color: #2563eb !important;
+  color: #fff !important;
+  font-weight: 600;
+  box-shadow: 0 2px 10px rgba(37, 99, 235, 0.35);
+}
+
+.home-plan-calendar .react-datepicker__day--keyboard-selected:not(.react-datepicker__day--selected) {
+  background-color: #dbeafe !important;
+  color: #1e3a8a !important;
+}
+
+.home-plan-calendar .react-datepicker__day--disabled {
+  opacity: 0.32;
+  cursor: not-allowed;
+}
+
+.home-plan-calendar .react-datepicker__day--outside-month {
+  opacity: 0.4;
+}
+
+.home-plan-calendar .react-datepicker__navigation {
+  top: 0.85rem;
+}
+
+.home-plan-calendar .react-datepicker__navigation-icon::before {
+  border-color: #6b7280;
+}
+
+/* Physio dashboard — react-calendar (sessions) */
+.physio-calendar-shell .react-calendar {
+  width: 100%;
+  font-family: inherit;
+  border: none;
+}
+
+.physio-calendar-shell .react-calendar__navigation {
+  margin-bottom: 0.5rem;
+}
+
+.physio-calendar-shell .react-calendar__navigation button {
+  border-radius: 0.5rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.physio-calendar-shell .react-calendar__month-view__weekdays {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #6b7280;
+}
+
+.physio-calendar-shell .react-calendar__tile {
+  border-radius: 0.5rem;
+  padding: 0.65rem 0.2rem;
+  font-size: 0.875rem;
+}
+
+.physio-calendar-shell .react-calendar__tile--active {
+  background: #2563eb !important;
+  color: #fff !important;
+  font-weight: 600;
+}
+
+.physio-calendar-shell .react-calendar__tile--now {
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-weight: 600;
+}
+
+.physio-calendar-shell .react-calendar__tile.physio-cal-tile--busy:not(.react-calendar__tile--active) {
+  background: #dbeafe;
+  color: #1e40af;
+  font-weight: 600;
+}
+
+.physio-calendar-shell .react-calendar__tile:enabled:hover {
+  background: #eff6ff;
+}
