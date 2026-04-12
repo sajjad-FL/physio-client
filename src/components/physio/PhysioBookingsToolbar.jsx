@@ -25,8 +25,8 @@ export default function PhysioBookingsToolbar({
   filtersActive,
 }) {
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-3">
+    <div className="flex flex-col gap-2.5">
+      <div className="flex flex-col gap-2.5 lg:flex-row lg:items-center lg:gap-3">
         <div className="relative min-w-0 flex-1">
           <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2">{searchIcon}</span>
           <input
@@ -35,7 +35,7 @@ export default function PhysioBookingsToolbar({
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder="Search by patient name or phone..."
             autoComplete="off"
-            className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-10 pr-4 text-sm text-gray-900 shadow-sm ring-1 ring-gray-100/80 transition-shadow placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/25"
+            className="w-full rounded-lg border border-gray-200 bg-white py-2 pl-10 pr-3.5 text-sm text-gray-900 shadow-sm ring-1 ring-gray-100/80 transition-shadow placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/25"
           />
         </div>
         <div className="flex flex-wrap items-center gap-3">
@@ -44,7 +44,7 @@ export default function PhysioBookingsToolbar({
             <select
               value={sort}
               onChange={(e) => onSortChange(e.target.value)}
-              className="w-full min-w-0 cursor-pointer rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-medium text-gray-800 shadow-sm ring-1 ring-gray-100/80 transition-colors focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/25 sm:w-auto sm:min-w-44"
+              className="w-full min-w-0 cursor-pointer rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-800 shadow-sm ring-1 ring-gray-100/80 transition-colors focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/25 sm:w-auto sm:min-w-40"
             >
               <option value="latest">Latest first</option>
               <option value="oldest">Oldest first</option>
@@ -53,7 +53,7 @@ export default function PhysioBookingsToolbar({
           <button
             type="button"
             onClick={onFilterClick}
-            className="relative flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-700 shadow-sm transition-colors hover:bg-gray-100"
+            className="relative flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-700 shadow-sm transition-colors hover:bg-gray-100"
             aria-label={filtersActive ? 'Filters (active)' : 'Filters'}
             title="Filters"
           >
@@ -63,14 +63,14 @@ export default function PhysioBookingsToolbar({
             )}
           </button>
           <div
-            className="flex shrink-0 rounded-xl border border-gray-200 bg-gray-100/80 p-1 shadow-inner"
+            className="flex shrink-0 rounded-lg border border-gray-200 bg-gray-100/80 p-0.5 shadow-inner"
             role="group"
             aria-label="View mode"
           >
             <button
               type="button"
               onClick={() => onViewChange('list')}
-              className={`cursor-pointer rounded-lg px-3 py-2 text-sm font-semibold transition-all duration-200 sm:px-4 ${
+              className={`cursor-pointer rounded-md px-2.5 py-1.5 text-xs font-semibold transition-all duration-200 sm:px-3 sm:text-sm ${
                 view === 'list'
                   ? 'bg-white text-blue-700 shadow-sm ring-1 ring-gray-200/80'
                   : 'text-gray-600 hover:text-gray-900'
@@ -81,7 +81,7 @@ export default function PhysioBookingsToolbar({
             <button
               type="button"
               onClick={() => onViewChange('calendar')}
-              className={`cursor-pointer rounded-lg px-3 py-2 text-sm font-semibold transition-all duration-200 sm:px-4 ${
+              className={`cursor-pointer rounded-md px-2.5 py-1.5 text-xs font-semibold transition-all duration-200 sm:px-3 sm:text-sm ${
                 view === 'calendar'
                   ? 'bg-white text-blue-700 shadow-sm ring-1 ring-gray-200/80'
                   : 'text-gray-600 hover:text-gray-900'

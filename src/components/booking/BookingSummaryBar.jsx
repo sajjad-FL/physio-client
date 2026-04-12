@@ -3,6 +3,7 @@ import { formatBookingDateAndSlot } from '../../utils/date'
 
 /**
  * Sticky bottom booking summary + primary CTA.
+ * When no `selectedPhysio`, copy assumes admin/team assignment after booking.
  */
 export default function BookingSummaryBar({
   selectedPhysio,
@@ -14,6 +15,7 @@ export default function BookingSummaryBar({
   onConfirm,
 }) {
   const price = selectedPhysio?.pricePerSession
+  const teamAssigns = !selectedPhysio?._id
 
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2">
@@ -22,25 +24,30 @@ export default function BookingSummaryBar({
           <div className="min-w-0 flex-1 space-y-1">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Booking summary</p>
             <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 text-sm text-gray-800">
-              <span className="font-semibold text-gray-900">
-                {selectedPhysio?.name ? (
-                  <>
-                    <span className="text-gray-500">Physio · </span>
-                    {selectedPhysio.name}
-                  </>
-                ) : (
-                  <span className="text-gray-500">No physiotherapist selected</span>
-                )}
-              </span>
+              {teamAssigns ? (
+                <span className="font-semibold text-gray-900">
+                  <span className="text-gray-500">Physio · </span>
+                  Assigned by our team
+                </span>
+              ) : (
+                <span className="font-semibold text-gray-900">
+                  <span className="text-gray-500">Physio · </span>
+                  {selectedPhysio.name}
+                </span>
+              )}
               {date && timeSlot && (
                 <span className="text-gray-600">{formatBookingDateAndSlot(date, timeSlot)}</span>
               )}
-              {price != null && selectedPhysio && (
+              {!teamAssigns && price != null && (
                 <span className="font-semibold tabular-nums text-gray-900">₹{price}</span>
               )}
             </div>
             <p className="text-xs text-gray-500">
-              {serviceType === 'home' ? 'Home visit plan — your physio will propose sessions' : 'Online consultation'}
+              {serviceType === 'home'
+                ? 'Home visit — a physiotherapist will be assigned after you confirm.'
+                : teamAssigns
+                  ? 'Online session — fee is confirmed at payment.'
+                  : 'Online consultation'}
             </p>
           </div>
           <Button

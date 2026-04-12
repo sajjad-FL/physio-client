@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '../config/api'
+import { validateLiveField } from '../utils/liveFieldValidation'
 import toast from 'react-hot-toast'
 import Button from './ui/Button'
 
@@ -19,6 +20,7 @@ export default function ProfileCompletionModal({ initial, onComplete }) {
   const [dob, setDob] = useState('')
   const [gender, setGender] = useState('')
   const [busy, setBusy] = useState(false)
+  const [fieldErrors, setFieldErrors] = useState({})
 
   useEffect(() => {
     if (!initial) return
@@ -29,16 +31,14 @@ export default function ProfileCompletionModal({ initial, onComplete }) {
 
   async function submit(e) {
     e.preventDefault()
-    if (!name.trim()) {
-      toast.error('Name is required')
-      return
+    const next = {
+      name: validateLiveField('name', name),
+      dob: validateLiveField('dob', dob),
+      gender: validateLiveField('gender', gender, { requiredGender: true }),
     }
-    if (!dob) {
-      toast.error('Date of birth is required')
-      return
-    }
-    if (!gender) {
-      toast.error('Gender is required')
+    setFieldErrors(next)
+    if (Object.values(next).some(Boolean)) {
+      toast.error('Please fix the highlighted fields')
       return
     }
 
@@ -49,6 +49,7 @@ export default function ProfileCompletionModal({ initial, onComplete }) {
         dob,
         gender,
       })
+      setFieldErrors({})
       toast.success('Profile saved')
       onComplete()
     } catch (err) {
@@ -76,12 +77,21 @@ export default function ProfileCompletionModal({ initial, onComplete }) {
               <input
                 id="pc-name"
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) => {
+                  const v = e.target.value
+                  setName(v)
+                  setFieldErrors((prev) => ({ ...prev, name: validateLiveField('name', v) }))
+                }}
                 autoComplete="name"
-                required
-                className="mt-1.5 h-11 w-full rounded-xl border border-gray-200 bg-gray-50/80 px-3 text-gray-900 shadow-inner outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                aria-invalid={Boolean(fieldErrors.name)}
+                className={`mt-1.5 h-11 w-full rounded-xl border bg-gray-50/80 px-3 text-gray-900 shadow-inner outline-none focus:ring-2 ${
+                  fieldErrors.name
+                    ? 'border-red-400 ring-1 ring-red-200 focus:border-red-500 focus:ring-red-500/20'
+                    : 'border-gray-200 focus:border-blue-500 focus:ring-blue-500/20'
+                }`}
                 placeholder="As on official ID"
               />
+              {fieldErrors.name ? <p className="mt-1 text-xs text-red-600">{fieldErrors.name}</p> : null}
             </div>
 
             <div>
@@ -92,10 +102,19 @@ export default function ProfileCompletionModal({ initial, onComplete }) {
                 id="pc-dob"
                 type="date"
                 value={dob}
-                onChange={(e) => setDob(e.target.value)}
-                required
-                className="mt-1.5 h-11 w-full rounded-xl border border-gray-200 bg-gray-50/80 px-3 text-gray-900 shadow-inner outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                onChange={(e) => {
+                  const v = e.target.value
+                  setDob(v)
+                  setFieldErrors((prev) => ({ ...prev, dob: validateLiveField('dob', v) }))
+                }}
+                aria-invalid={Boolean(fieldErrors.dob)}
+                className={`mt-1.5 h-11 w-full rounded-xl border bg-gray-50/80 px-3 text-gray-900 shadow-inner outline-none focus:ring-2 ${
+                  fieldErrors.dob
+                    ? 'border-red-400 ring-1 ring-red-200 focus:border-red-500 focus:ring-red-500/20'
+                    : 'border-gray-200 focus:border-blue-500 focus:ring-blue-500/20'
+                }`}
               />
+              {fieldErrors.dob ? <p className="mt-1 text-xs text-red-600">{fieldErrors.dob}</p> : null}
             </div>
 
             <div>
@@ -105,9 +124,20 @@ export default function ProfileCompletionModal({ initial, onComplete }) {
               <select
                 id="pc-gender"
                 value={gender}
-                onChange={(e) => setGender(e.target.value)}
-                required
-                className="mt-1.5 h-11 w-full rounded-xl border border-gray-200 bg-gray-50/80 px-3 text-gray-900 shadow-inner outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                onChange={(e) => {
+                  const v = e.target.value
+                  setGender(v)
+                  setFieldErrors((prev) => ({
+                    ...prev,
+                    gender: validateLiveField('gender', v, { requiredGender: true }),
+                  }))
+                }}
+                aria-invalid={Boolean(fieldErrors.gender)}
+                className={`mt-1.5 h-11 w-full rounded-xl border bg-gray-50/80 px-3 text-gray-900 shadow-inner outline-none focus:ring-2 ${
+                  fieldErrors.gender
+                    ? 'border-red-400 ring-1 ring-red-200 focus:border-red-500 focus:ring-red-500/20'
+                    : 'border-gray-200 focus:border-blue-500 focus:ring-blue-500/20'
+                }`}
               >
                 <option value="">Select…</option>
                 {GENDERS.map((g) => (
@@ -116,6 +146,7 @@ export default function ProfileCompletionModal({ initial, onComplete }) {
                   </option>
                 ))}
               </select>
+              {fieldErrors.gender ? <p className="mt-1 text-xs text-red-600">{fieldErrors.gender}</p> : null}
             </div>
 
             <Button type="submit" variant="primary" className="mt-2 h-12 w-full text-[15px]" disabled={busy}>

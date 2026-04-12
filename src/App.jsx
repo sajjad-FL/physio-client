@@ -1,7 +1,10 @@
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Navigate, Route, Routes, useParams } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import HomePage from './pages/HomePage'
 import LoginPage from './pages/LoginPage'
+import RegisterPage from './pages/RegisterPage'
+import ForgotPasswordPage from './pages/ForgotPasswordPage'
+import RegisterPhysioPage from './pages/RegisterPhysioPage'
 import BookingPage from './pages/BookingPage'
 import PhysioListPage from './pages/PhysioListPage'
 import PublicPhysicianPage from './pages/PublicPhysicianPage'
@@ -19,6 +22,7 @@ import PhysioWalletPage from './pages/physio/PhysioWalletPage'
 import UserDashboardLayout from './pages/dashboard/UserDashboardLayout'
 import DashboardHome from './pages/dashboard/DashboardHome'
 import DashboardBookings from './pages/dashboard/DashboardBookings'
+import DashboardWallet from './pages/dashboard/DashboardWallet'
 import UserBookingDetailPage from './pages/dashboard/UserBookingDetailPage'
 import DashboardDisputes from './pages/dashboard/DashboardDisputes'
 import ProfilePage from './pages/dashboard/ProfilePage'
@@ -32,9 +36,15 @@ import DisputesAdmin from './pages/admin/DisputesAdmin'
 import AdminSettlementPage from './pages/admin/AdminSettlementPage'
 import AdminPaymentsPage from './pages/admin/AdminPaymentsPage'
 import AdminWithdrawalsPage from './pages/admin/AdminWithdrawalsPage'
+import AdminPlatformSettingsPage from './pages/admin/AdminPlatformSettingsPage'
 import RoleProtectedRoute from './components/RoleProtectedRoute'
 import LegacyPhysioDashboardRedirect from './components/LegacyPhysioDashboardRedirect'
 import ProfileCompletionGate from './components/ProfileCompletionGate'
+
+function PublicPhysicianRoute() {
+  const { id } = useParams()
+  return <PublicPhysicianPage key={id} />
+}
 
 export default function App() {
   return (
@@ -44,14 +54,17 @@ export default function App() {
         position="top-center"
         toastOptions={{
           duration: 4000,
-          className: '!rounded-xl !border !border-gray-100 !bg-white !text-gray-900 !shadow-lg',
-          success: { iconTheme: { primary: '#2563eb', secondary: '#fff' } },
+          className: '!rounded-xl !border !border-slate-100 !bg-white !text-slate-900 !shadow-lg',
+          success: { iconTheme: { primary: '#0d9488', secondary: '#fff' } },
           error: { iconTheme: { primary: '#ef4444', secondary: '#fff' } },
         }}
       />
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/register-physio" element={<RegisterPhysioPage />} />
         <Route
           path="/profile"
           element={
@@ -61,7 +74,7 @@ export default function App() {
           }
         />
         <Route path="/unauthorized" element={<UnauthorizedPage />} />
-        <Route path="/physician/:id" element={<PublicPhysicianPage />} />
+        <Route path="/physician/:id" element={<PublicPhysicianRoute />} />
         <Route path="/physio-dashboard/*" element={<LegacyPhysioDashboardRedirect />} />
         <Route
           path="/dashboard"
@@ -73,8 +86,9 @@ export default function App() {
         >
           <Route index element={<DashboardHome />} />
           <Route path="bookings" element={<DashboardBookings />} />
+          <Route path="wallet" element={<DashboardWallet />} />
           <Route path="bookings/:id" element={<UserBookingDetailPage />} />
-          <Route path="profile" element={<Navigate to="/profile" replace />} />
+          <Route path="profile" element={<ProfilePage />} />
           <Route path="disputes" element={<DashboardDisputes />} />
         </Route>
         <Route
@@ -137,6 +151,7 @@ export default function App() {
           <Route path="payments" element={<AdminPaymentsPage />} />
           <Route path="withdrawals" element={<AdminWithdrawalsPage />} />
           <Route path="settlements" element={<AdminSettlementPage />} />
+          <Route path="platform" element={<AdminPlatformSettingsPage />} />
           <Route path="*" element={<Navigate to="/admin" replace />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />

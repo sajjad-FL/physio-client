@@ -1,14 +1,13 @@
-import { Link, Outlet, useNavigate } from 'react-router-dom'
-import { logout } from '../../auth/session'
+import { useMemo } from 'react'
+import { Link, Outlet, useLocation } from 'react-router-dom'
 import AppShell from '../../components/layout/AppShell'
-import Button from '../../components/ui/Button'
 
-const iconOverview = (
+const iconHome = (
   <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24" aria-hidden>
     <path
       strokeLinecap="round"
       strokeLinejoin="round"
-      d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z"
+      d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"
     />
   </svg>
 )
@@ -18,6 +17,15 @@ const iconCalendar = (
       strokeLinecap="round"
       strokeLinejoin="round"
       d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5a2.25 2.25 0 002.25-2.25m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5a2.25 2.25 0 012.25 2.25v7.5"
+    />
+  </svg>
+)
+const iconWallet = (
+  <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24" aria-hidden>
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M21 12a2.25 2.25 0 00-2.25-2.25H15a3 3 0 11-6 0H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9M3 12V9m0 0a2.25 2.25 0 012.25-2.25H15a3 3 0 016 0h.75a2.25 2.25 0 012.25 2.25V9M15 12a3 3 0 11-6 0 3 3 0 016 0z"
     />
   </svg>
 )
@@ -41,49 +49,59 @@ const iconDispute = (
 )
 
 const navItems = [
-  { to: '/dashboard', label: 'Overview', end: true, icon: iconOverview },
+  { to: '/dashboard', label: 'Home', end: true, icon: iconHome },
   { to: '/dashboard/bookings', label: 'Bookings', icon: iconCalendar },
-  { to: '/profile', label: 'Profile', icon: iconUser },
+  { to: '/dashboard/wallet', label: 'Wallet', icon: iconWallet },
+  { to: '/dashboard/profile', label: 'Profile', icon: iconUser },
   { to: '/dashboard/disputes', label: 'Disputes', icon: iconDispute },
 ]
 
+const bottomNavItems = [
+  { to: '/dashboard', label: 'Home', end: true, icon: iconHome },
+  { to: '/dashboard/bookings', label: 'Bookings', icon: iconCalendar },
+  { to: '/dashboard/wallet', label: 'Wallet', icon: iconWallet },
+  { to: '/dashboard/profile', label: 'Profile', icon: iconUser },
+]
+
+function titleForPath(pathname) {
+  if (pathname === '/dashboard' || pathname === '/dashboard/') return 'Home'
+  if (pathname.startsWith('/dashboard/bookings/') && pathname !== '/dashboard/bookings') return 'Session'
+  if (pathname === '/dashboard/bookings') return 'Bookings'
+  if (pathname === '/dashboard/wallet') return 'Wallet'
+  if (pathname === '/dashboard/disputes') return 'Disputes'
+  if (pathname === '/dashboard/profile') return 'Profile'
+  return 'Dashboard'
+}
+
 export default function UserDashboardLayout() {
-  const navigate = useNavigate()
+  const { pathname } = useLocation()
+  const topBarTitle = useMemo(() => titleForPath(pathname), [pathname])
 
   return (
     <AppShell
       brand="PhysioCare"
       badge="Patient"
-      topBarTitle="My dashboard"
+      topBarTitle={topBarTitle}
       topBarSubtitle=""
       navItems={navItems}
+      bottomNavItems={bottomNavItems}
       headerActions={
         <>
           <Link
             to="/book"
-            className="hidden cursor-pointer items-center justify-center rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-600/20 transition-all duration-200 hover:bg-blue-700 hover:shadow-lg active:scale-[0.98] sm:inline-flex"
+            className="hidden cursor-pointer items-center justify-center rounded-xl bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md shadow-teal-600/25 transition-all duration-200 hover:bg-teal-700 motion-safe:active:scale-[0.98] sm:inline-flex"
           >
             Book session
           </Link>
-          <Button variant="outline" className="hidden rounded-xl sm:inline-flex" onClick={() => logout(navigate)}>
-            Log out
-          </Button>
           <Link
             to="/book"
-            className="inline-flex cursor-pointer items-center justify-center rounded-xl bg-blue-600 px-3 py-2 text-xs font-semibold text-white shadow-md transition-all duration-200 hover:bg-blue-700 active:scale-[0.98] sm:hidden"
+            className="tap-feedback inline-flex cursor-pointer items-center justify-center rounded-xl bg-teal-600 px-3 py-2 text-xs font-semibold text-white shadow-md transition hover:bg-teal-700 sm:hidden"
           >
             Book
           </Link>
         </>
       }
-      sidebarFooter={
-        <div className="space-y-2">
-          <Button variant="outline" className="w-full sm:hidden" onClick={() => logout(navigate)}>
-            Log out
-          </Button>
-          <p className="text-center text-xs text-gray-400">Help: home page</p>
-        </div>
-      }
+      sidebarFooter={<p className="text-center text-xs text-slate-400">Disputes and more in this menu — bottom tabs for quick access.</p>}
     >
       <Outlet />
     </AppShell>

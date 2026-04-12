@@ -5,7 +5,7 @@ import AuthSpinner from './AuthSpinner'
 
 /**
  * @param {{ children: React.ReactNode, allowedRoles: string[] }} props
- * Users with `admin` in roles may access any route.
+ * Users with role `admin` may access any route.
  */
 export default function RoleProtectedRoute({ children, allowedRoles }) {
   const location = useLocation()

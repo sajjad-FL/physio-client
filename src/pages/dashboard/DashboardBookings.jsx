@@ -1,46 +1,31 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import DatePicker from 'react-datepicker'
-import 'react-datepicker/dist/react-datepicker.css'
 import { api } from '../../config/api'
 import toast from 'react-hot-toast'
 import { bookingStatusBadge, paymentBadge } from './dashboardUtils'
 import { matchesPatientBookingFilter } from './bookingFilterUtils'
-import SessionProgressTracker from '../../components/bookings/SessionProgressTracker'
 import EmptyState from '../../components/ui/EmptyState'
 import { formatBookingDateAndSlot } from '../../utils/date'
 import { todayYmd } from '../../components/physio/physioBookingHelpers'
+import PatientBookingsFilterDrawer from '../../components/dashboard/PatientBookingsFilterDrawer'
 
-function BookingSkeleton() {
-  return (
-    <div className="h-48 animate-pulse rounded-2xl border border-gray-100 bg-gradient-to-br from-gray-50 to-white shadow-sm ring-1 ring-gray-100/80" />
-  )
+function BookingRowSkeleton() {
+  return <div className="h-[3.25rem] animate-pulse rounded-xl border border-slate-100 bg-slate-100/60" />
 }
 
-const primaryBtn =
-  'inline-flex min-h-[44px] cursor-pointer items-center justify-center rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-600/20 transition-all duration-200 hover:bg-blue-700 hover:shadow-lg active:scale-[0.98]'
-
-const FILTER_OPTIONS = [
-  { id: 'all', label: 'All' },
-  { id: 'today', label: 'Today' },
-  { id: 'upcoming', label: 'Upcoming' },
-  { id: 'past', label: 'Past' },
-  { id: 'range', label: 'Date Range' },
-]
-
-function pillClass(active) {
-  return [
-    'shrink-0 cursor-pointer rounded-full px-4 py-2 text-sm font-semibold transition-all duration-200',
-    active
-      ? 'bg-blue-600 text-white shadow-md shadow-blue-600/25 ring-2 ring-blue-600/20'
-      : 'bg-gray-100 text-gray-700 ring-1 ring-gray-200/80 hover:bg-gray-200/90 hover:ring-gray-300 active:scale-[0.98]',
-  ].join(' ')
+const FILTER_LABELS = {
+  all: 'All',
+  today: 'Today',
+  upcoming: 'Upcoming',
+  past: 'Past',
+  range: 'Date range',
 }
 
 export default function DashboardBookings() {
   const [bookings, setBookings] = useState(null)
-  const [filter, setFilter] = useState('upcoming')
+  const [filter, setFilter] = useState('all')
   const [dateRange, setDateRange] = useState(null)
+  const [filterOpen, setFilterOpen] = useState(false)
 
   const load = useCallback(async () => {
     try {
@@ -60,53 +45,42 @@ export default function DashboardBookings() {
 
   const filtered = useMemo(() => {
     if (!bookings?.length) return []
-    return bookings.filter((b) =>
-      matchesPatientBookingFilter(b, { filter, dateRange, today }),
-    )
+    return bookings.filter((b) => matchesPatientBookingFilter(b, { filter, dateRange, today }))
   }, [bookings, filter, dateRange, today])
 
   const loading = bookings === null
   const totalLoaded = bookings?.length ?? 0
 
-  function onFilterClick(id) {
-    setFilter(id)
-    if (id !== 'range') {
-      setDateRange(null)
-    }
+  function applyFilters(nextFilter, nextRange) {
+    setFilter(nextFilter)
+    setDateRange(nextFilter === 'range' ? nextRange : null)
   }
 
-  function onRangeChange(dates) {
-    if (!dates) {
-      setDateRange(null)
-      setFilter('all')
-      return
-    }
-    const [start, end] = dates
-    if (start && end) {
-      setDateRange([start, end])
-    } else {
-      setDateRange(start ? [start, null] : null)
-    }
-    setFilter('range')
-  }
+  const filterSummary =
+    filter === 'range' && dateRange?.[0] && dateRange?.[1]
+      ? `${FILTER_LABELS.range} · ${dateRange[0].toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} – ${dateRange[1].toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}`
+      : FILTER_LABELS[filter] || filter
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl">Your bookings</h2>
+        <h1 className="text-lg font-semibold tracking-tight text-slate-900 sm:text-xl">Bookings</h1>
+        <p className="mt-1 text-sm text-slate-500">Sessions and payment status.</p>
       </div>
 
       {loading ? (
-        <div className="grid gap-5 md:grid-cols-2">
-          <BookingSkeleton />
-          <BookingSkeleton />
+        <div className="space-y-2">
+          <BookingRowSkeleton />
+          <BookingRowSkeleton />
+          <BookingRowSkeleton />
+          <BookingRowSkeleton />
         </div>
       ) : totalLoaded === 0 ? (
         <EmptyState
           title="No bookings yet"
           description="Book a session to see it here."
           icon={
-            <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" strokeWidth={1} viewBox="0 0 24 24">
+            <svg className="mx-auto h-12 w-12 text-slate-400" fill="none" stroke="currentColor" strokeWidth={1} viewBox="0 0 24 24">
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -115,82 +89,73 @@ export default function DashboardBookings() {
             </svg>
           }
         >
-          <Link to="/book" className={primaryBtn}>
+          <Link
+            to="/book"
+            className="tap-feedback flex min-h-11 w-full items-center justify-center rounded-xl bg-teal-600 px-5 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-teal-700 sm:w-auto"
+          >
             Book your first session
           </Link>
         </EmptyState>
       ) : (
         <>
-          <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm ring-1 ring-gray-100/80 sm:p-5">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500">Filter</p>
-            <div className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:thin] [&::-webkit-scrollbar]:h-1.5">
-              {FILTER_OPTIONS.map(({ id, label }) => (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() => onFilterClick(id)}
-                  className={pillClass(filter === id)}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-
-            {filter === 'range' && (
-              <div className="mt-4 flex flex-col gap-2 border-t border-gray-100 pt-4 sm:flex-row sm:items-center sm:gap-4">
-                <span className="text-sm text-gray-600">Select start and end:</span>
-                <div className="patient-booking-datepicker [&_.react-datepicker-wrapper]:w-full [&_.react-datepicker__input-container]:w-full [&_input]:w-full [&_input]:max-w-xs [&_input]:cursor-pointer [&_input]:rounded-xl [&_input]:border [&_input]:border-gray-200 [&_input]:bg-white [&_input]:px-3 [&_input]:py-2.5 [&_input]:text-sm [&_input]:font-medium [&_input]:text-gray-900 [&_input]:shadow-sm [&_input]:outline-none [&_input]:ring-0 [&_input]:focus:border-blue-500 [&_input]:focus:ring-2 [&_input]:focus:ring-blue-500/20">
-                  <DatePicker
-                    selectsRange
-                    startDate={dateRange?.[0] ?? undefined}
-                    endDate={dateRange?.[1] ?? undefined}
-                    onChange={onRangeChange}
-                    isClearable
-                    placeholderText="Click to choose dates"
-                    dateFormat="dd MMM yyyy"
-                    monthsShown={1}
-                    popperClassName="z-50"
-                    wrapperClassName="w-full max-w-md"
-                  />
-                </div>
-              </div>
-            )}
-
-            <p className="mt-4 text-sm text-gray-600">
-              <span className="font-semibold text-gray-900">{filtered.length}</span> result
-              {filtered.length === 1 ? '' : 's'}
-              {totalLoaded > 0 && (
-                <span className="text-gray-400">
-                  {' '}
-                  · {totalLoaded} loaded
-                </span>
-              )}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm text-slate-600">
+              <span className="font-semibold tabular-nums text-slate-900">{filtered.length}</span>
+              <span className="text-slate-400"> / </span>
+              <span className="tabular-nums text-slate-500">{totalLoaded}</span>
+              <span className="ml-2 text-xs text-slate-400">· {filterSummary}</span>
             </p>
+            <button
+              type="button"
+              onClick={() => setFilterOpen(true)}
+              className="tap-feedback inline-flex min-h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-800 shadow-sm transition hover:bg-slate-50"
+            >
+              <svg className="h-4 w-4 text-slate-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden>
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 01-.659 1.591l-5.432 5.432a2.25 2.25 0 00-.659 1.591v2.927a2.25 2.25 0 01-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 00-.659-1.591L3.659 7.409A2.25 2.25 0 013 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0112 3z"
+                />
+              </svg>
+              Filters
+            </button>
           </div>
 
+          {filterOpen && (
+            <PatientBookingsFilterDrawer
+              onClose={() => setFilterOpen(false)}
+              filter={filter}
+              onFilterChange={applyFilters}
+              dateRange={dateRange}
+            />
+          )}
+
           {filtered.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50/80 px-6 py-14 text-center">
-              <p className="text-base font-medium text-gray-900">No bookings match this filter</p>
-              <p className="mt-2 text-sm text-gray-500">
+            <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/80 px-4 py-10 text-center">
+              <p className="text-sm font-medium text-slate-900">No bookings match this filter</p>
+              <p className="mt-2 text-sm text-slate-500">
                 {filter === 'range' && (!dateRange?.[0] || !dateRange?.[1])
-                  ? 'Choose a start and end date above.'
+                  ? 'Pick a start and end date in filters.'
                   : 'Try another filter or book a new session.'}
               </p>
-              <div className="mt-6 flex flex-wrap justify-center gap-3">
+              <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-center sm:gap-3">
                 <button
                   type="button"
-                  onClick={() => onFilterClick('all')}
-                  className="rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-800 shadow-sm transition hover:bg-gray-50"
+                  onClick={() => applyFilters('all', null)}
+                  className="tap-feedback min-h-11 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-800 shadow-sm transition hover:bg-slate-50"
                 >
                   Show all
                 </button>
-                <Link to="/book" className={primaryBtn}>
+                <Link
+                  to="/book"
+                  className="tap-feedback flex min-h-11 items-center justify-center rounded-xl bg-teal-600 px-4 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-teal-700"
+                >
                   Book session
                 </Link>
               </div>
             </div>
           ) : (
-            <ul className="grid gap-5 md:grid-cols-2">
+            <ul className="space-y-2">
               {filtered.map((b) => {
                 const st = bookingStatusBadge(b.status, b.sessionStatus, b.paymentStatus)
                 const pay = paymentBadge(b.paymentStatus)
@@ -198,40 +163,25 @@ export default function DashboardBookings() {
                   <li key={b._id}>
                     <Link
                       to={`/dashboard/bookings/${b._id}`}
-                      className="group flex h-full flex-col overflow-hidden rounded-2xl border border-gray-100/90 bg-white shadow-sm ring-1 ring-gray-100/80 transition-all duration-300 hover:-translate-y-1 hover:border-blue-100 hover:shadow-lg hover:shadow-blue-900/5"
+                      className="tap-feedback flex min-h-[3.25rem] items-center justify-between gap-3 rounded-xl border border-slate-100 bg-white px-3 py-3 ring-1 ring-slate-100/60 transition active:bg-slate-50 sm:px-4"
                     >
-                      <div className="space-y-4 px-6 py-6">
-                        <div>
-                          <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Date & time</p>
-                          <p className="mt-1 text-lg font-semibold tracking-tight text-gray-900">
-                            {formatBookingDateAndSlot(b.date, b.timeSlot)}
-                          </p>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold text-slate-900">
+                          {formatBookingDateAndSlot(b.date, b.timeSlot)}
+                        </p>
+                        <p className="truncate text-xs text-slate-500">{b.physioId?.name ?? 'Physio'}</p>
+                        <div className="mt-1 flex flex-wrap gap-1 sm:hidden">
+                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ${st.cls}`}>{st.label}</span>
+                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ${pay.cls}`}>{pay.label}</span>
                         </div>
-                        <div>
-                          <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Issue</p>
-                          <p className="mt-1 line-clamp-2 text-sm leading-relaxed text-gray-700">{b.issue}</p>
-                        </div>
-                        <div>
-                          <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Physiotherapist</p>
-                          <p className="mt-1 text-sm font-semibold text-gray-900">{b.physioId?.name ?? 'Assigning…'}</p>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          <span
-                            className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ${st.cls}`}
-                          >
-                            {st.label}
-                          </span>
-                          <span
-                            className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ${pay.cls}`}
-                          >
-                            {pay.label}
-                          </span>
-                        </div>
-                        <SessionProgressTracker booking={b} variant="mini" />
-                        <span className="inline-flex w-full items-center justify-center rounded-xl border-2 border-gray-100 bg-gray-50/90 py-2.5 text-sm font-semibold text-blue-700 transition-all duration-200 group-hover:border-blue-200 group-hover:bg-blue-50">
-                          View details
-                        </span>
                       </div>
+                      <div className="hidden shrink-0 flex-wrap justify-end gap-1 sm:flex">
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ${st.cls}`}>{st.label}</span>
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ${pay.cls}`}>{pay.label}</span>
+                      </div>
+                      <svg className="h-4 w-4 shrink-0 text-slate-300" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                      </svg>
                     </Link>
                   </li>
                 )

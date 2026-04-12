@@ -263,7 +263,8 @@ export default function BookingPage() {
             <div className="surface-card rounded-2xl p-7 sm:p-8 lg:p-10">
               <h2 className="text-lg font-semibold text-ink">Your details</h2>
               <p className="mt-2 text-sm leading-relaxed text-ink-muted">
-                We use this to match you with the nearest verified therapist when possible.
+                Location helps us plan your visit. A physiotherapist is assigned by our team after you book (and pay when
+                required).
               </p>
 
               <div className="mt-4 flex flex-wrap items-center gap-3">
@@ -402,7 +403,7 @@ export default function BookingPage() {
                 bookingId={booking._id}
                 onPaid={async () => {
                   await refreshBookingById(booking._id)
-                  setToast('Payment held in escrow. Physiotherapist will be assigned when available.')
+                  setToast('Payment held in escrow. Our team will assign a physiotherapist shortly.')
                 }}
               />
             )}
@@ -411,9 +412,9 @@ export default function BookingPage() {
               <div className="surface-card rounded-2xl p-6 sm:p-7">
                 <h3 className="text-sm font-semibold text-ink">Payment held (escrow)</h3>
                 <p className="mt-2 text-sm leading-relaxed text-ink-muted">
-                  {booking.status === 'assigned'
+                  {booking.status === 'assigned' && physioName
                     ? 'Funds are held until your session is completed and released by the platform.'
-                    : 'We are confirming your physiotherapist.'}
+                    : 'Funds are held while our team assigns your physiotherapist. You will see their name here once assigned.'}
                 </p>
                 <button
                   type="button"

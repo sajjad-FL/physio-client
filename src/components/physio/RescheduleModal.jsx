@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { api } from '../../config/api'
+import { createPortal } from 'react-dom'
 import toast from 'react-hot-toast'
 import { DAILY_SLOTS } from '../../constants/slots'
 import { formatBookingDateAndSlot, formatBookingTimeSlot } from '../../utils/date'
@@ -9,19 +9,28 @@ function todayInputValue() {
   return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`
 }
 
-export default function RescheduleModal({ booking, onClose, onUpdated }) {
-  const [date, setDate] = useState(booking?.date || todayInputValue())
-  const [timeSlot, setTimeSlot] = useState(booking?.timeSlot || DAILY_SLOTS[0])
+function RescheduleModal({ booking, sessionRow, patchReschedule, onClose, onUpdated, title }) {
+  const initialDate = sessionRow?.date || booking?.date || todayInputValue()
+  const initialSlot = sessionRow?.time || booking?.timeSlot || DAILY_SLOTS[0]
+  const [date, setDate] = useState(initialDate)
+  const [timeSlot, setTimeSlot] = useState(initialSlot)
   const [busy, setBusy] = useState(false)
 
   if (!booking) return null
+
+  const sessionLabel =
+    sessionRow?.n != null ? `Session #${sessionRow.n}` : sessionRow?.sessionId ? 'This session' : 'Visit'
 
   async function submit(e) {
     e.preventDefault()
     setBusy(true)
     try {
-      await api.patch(`/bookings/${booking._id}/reschedule`, { date, timeSlot })
-      toast.success('Visit rescheduled')
+      const payload = { date, timeSlot }
+      if (sessionRow?.sessionId && String(sessionRow.sessionId) !== String(booking._id)) {
+        payload.sessionId = sessionRow.sessionId
+      }
+      await patchReschedule(payload)
+      toast.success('Session rescheduled')
       onUpdated?.()
       onClose()
     } catch (err) {
@@ -32,25 +41,32 @@ export default function RescheduleModal({ booking, onClose, onUpdated }) {
   }
 
   const min = todayInputValue()
+  const heading = title || 'Reschedule session'
 
-  return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+  const node = (
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+      onClick={onClose}
+      onKeyDown={(e) => e.key === 'Escape' && onClose()}
+      role="presentation"
+    >
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="reschedule-title"
         className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl ring-1 ring-gray-200"
+        onClick={(e) => e.stopPropagation()}
       >
         <h2 id="reschedule-title" className="text-lg font-semibold text-gray-900">
-          Reschedule visit
+          {heading}
         </h2>
         <p className="mt-1 text-sm text-gray-500">
-          Current:{' '}
+          {sessionLabel} — currently{' '}
           <span className="font-medium text-gray-800">
-            {formatBookingDateAndSlot(booking.date, booking.timeSlot)}
+            {formatBookingDateAndSlot(sessionRow?.date || booking.date, sessionRow?.time || booking.timeSlot)}
           </span>
         </p>
-        {booking.rescheduled && booking.previousDate && (
+        {booking.rescheduled && booking.previousDate && !sessionRow?.sessionId && (
           <p className="mt-1 text-xs text-amber-800">
             Previously: {formatBookingDateAndSlot(booking.previousDate, booking.previousTimeSlot)}
           </p>
@@ -105,4 +121,8 @@ export default function RescheduleModal({ booking, onClose, onUpdated }) {
       </div>
     </div>
   )
+
+  return createPortal(node, document.body)
 }
+
+export default RescheduleModal

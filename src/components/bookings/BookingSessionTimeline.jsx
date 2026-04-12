@@ -20,14 +20,18 @@ function statusLabel(status) {
 }
 
 /**
- * @param {{ booking: object }} props
+ * @param {{
+ *   booking: object,
+ *   reschedule?: { enabled: boolean, onReschedule: (row: { key: string, sessionId: string | null, date: string, time: string, n: number }) => void },
+ * }} props
  */
-export default function BookingSessionTimeline({ booking }) {
+export default function BookingSessionTimeline({ booking, reschedule }) {
   const rows = normalizeSessionRows(booking)
   const tday = todayYmd()
   const visitDone = booking.sessionStatus === 'completed'
   const rescheduled = Boolean(booking.rescheduled)
   const rowStatus = sessionRowStatus(booking)
+  const showReschedule = Boolean(reschedule?.enabled && reschedule?.onReschedule && !visitDone)
 
   return (
     <div
@@ -51,14 +55,27 @@ export default function BookingSessionTimeline({ booking }) {
 
           return (
             <li key={r.key} className={rowCls}>
-              <div className="min-w-0">
-                <span className="font-medium">#{r.n}</span>
-                <span className="text-gray-500"> · </span>
-                {formatBookingDateAndSlot(r.date, r.time)}
-                {visitDone && <span className="ml-2 text-xs font-semibold text-emerald-800">Done</span>}
-                {!visitDone && r.date === tday && (
-                  <span className="ml-2 text-xs font-semibold text-blue-800">Today</span>
-                )}
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <div className="min-w-0">
+                    <span className="font-medium">#{r.n}</span>
+                    <span className="text-gray-500"> · </span>
+                    {formatBookingDateAndSlot(r.date, r.time)}
+                    {visitDone && <span className="ml-2 text-xs font-semibold text-emerald-800">Done</span>}
+                    {!visitDone && r.date === tday && (
+                      <span className="ml-2 text-xs font-semibold text-blue-800">Today</span>
+                    )}
+                  </div>
+                  {showReschedule && (
+                    <button
+                      type="button"
+                      onClick={() => reschedule.onReschedule(r)}
+                      className="tap-feedback shrink-0 rounded-lg border border-blue-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-blue-800 hover:bg-blue-50"
+                    >
+                      Reschedule
+                    </button>
+                  )}
+                </div>
               </div>
               <span
                 className={`inline-flex shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ${statusBadgeClass(

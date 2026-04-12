@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api } from '../config/api'
 import { clearToken, getToken, setProfileCompleteStored } from '../auth/session'
+import { getProfileCached } from '../utils/profileCache'
 import AuthSpinner from './AuthSpinner'
 import ProfileCompletionModal from './ProfileCompletionModal'
 
@@ -15,7 +16,7 @@ export default function ProfileCompletionGate({ children }) {
     let cancelled = false
     let reqId = 0
 
-    function load() {
+    function load(forceProfile = false) {
       const token = getToken()
       if (!token) {
         if (!cancelled) {
@@ -27,13 +28,26 @@ export default function ProfileCompletionGate({ children }) {
 
       const id = ++reqId
       setState('loading')
-      api
-        .get('/profile')
-        .then((res) => {
+      getProfileCached(api, { force: forceProfile })
+        .then((wrapped) => {
           if (cancelled || id !== reqId) return
+          if (!wrapped?.data) {
+            setState('complete')
+            setProfileSnapshot(null)
+            return
+          }
+          const res = { data: wrapped.data }
           const ok = res.data?.isProfileComplete === true
+          const r = res.data?.role
+          const legacy = Array.isArray(res.data?.roles) ? res.data.roles : []
+          const isPhysio =
+            r === 'physio' || (!r && legacy.includes('physio'))
           setProfileCompleteStored(ok)
           if (ok) {
+            setState('complete')
+            setProfileSnapshot(null)
+          } else if (isPhysio) {
+            // Physios complete account via /physio/onboarding and /profile; server still guards bookings/wallet.
             setState('complete')
             setProfileSnapshot(null)
           } else {
@@ -53,8 +67,8 @@ export default function ProfileCompletionGate({ children }) {
         })
     }
 
-    load()
-    window.addEventListener('auth-session-changed', load)
+    load(false)
+    window.addEventListener('auth-session-changed', () => load(true))
     return () => {
       cancelled = true
       window.removeEventListener('auth-session-changed', load)

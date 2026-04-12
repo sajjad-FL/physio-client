@@ -26,7 +26,7 @@ export default function PhysioBookingDetailPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [busyId, setBusyId] = useState(null)
-  const [rescheduleOpen, setRescheduleOpen] = useState(false)
+  const [rescheduleRow, setRescheduleRow] = useState(null)
   const [collectModalOpen, setCollectModalOpen] = useState(false)
 
   const load = useCallback(async () => {
@@ -214,7 +214,13 @@ export default function PhysioBookingDetailPage() {
       <Card hover={false} className="p-5 sm:p-6">
         <h2 className="text-sm font-semibold text-gray-900">Session timeline</h2>
         <div className="mt-4">
-          <BookingSessionTimeline booking={b} />
+          <BookingSessionTimeline
+            booking={b}
+            reschedule={{
+              enabled: true,
+              onReschedule: (row) => setRescheduleRow(row),
+            }}
+          />
         </div>
       </Card>
 
@@ -338,20 +344,18 @@ export default function PhysioBookingDetailPage() {
           >
             {b.sessionStatus === 'completed' ? 'Completed' : 'Mark complete'}
           </button>
-          {b.sessionStatus !== 'completed' && (
-            <button
-              type="button"
-              onClick={() => setRescheduleOpen(true)}
-              className={`${actionBtn} w-full border border-gray-200 bg-white text-gray-800 hover:border-blue-200 hover:bg-blue-50/50 sm:w-auto`}
-            >
-              Reschedule
-            </button>
-          )}
         </div>
       </Card>
 
-      {rescheduleOpen && (
-        <RescheduleModal booking={b} onClose={() => setRescheduleOpen(false)} onUpdated={load} />
+      {rescheduleRow != null && (
+        <RescheduleModal
+          key={rescheduleRow.key}
+          booking={b}
+          sessionRow={rescheduleRow}
+          patchReschedule={(body) => api.patch(`/bookings/${b._id}/reschedule`, body)}
+          onClose={() => setRescheduleRow(null)}
+          onUpdated={load}
+        />
       )}
 
       {collectModalOpen && b && (

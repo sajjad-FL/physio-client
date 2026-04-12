@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { api } from '../config/api'
 import { assetUrl } from '../utils/assetUrl'
@@ -18,48 +18,71 @@ export default function PublicPhysicianPage() {
   const [reviewsLoading, setReviewsLoading] = useState(true)
   const [error, setError] = useState('')
 
-  const loadPhysio = useCallback(async () => {
-    if (!id) return
+  /** Physio + first page of reviews in parallel (faster first paint). */
+  useEffect(() => {
+    if (!id || page !== 1) return
+    let cancelled = false
     setLoading(true)
-    setError('')
-    try {
-      const res = await api.get(`/physios/${id}`)
-      setPhysio(res.data)
-    } catch (e) {
-      setError(e.response?.data?.message || 'Could not load profile')
-      setPhysio(null)
-    } finally {
-      setLoading(false)
-    }
-  }, [id])
-
-  const loadReviews = useCallback(async () => {
-    if (!id) return
     setReviewsLoading(true)
-    try {
-      const res = await api.get(`/physios/${id}/reviews`, { params: { page, limit: 8 } })
-      setReviews(res.data?.data || [])
-      setTotalPages(res.data?.totalPages || 1)
-    } catch {
-      toast.error('Could not load reviews')
-      setReviews([])
-    } finally {
-      setReviewsLoading(false)
+    setError('')
+    Promise.all([
+      api.get(`/physios/${id}`),
+      api.get(`/physios/${id}/reviews`, { params: { page: 1, limit: 8 } }),
+    ])
+      .then(([physioRes, revRes]) => {
+        if (cancelled) return
+        setPhysio(physioRes.data)
+        setReviews(revRes.data?.data || [])
+        setTotalPages(revRes.data?.totalPages || 1)
+      })
+      .catch((e) => {
+        if (cancelled) return
+        setError(e.response?.data?.message || 'Could not load profile')
+        setPhysio(null)
+        setReviews([])
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoading(false)
+          setReviewsLoading(false)
+        }
+      })
+    return () => {
+      cancelled = true
     }
   }, [id, page])
 
+  /** Later review pages only (no physio refetch). */
   useEffect(() => {
-    loadPhysio()
-  }, [loadPhysio])
-
-  useEffect(() => {
-    if (physio) loadReviews()
-  }, [physio, loadReviews])
+    if (!id || page === 1) return
+    let cancelled = false
+    setReviewsLoading(true)
+    api
+      .get(`/physios/${id}/reviews`, { params: { page, limit: 8 } })
+      .then((res) => {
+        if (cancelled) return
+        setReviews(res.data?.data || [])
+        setTotalPages(res.data?.totalPages || 1)
+      })
+      .catch(() => {
+        if (!cancelled) {
+          toast.error('Could not load reviews')
+          setReviews([])
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setReviewsLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [id, page])
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-3xl px-4 py-16">
-        <div className="h-48 animate-pulse rounded-2xl bg-gray-100" />
+      <div className="mx-auto max-w-3xl space-y-6 px-4 py-16 sm:px-6">
+        <div className="h-40 animate-pulse rounded-2xl bg-gray-100" />
+        <div className="h-32 animate-pulse rounded-2xl bg-gray-100" />
       </div>
     )
   }
@@ -95,7 +118,13 @@ export default function PublicPhysicianPage() {
           <div className="flex flex-col gap-6 p-6 sm:flex-row sm:items-center">
             <div className="h-24 w-24 shrink-0 overflow-hidden rounded-2xl bg-gray-100 ring-2 ring-gray-100">
               {avatarSrc ? (
-                <img src={avatarSrc} alt="" className="h-full w-full object-cover" />
+                <img
+                  src={avatarSrc}
+                  alt=""
+                  className="h-full w-full object-cover"
+                  loading="eager"
+                  decoding="async"
+                />
               ) : (
                 <div className="flex h-full w-full items-center justify-center text-3xl font-semibold text-gray-400">
                   {(p.name || '?').slice(0, 1).toUpperCase()}

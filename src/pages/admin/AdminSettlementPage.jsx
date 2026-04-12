@@ -124,7 +124,9 @@ export default function AdminSettlementPage() {
       <Card hover={false} className="overflow-hidden p-0">
         <div className="border-b border-gray-100 px-6 py-4">
           <h2 className="text-sm font-semibold text-gray-900">Physiotherapists</h2>
-          <p className="text-xs text-gray-500">Settle offline commission collections</p>
+          <p className="text-xs text-gray-500">
+            Withdrawable = online wallet minus commission due (same rule as the physio app)
+          </p>
         </div>
         {loading ? (
           <div className="p-8 text-center text-sm text-gray-500">Loading…</div>
@@ -138,7 +140,7 @@ export default function AdminSettlementPage() {
                   <th className="px-6 py-3">Name</th>
                   <th className="px-6 py-3">Total earnings</th>
                   <th className="px-6 py-3">Commission due</th>
-                  <th className="px-6 py-3">Balance</th>
+                  <th className="px-6 py-3">Withdrawable</th>
                   <th className="px-6 py-3">Status</th>
                   <th className="px-6 py-3 text-right">Actions</th>
                 </tr>

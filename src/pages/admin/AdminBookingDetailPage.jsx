@@ -16,6 +16,9 @@ import SessionNotesReadOnly from '../../components/bookings/SessionNotesReadOnly
 import SessionProgressTracker from '../../components/bookings/SessionProgressTracker'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
+import AdminAssignPhysioModal from '../../components/admin/AdminAssignPhysioModal'
+import RescheduleModal from '../../components/physio/RescheduleModal'
+import { resolveFileUrl } from '../../utils/serverOrigin'
 
 const adminHeaders = () => ({
   headers: { Authorization: `Bearer ${import.meta.env.VITE_ADMIN_API_KEY || ''}` },
@@ -31,11 +34,13 @@ export default function AdminBookingDetailPage() {
   const [error, setError] = useState(null)
   const [rowBusy, setRowBusy] = useState(null)
   const [assignPhysioId, setAssignPhysioId] = useState('')
+  const [assignModalOpen, setAssignModalOpen] = useState(false)
   const [notesModal, setNotesModal] = useState(null)
   const [resolveOpen, setResolveOpen] = useState(null)
   const [resolution, setResolution] = useState('')
   const [resolveAction, setResolveAction] = useState('reject')
   const [resolveSubmitting, setResolveSubmitting] = useState(false)
+  const [rescheduleRow, setRescheduleRow] = useState(null)
 
   const load = useCallback(async () => {
     if (!id) return
@@ -67,9 +72,18 @@ export default function AdminBookingDetailPage() {
   const b = booking
   const activeDispute = useMemo(() => disputes.find((d) => d.status === 'open' || d.status === 'under_review'), [disputes])
 
+  const selectedPhysioForAssign = useMemo(
+    () => physios.find((p) => String(p._id) === String(assignPhysioId)),
+    [physios, assignPhysioId],
+  )
+
+  /** Admin assigns physio; allow before or after patient payment (escrow may still be pending). */
   const canAssign = useMemo(() => {
     if (!b) return false
-    return b.paymentStatus === 'held' && !b.physioId && b.status !== 'completed'
+    if (b.physioId) return false
+    if (b.status === 'completed') return false
+    if (b.paymentStatus === 'refunded') return false
+    return true
   }, [b])
 
   const canComplete = useMemo(() => {
@@ -359,9 +373,27 @@ export default function AdminBookingDetailPage() {
       <Card hover={false} className="border-border-subtle p-5 sm:p-6">
         <h2 className="text-sm font-semibold text-ink">Session timeline</h2>
         <div className="mt-4">
-          <BookingSessionTimeline booking={b} />
+          <BookingSessionTimeline
+            booking={b}
+            reschedule={{
+              enabled: true,
+              onReschedule: (row) => setRescheduleRow(row),
+            }}
+          />
         </div>
       </Card>
+
+      {rescheduleRow != null && (
+        <RescheduleModal
+          key={rescheduleRow.key}
+          booking={b}
+          sessionRow={rescheduleRow}
+          title="Reschedule session (admin)"
+          patchReschedule={(body) => api.patch(`/admin/bookings/${b._id}/reschedule`, body, adminHeaders())}
+          onClose={() => setRescheduleRow(null)}
+          onUpdated={load}
+        />
+      )}
 
       <Card hover={false} className="border-border-subtle p-5 sm:p-6">
         <h2 className="text-sm font-semibold text-ink">Session notes</h2>
@@ -431,28 +463,82 @@ export default function AdminBookingDetailPage() {
       <Card hover={false} className="border-border-subtle p-5 sm:p-6">
         <h2 className="mb-4 text-sm font-semibold text-ink">Actions — manage booking</h2>
         <div className="flex flex-col gap-4">
-          <div className="flex flex-wrap items-end gap-2">
-            <div className="min-w-[200px] flex-1">
+          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+            <div className="min-w-0 flex-1 space-y-2">
               <label className="text-xs font-medium text-ink-muted">Assign physiotherapist</label>
-              <select
-                value={assignPhysioId}
-                onChange={(e) => setAssignPhysioId(e.target.value)}
-                disabled={rowBusy === 'assign' || !canAssign}
-                className="mt-1 w-full rounded-xl border border-border-subtle bg-white px-3 py-2 text-sm text-ink"
-              >
-                <option value="">Select physio</option>
-                {physios.map((p) => (
-                  <option key={p._id} value={p._id}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
+              {canAssign && b.paymentStatus !== 'held' && (
+                <p className="text-[11px] text-amber-800/90">
+                  Payment not in escrow yet — you can still assign; the patient may need to complete checkout.
+                </p>
+              )}
+              {selectedPhysioForAssign ? (
+                <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border-subtle bg-white p-3 ring-1 ring-border-subtle/60">
+                  <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-slate-100 ring-1 ring-border-subtle">
+                    {resolveFileUrl(selectedPhysioForAssign.avatar) ? (
+                      <img
+                        src={resolveFileUrl(selectedPhysioForAssign.avatar)}
+                        alt=""
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center text-sm font-semibold text-slate-400">
+                        {(selectedPhysioForAssign.name || '?').slice(0, 1).toUpperCase()}
+                      </div>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-ink">{selectedPhysioForAssign.name}</p>
+                    <p className="truncate text-xs text-ink-muted">
+                      {selectedPhysioForAssign.specialization || '—'} · {selectedPhysioForAssign.experience ?? 0} yrs
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={rowBusy === 'assign' || !canAssign}
+                    title={!canAssign && b?.physioId ? 'Booking already has a physiotherapist' : undefined}
+                    onClick={() => setAssignModalOpen(true)}
+                    className="tap-feedback shrink-0 rounded-lg border border-border-subtle bg-white px-3 py-2 text-xs font-semibold text-ink hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    Change
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  disabled={rowBusy === 'assign' || !canAssign}
+                  title={
+                    !canAssign && b
+                      ? b.physioId
+                        ? 'This booking already has a physiotherapist'
+                        : b.status === 'completed'
+                          ? 'Completed bookings cannot be reassigned here'
+                          : b.paymentStatus === 'refunded'
+                            ? 'Refunded bookings cannot be assigned'
+                            : undefined
+                      : undefined
+                  }
+                  onClick={() => setAssignModalOpen(true)}
+                  className="tap-feedback w-full rounded-xl border border-dashed border-border-subtle bg-slate-50/80 px-4 py-4 text-left text-sm font-medium text-ink hover:border-teal-300 hover:bg-teal-50/40 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:min-w-[240px]"
+                >
+                  <span className="block text-ink">Choose physiotherapist…</span>
+                  <span className="mt-0.5 block text-xs font-normal text-ink-muted">Browse photos, ratings &amp; experience</span>
+                </button>
+              )}
+              <AdminAssignPhysioModal
+                key={b?._id ? `assign-${b._id}` : `assign-${id}`}
+                open={assignModalOpen}
+                onClose={() => setAssignModalOpen(false)}
+                physios={physios}
+                patientCoords={b?.userId?.coordinates}
+                selectedId={assignPhysioId}
+                onConfirmSelect={(id) => setAssignPhysioId(id)}
+              />
             </div>
             <button
               type="button"
-              disabled={rowBusy === 'assign' || !canAssign}
+              disabled={rowBusy === 'assign' || !canAssign || !assignPhysioId}
               onClick={handleAssign}
-              className={`${actionBtn} bg-blue-600 text-white hover:bg-blue-700`}
+              className={`${actionBtn} bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50`}
             >
               {rowBusy === 'assign' ? '…' : 'Assign'}
             </button>

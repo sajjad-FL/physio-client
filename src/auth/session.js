@@ -1,8 +1,9 @@
 import { PHYSIO_DASHBOARD_ENTRY } from '../constants/authPaths'
 
 const TOKEN_KEY = 'token'
-/** Legacy single role hint: patient | physio | admin (derived from roles array). */
+/** Canonical: user | physio | admin */
 const ROLE_KEY = 'role'
+/** @deprecated Legacy JSON array — read once for migration, then ignored */
 const ROLES_KEY = 'roles'
 const PROFILE_COMPLETE_KEY = 'profileComplete'
 
@@ -12,35 +13,61 @@ function emitSessionChanged() {
   }
 }
 
+function normalizeRoleInput(input) {
+  if (input == null || input === '') return 'user'
+  if (typeof input === 'string') {
+    if (input === 'patient') return 'user'
+    if (input === 'user' || input === 'physio' || input === 'admin') return input
+    return 'user'
+  }
+  if (Array.isArray(input)) {
+    if (input.includes('admin')) return 'admin'
+    if (input.includes('physio')) return 'physio'
+    return 'user'
+  }
+  return 'user'
+}
+
 export function getToken() {
   return localStorage.getItem(TOKEN_KEY)
 }
 
-/** @returns {string[]} */
-export function getRoles() {
+/** @returns {'user' | 'physio' | 'admin'} */
+export function getRole() {
+  try {
+    const single = localStorage.getItem(ROLE_KEY)
+    if (single === 'user' || single === 'physio' || single === 'admin') return single
+    if (single === 'patient') return 'user'
+  } catch {
+    /* ignore */
+  }
   try {
     const raw = localStorage.getItem(ROLES_KEY)
     if (raw != null) {
       const parsed = JSON.parse(raw)
-      if (Array.isArray(parsed) && parsed.length) return parsed
+      if (Array.isArray(parsed) && parsed.length) return normalizeRoleInput(parsed)
     }
   } catch {
     /* ignore */
   }
-  const legacy = localStorage.getItem(ROLE_KEY)
-  if (legacy === 'physio') return ['user', 'physio']
-  if (legacy === 'admin') return ['admin']
-  return ['user']
+  return 'user'
 }
 
-/** @param {boolean} [isProfileComplete] — when set, persists profile gate hint from login */
-export function setSession(token, roles, isProfileComplete) {
-  const list = Array.isArray(roles) && roles.length ? roles : ['user']
+/** @returns {string[]} — single-element array for backward compatibility */
+export function getRoles() {
+  return [getRole()]
+}
+
+/**
+ * @param {string} token
+ * @param {string | string[]} roleOrLegacyRoles
+ * @param {boolean} [isProfileComplete]
+ */
+export function setSession(token, roleOrLegacyRoles, isProfileComplete) {
+  const role = normalizeRoleInput(roleOrLegacyRoles)
   localStorage.setItem(TOKEN_KEY, token)
-  localStorage.setItem(ROLES_KEY, JSON.stringify(list))
-  const legacy =
-    list.includes('admin') ? 'admin' : list.includes('physio') ? 'physio' : 'patient'
-  localStorage.setItem(ROLE_KEY, legacy)
+  localStorage.setItem(ROLE_KEY, role)
+  localStorage.removeItem(ROLES_KEY)
   if (typeof isProfileComplete === 'boolean') {
     setProfileCompleteStored(isProfileComplete)
   }
@@ -59,23 +86,12 @@ export function getProfileCompleteStored() {
   return null
 }
 
-/** @param {string} token
- * @param {string | string[]} roleOrRoles — backward compatible: 'physio' / 'patient' or roles array */
-export function setToken(token, roleOrRoles = ['user']) {
-  if (Array.isArray(roleOrRoles)) {
-    setSession(token, roleOrRoles)
-    return
-  }
-  if (roleOrRoles === 'physio') {
-    setSession(token, ['user', 'physio'])
-    return
-  }
-  setSession(token, ['user'])
-}
-
-/** @deprecated Use getRoles — kept for narrow checks */
-export function getRole() {
-  return localStorage.getItem(ROLE_KEY)
+/**
+ * @param {string} token
+ * @param {string | string[]} roleOrRoles — 'physio' / 'patient' or roles array (legacy)
+ */
+export function setToken(token, roleOrRoles = 'user') {
+  setSession(token, roleOrRoles)
 }
 
 export function clearToken() {
@@ -87,19 +103,19 @@ export function clearToken() {
 }
 
 export function isPhysioSession() {
-  return getRoles().includes('physio')
+  return getRole() === 'physio'
 }
 
-export function hasAnyRole(...roles) {
-  const mine = getRoles()
-  if (mine.includes('admin')) return true
-  return roles.some((r) => mine.includes(r))
+export function hasAnyRole(...allowed) {
+  const mine = getRole()
+  if (mine === 'admin') return true
+  return allowed.some((r) => mine === r)
 }
 
 export function getDefaultDashboardPath() {
-  const roles = getRoles()
-  if (roles.includes('admin')) return '/admin'
-  if (roles.includes('physio')) return PHYSIO_DASHBOARD_ENTRY
+  const role = getRole()
+  if (role === 'admin') return '/admin'
+  if (role === 'physio') return PHYSIO_DASHBOARD_ENTRY
   return '/dashboard'
 }
 

@@ -6,6 +6,11 @@ import { toastApiError } from '../../utils/formToast'
 import { resolveFileUrl } from '../../utils/serverOrigin'
 import VerificationBadge from '../../components/physio/VerificationBadge'
 
+function verificationLevelForBadge(level) {
+  if (level === 'verified' || level === 'premium') return 'verified'
+  return 'not_verified'
+}
+
 function DocLink({ label, url }) {
   if (!url) return <span className="text-ink-muted">{label}: —</span>
   const full = resolveFileUrl(url)
@@ -32,7 +37,6 @@ export default function AdminPhysioDetailPage() {
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [rejectReason, setRejectReason] = useState('')
-  const [approveLevel, setApproveLevel] = useState('verified')
 
   const load = useCallback(async () => {
     if (!id) return
@@ -52,7 +56,7 @@ export default function AdminPhysioDetailPage() {
     load()
   }, [load])
 
-  async function verify(status, level) {
+  async function verify(status) {
     if (status === 'rejected') {
       const reason = rejectReason.trim()
       if (reason.length < 3) {
@@ -65,7 +69,7 @@ export default function AdminPhysioDetailPage() {
       const body =
         status === 'rejected'
           ? { status: 'rejected', rejectionReason: rejectReason.trim() }
-          : { status: 'verified', level: level || approveLevel }
+          : { status: 'verified' }
       await api.patch(`/admin/physios/${id}/verify`, body)
       toast.success(status === 'rejected' ? 'Application rejected' : 'Physiotherapist approved')
       setRejectReason('')
@@ -105,30 +109,20 @@ export default function AdminPhysioDetailPage() {
           <h1 className="mt-2 text-2xl font-semibold text-ink">{p.name}</h1>
           <p className="mt-1 text-sm text-ink-muted">{p.specialization}</p>
           <div className="mt-2 flex flex-wrap items-center gap-2">
-            <span className="text-xs text-ink-muted">Badge tier</span>
-            <VerificationBadge level={v.level || 'basic'} />
+            <span className="text-xs text-ink-muted">Platform verification</span>
+            <VerificationBadge level={verificationLevelForBadge(v.level)} />
             <span className="text-xs text-ink-muted">Status: {v.status || p.verificationStatus}</span>
           </div>
         </div>
         <div className="flex flex-col gap-2 rounded-xl border border-border-subtle bg-white p-4 shadow-sm sm:min-w-[280px]">
-          <label className="text-xs font-medium text-ink-muted">Approve as tier</label>
-          <select
-            className="h-10 rounded-lg border border-border-subtle px-2 text-sm"
-            value={approveLevel}
-            onChange={(e) => setApproveLevel(e.target.value)}
-            disabled={busy}
-          >
-            <option value="basic">Basic</option>
-            <option value="verified">Verified</option>
-            <option value="premium">Premium</option>
-          </select>
+          <p className="text-xs text-ink-muted">Approve marks the physiotherapist as verified on the platform.</p>
           <button
             type="button"
             disabled={busy}
-            onClick={() => verify('verified', approveLevel)}
+            onClick={() => verify('verified')}
             className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
           >
-            Approve
+            Approve (verified)
           </button>
           <textarea
             className="min-h-[72px] rounded-lg border border-border-subtle px-2 py-1.5 text-sm"

@@ -1,3 +1,5 @@
+import { validateIndianMobile } from './phoneIndia.js'
+
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 export function validateEmailOptional(email) {
@@ -126,7 +128,8 @@ function hasUrl(s) {
  *   name: string, email: string, location: string, dob?: string, gender?: string, address?: string,
  *   degree: string, university: string, year: string, registrationNumber: string,
  *   experience: string, specialization: string, serviceType: string, areas: string, fees: string,
- *   docCertificate: string, docIdProof: string, docRegistration: string, docSelfie: string
+ *   docCertificate: string, docIdProof: string, docRegistration: string, docSelfie: string,
+ *   docSignedNda?: string, requireSignedNda?: boolean
  * }} values
  */
 export function validateSubmitForm(values) {
@@ -167,6 +170,10 @@ export function validateSubmitForm(values) {
   if (!hasUrl(values.docRegistration)) errors.registrationCertificate = 'Upload registration certificate'
   if (!hasUrl(values.docSelfie)) errors.selfieWithId = 'Upload a selfie with your ID'
 
+  if (values.requireSignedNda && !hasUrl(values.docSignedNda)) {
+    errors.signedNda = 'Download the NDA, sign it, and upload the signed copy'
+  }
+
   return { errors, ok: Object.keys(errors).length === 0 }
 }
 
@@ -196,11 +203,35 @@ export function validateAvatarFile(file) {
   return { ok: true }
 }
 
+/** Phone + password for self-registration (not part of onboarding PATCH). */
+export function validateRegistrationAccount({ phone, password }) {
+  const errors = {}
+  const pv = validateIndianMobile(phone)
+  if (!pv.valid) errors.phone = pv.message
+  if (!password || String(password).length < 8) {
+    errors.password = 'Password must be at least 8 characters'
+  }
+  return { errors }
+}
+
 /**
- * @param {{ fCertificate?: File | null, fIdProof?: File | null, fRegCert?: File | null, fSelfie?: File | null }} files
- * @param {{ certificate?: string, idProof?: string, registration?: string, selfie?: string }} existing Server URLs already saved
+ * @param {{
+ *   fCertificate?: File | null,
+ *   fIdProof?: File | null,
+ *   fRegCert?: File | null,
+ *   fSelfie?: File | null,
+ *   fSignedNda?: File | null
+ * }} files
+ * @param {{
+ *   certificate?: string,
+ *   idProof?: string,
+ *   registration?: string,
+ *   selfie?: string,
+ *   signedNda?: string
+ * }} existing
+ * @param {{ requireSignedNda?: boolean }} [opts]
  */
-export function validateDocumentsStep(files, existing = {}) {
+export function validateDocumentsStep(files, existing = {}, opts = {}) {
   const errors = {}
   const has = (url, file) => Boolean(String(url || '').trim()) || Boolean(file)
   if (!has(existing.certificate, files.fCertificate)) {
@@ -214,6 +245,9 @@ export function validateDocumentsStep(files, existing = {}) {
   }
   if (!has(existing.selfie, files.fSelfie)) {
     errors.selfieWithId = 'Selfie with ID is required'
+  }
+  if (opts.requireSignedNda && !has(existing.signedNda, files.fSignedNda)) {
+    errors.signedNda = 'Download the NDA, sign it, and upload the signed copy'
   }
   return { errors, ok: Object.keys(errors).length === 0 }
 }

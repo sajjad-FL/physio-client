@@ -234,6 +234,12 @@ export default function PhysiosAdmin() {
     }
   }
 
+  function verificationLevelLabel(level) {
+    if (level === 'verified' || level === 'premium') return 'verified'
+    if (level === 'not_verified' || level === 'basic') return 'not_verified'
+    return level || '—'
+  }
+
   async function verifyPhysio(id, status, extra = {}) {
     setError('')
     setRowBusy((b) => ({ ...b, [id]: status }))
@@ -638,7 +644,7 @@ export default function PhysiosAdmin() {
                           </button>
                           <button
                             type="button"
-                            onClick={() => verifyPhysio(p._id, 'verified', { level: 'verified' })}
+                            onClick={() => verifyPhysio(p._id, 'verified')}
                             disabled={Boolean(busy)}
                             className="cursor-pointer rounded-lg bg-green-500 px-4 py-2 text-xs font-semibold text-white shadow-sm transition duration-200 ease-in-out hover:bg-green-600 disabled:cursor-not-allowed disabled:opacity-50"
                           >

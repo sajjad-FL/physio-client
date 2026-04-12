@@ -281,7 +281,8 @@ export default function MapView() {
   }
 
   function continueToBooking() {
-    navigate('/book', { state: { selectedPhysio, userCoords: coords } })
+    if (!coords) return
+    navigate('/book', { state: { userCoords: coords } })
   }
 
   const distanceLabel =
@@ -295,7 +296,8 @@ export default function MapView() {
           <div>
             <h1 className="text-2xl font-semibold tracking-tight text-gray-900">Map &amp; nearby physios</h1>
             <p className="mt-1 text-sm text-gray-500">
-              Select from the list or map — route and ETA appear after you choose a physiotherapist.
+              Explore nearby therapists on the map (optional). Booking does not require a selection — our team assigns a
+              physiotherapist after you submit.
             </p>
           </div>
           <Link
@@ -439,6 +441,18 @@ export default function MapView() {
                   )
                 })}
               </div>
+              {coords && (
+                <div className="rounded-2xl border border-blue-100 bg-blue-50/90 p-4 shadow-sm">
+                  <p className="text-sm font-semibold text-gray-900">Ready to book?</p>
+                  <p className="mt-1 text-xs leading-relaxed text-gray-600">
+                    You don&apos;t need to pick someone on this map. Continue with your location — a physiotherapist will be
+                    assigned by our team.
+                  </p>
+                  <Button type="button" variant="primary" className="mt-3 w-full rounded-xl text-sm" onClick={continueToBooking}>
+                    Continue to book
+                  </Button>
+                </div>
+              )}
             </aside>
           </div>
         )}

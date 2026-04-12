@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../../config/api'
+import { getProfileCached, invalidateProfileCache } from '../../utils/profileCache'
 import { assetUrl } from '../../utils/assetUrl'
 import { mapboxReverseGeocode } from '../../utils/mapboxGeocode'
+import { validateLiveField } from '../../utils/liveFieldValidation'
 import toast from 'react-hot-toast'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
@@ -16,6 +18,14 @@ const GENDERS = [
   { value: 'prefer_not_to_say', label: 'Prefer not to say' },
 ]
 
+function profileRoleFromApi(d) {
+  if (d?.role === 'user' || d?.role === 'physio' || d?.role === 'admin') return d.role
+  const arr = Array.isArray(d?.roles) ? d.roles : []
+  if (arr.includes('admin')) return 'admin'
+  if (arr.includes('physio')) return 'physio'
+  return 'user'
+}
+
 export default function ProfilePage() {
   const fileInputRef = useRef(null)
   const [loading, setLoading] = useState(true)
@@ -28,7 +38,7 @@ export default function ProfilePage() {
   const [dob, setDob] = useState('')
   const [gender, setGender] = useState('')
   const [avatarUrl, setAvatarUrl] = useState('')
-  const [roles, setRoles] = useState([])
+  const [role, setRole] = useState('user')
   const [specialization, setSpecialization] = useState('')
   const [experience, setExperience] = useState('')
   const [fees, setFees] = useState('')
@@ -38,11 +48,31 @@ export default function ProfilePage() {
   const [mapOpen, setMapOpen] = useState(false)
 
   const [previewLocal, setPreviewLocal] = useState(null)
+  const [fieldErrors, setFieldErrors] = useState({})
+
+  const patchField = useCallback(
+    (name, value) => {
+      const physio = role === 'physio'
+      setFieldErrors((prev) => {
+        const ctx = { isPhysio: physio, requiredGender: true }
+        if (name === 'addressCoords') {
+          ctx.addressLat = addressLat
+          ctx.addressLng = addressLng
+        }
+        return { ...prev, [name]: validateLiveField(name, value, ctx) }
+      })
+    },
+    [addressLat, addressLng, role],
+  )
 
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await api.get('/profile')
+      const res = await getProfileCached(api, { force: false })
+      if (!res?.data) {
+        toast.error('Could not load profile')
+        return
+      }
       const d = res.data
       setName(d.name || '')
       setPhone(d.phone || '')
@@ -50,7 +80,7 @@ export default function ProfilePage() {
       setDob(d.dob ? String(d.dob).slice(0, 10) : '')
       setGender(d.gender || '')
       setAvatarUrl(d.avatarUrl || '')
-      setRoles(Array.isArray(d.roles) ? d.roles : [])
+      setRole(profileRoleFromApi(d))
       setSpecialization(d.physio?.specialization || '')
       setExperience(d.physio?.experience != null ? String(d.physio.experience) : '')
       setFees(d.physio?.fees != null ? String(d.physio.fees) : '')
@@ -74,14 +104,23 @@ export default function ProfilePage() {
     }
   }, [previewLocal])
 
+  useEffect(() => {
+    setFieldErrors((prev) => ({
+      ...prev,
+      addressCoords: validateLiveField('addressCoords', '', { addressLat, addressLng }),
+    }))
+  }, [addressLat, addressLng])
+
   const displayAvatarSrc = previewLocal || assetUrl(avatarUrl)
-  const isPhysio = roles.includes('physio')
+  const isPhysio = role === 'physio'
 
   function onPlaceResolved(place) {
     if (place && Number.isFinite(place.lat) && Number.isFinite(place.lng)) {
       setAddressLat(place.lat)
       setAddressLng(place.lng)
-      setAddressText(place.label || '')
+      const label = place.label || ''
+      setAddressText(label)
+      patchField('address', label)
       return
     }
     setAddressLat(null)
@@ -92,11 +131,14 @@ export default function ProfilePage() {
     setAddressLat(coords.lat)
     setAddressLng(coords.lng)
     const label = await mapboxReverseGeocode(coords.lat, coords.lng)
-    if (label) setAddressText(label)
+    if (label) {
+      setAddressText(label)
+      patchField('address', label)
+    }
   }
 
   function backLink() {
-    if (roles.includes('admin')) {
+    if (role === 'admin') {
       return { to: '/admin', label: '← Admin' }
     }
     if (isPhysio) {
@@ -107,28 +149,23 @@ export default function ProfilePage() {
 
   async function saveProfile(e) {
     e.preventDefault()
-    if (!name.trim()) {
-      toast.error('Name is required')
-      return
+    const physio = role === 'physio'
+    const nextErrors = {
+      name: validateLiveField('name', name),
+      profileEmail: validateLiveField('profileEmail', email),
+      dob: validateLiveField('dob', dob),
+      gender: validateLiveField('gender', gender, { requiredGender: true }),
+      address: validateLiveField('address', addressText),
+      addressCoords: validateLiveField('addressCoords', '', { addressLat, addressLng }),
     }
-    if (!dob) {
-      toast.error('Date of birth is required')
-      return
+    if (physio) {
+      nextErrors.specialization = validateLiveField('specialization', specialization, { isPhysio: true })
+      nextErrors.profileExperience = validateLiveField('profileExperience', experience)
+      nextErrors.profileFees = validateLiveField('profileFees', fees)
     }
-    if (!gender) {
-      toast.error('Gender is required')
-      return
-    }
-    if (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-      toast.error('Please enter a valid email address')
-      return
-    }
-    if ((addressLat == null) !== (addressLng == null)) {
-      toast.error('Address coordinates are incomplete. Re-select a place on the map or from search.')
-      return
-    }
-    if (isPhysio && !specialization.trim()) {
-      toast.error('Specialization is required for physiotherapists')
+    setFieldErrors(nextErrors)
+    if (Object.values(nextErrors).some(Boolean)) {
+      toast.error('Please fix the highlighted fields')
       return
     }
 
@@ -157,7 +194,7 @@ export default function ProfilePage() {
       setEmail(d.email || '')
       setDob(d.dob ? String(d.dob).slice(0, 10) : '')
       setGender(d.gender || '')
-      setRoles(Array.isArray(d.roles) ? d.roles : roles)
+      setRole(profileRoleFromApi(d))
       setAvatarUrl(d.avatarUrl ?? avatarUrl)
       setSpecialization(d.physio?.specialization || '')
       setExperience(d.physio?.experience != null ? String(d.physio.experience) : '')
@@ -165,6 +202,8 @@ export default function ProfilePage() {
       setAddressText(d.address?.text || '')
       setAddressLat(Number.isFinite(d.address?.lat) ? d.address.lat : null)
       setAddressLng(Number.isFinite(d.address?.lng) ? d.address.lng : null)
+      setFieldErrors({})
+      invalidateProfileCache()
       toast.success('Profile updated')
       window.dispatchEvent(new Event('auth-session-changed'))
     } catch (err) {
@@ -202,6 +241,8 @@ export default function ProfilePage() {
       setAvatarUrl(next)
       URL.revokeObjectURL(objectUrl)
       setPreviewLocal(null)
+      invalidateProfileCache()
+      window.dispatchEvent(new Event('auth-session-changed'))
       toast.success('Photo updated')
     } catch (err) {
       URL.revokeObjectURL(objectUrl)
@@ -274,10 +315,20 @@ export default function ProfilePage() {
             <input
               id="pf-name"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => {
+                const v = e.target.value
+                setName(v)
+                patchField('name', v)
+              }}
               autoComplete="name"
-              className="mt-1.5 h-11 w-full rounded-xl border border-gray-200 bg-white px-3 text-gray-900 shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+              aria-invalid={Boolean(fieldErrors.name)}
+              className={`mt-1.5 h-11 w-full rounded-xl border bg-white px-3 text-gray-900 shadow-sm outline-none focus:ring-2 ${
+                fieldErrors.name
+                  ? 'border-red-400 ring-1 ring-red-200 focus:border-red-500 focus:ring-red-500/20'
+                  : 'border-gray-200 focus:border-blue-500 focus:ring-blue-500/20'
+              }`}
             />
+            {fieldErrors.name ? <p className="mt-1 text-xs text-red-600">{fieldErrors.name}</p> : null}
           </div>
 
           <div>
@@ -301,11 +352,23 @@ export default function ProfilePage() {
               id="pf-email"
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                const v = e.target.value
+                setEmail(v)
+                patchField('profileEmail', v)
+              }}
               autoComplete="email"
-              className="mt-1.5 h-11 w-full rounded-xl border border-gray-200 bg-white px-3 text-gray-900 shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+              aria-invalid={Boolean(fieldErrors.profileEmail)}
+              className={`mt-1.5 h-11 w-full rounded-xl border bg-white px-3 text-gray-900 shadow-sm outline-none focus:ring-2 ${
+                fieldErrors.profileEmail
+                  ? 'border-red-400 ring-1 ring-red-200 focus:border-red-500 focus:ring-red-500/20'
+                  : 'border-gray-200 focus:border-blue-500 focus:ring-blue-500/20'
+              }`}
               placeholder="name@example.com"
             />
+            {fieldErrors.profileEmail ? (
+              <p className="mt-1 text-xs text-red-600">{fieldErrors.profileEmail}</p>
+            ) : null}
           </div>
 
           <div>
@@ -326,11 +389,18 @@ export default function ProfilePage() {
             <LocationSelectorRow
               id="pf-address"
               value={addressText}
-              onChange={setAddressText}
+              onChange={(v) => {
+                setAddressText(v)
+                patchField('address', v)
+              }}
               onPlaceResolved={onPlaceResolved}
               onOpenMap={() => setMapOpen(true)}
               placeholder="Type to search (Mapbox) or enter manually"
             />
+            {fieldErrors.address ? <p className="mt-1 text-xs text-red-600">{fieldErrors.address}</p> : null}
+            {fieldErrors.addressCoords ? (
+              <p className="mt-1 text-xs text-red-600">{fieldErrors.addressCoords}</p>
+            ) : null}
           </div>
 
           <div>
@@ -341,9 +411,19 @@ export default function ProfilePage() {
               id="pf-dob"
               type="date"
               value={dob}
-              onChange={(e) => setDob(e.target.value)}
-              className="mt-1.5 h-11 w-full rounded-xl border border-gray-200 bg-white px-3 text-gray-900 shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+              onChange={(e) => {
+                const v = e.target.value
+                setDob(v)
+                patchField('dob', v)
+              }}
+              aria-invalid={Boolean(fieldErrors.dob)}
+              className={`mt-1.5 h-11 w-full rounded-xl border bg-white px-3 text-gray-900 shadow-sm outline-none focus:ring-2 ${
+                fieldErrors.dob
+                  ? 'border-red-400 ring-1 ring-red-200 focus:border-red-500 focus:ring-red-500/20'
+                  : 'border-gray-200 focus:border-blue-500 focus:ring-blue-500/20'
+              }`}
             />
+            {fieldErrors.dob ? <p className="mt-1 text-xs text-red-600">{fieldErrors.dob}</p> : null}
           </div>
 
           <div>
@@ -353,8 +433,17 @@ export default function ProfilePage() {
             <select
               id="pf-gender"
               value={gender}
-              onChange={(e) => setGender(e.target.value)}
-              className="mt-1.5 h-11 w-full rounded-xl border border-gray-200 bg-white px-3 text-gray-900 shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+              onChange={(e) => {
+                const v = e.target.value
+                setGender(v)
+                patchField('gender', v)
+              }}
+              aria-invalid={Boolean(fieldErrors.gender)}
+              className={`mt-1.5 h-11 w-full rounded-xl border bg-white px-3 text-gray-900 shadow-sm outline-none focus:ring-2 ${
+                fieldErrors.gender
+                  ? 'border-red-400 ring-1 ring-red-200 focus:border-red-500 focus:ring-red-500/20'
+                  : 'border-gray-200 focus:border-blue-500 focus:ring-blue-500/20'
+              }`}
             >
               <option value="">Select…</option>
               {GENDERS.map((g) => (
@@ -363,6 +452,7 @@ export default function ProfilePage() {
                 </option>
               ))}
             </select>
+            {fieldErrors.gender ? <p className="mt-1 text-xs text-red-600">{fieldErrors.gender}</p> : null}
           </div>
 
           {isPhysio && (
@@ -374,10 +464,22 @@ export default function ProfilePage() {
                 <input
                   id="pf-specialization"
                   value={specialization}
-                  onChange={(e) => setSpecialization(e.target.value)}
-                  className="mt-1.5 h-11 w-full rounded-xl border border-gray-200 bg-white px-3 text-gray-900 shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                  onChange={(e) => {
+                    const v = e.target.value
+                    setSpecialization(v)
+                    patchField('specialization', v)
+                  }}
+                  aria-invalid={Boolean(fieldErrors.specialization)}
+                  className={`mt-1.5 h-11 w-full rounded-xl border bg-white px-3 text-gray-900 shadow-sm outline-none focus:ring-2 ${
+                    fieldErrors.specialization
+                      ? 'border-red-400 ring-1 ring-red-200 focus:border-red-500 focus:ring-red-500/20'
+                      : 'border-gray-200 focus:border-blue-500 focus:ring-blue-500/20'
+                  }`}
                   placeholder="e.g. Orthopedic, Sports rehab"
                 />
+                {fieldErrors.specialization ? (
+                  <p className="mt-1 text-xs text-red-600">{fieldErrors.specialization}</p>
+                ) : null}
               </div>
               <div className="grid gap-5 sm:grid-cols-2">
                 <div>
@@ -390,9 +492,21 @@ export default function ProfilePage() {
                     min="0"
                     max="80"
                     value={experience}
-                    onChange={(e) => setExperience(e.target.value)}
-                    className="mt-1.5 h-11 w-full rounded-xl border border-gray-200 bg-white px-3 text-gray-900 shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                    onChange={(e) => {
+                      const v = e.target.value
+                      setExperience(v)
+                      patchField('profileExperience', v)
+                    }}
+                    aria-invalid={Boolean(fieldErrors.profileExperience)}
+                    className={`mt-1.5 h-11 w-full rounded-xl border bg-white px-3 text-gray-900 shadow-sm outline-none focus:ring-2 ${
+                      fieldErrors.profileExperience
+                        ? 'border-red-400 ring-1 ring-red-200 focus:border-red-500 focus:ring-red-500/20'
+                        : 'border-gray-200 focus:border-blue-500 focus:ring-blue-500/20'
+                    }`}
                   />
+                  {fieldErrors.profileExperience ? (
+                    <p className="mt-1 text-xs text-red-600">{fieldErrors.profileExperience}</p>
+                  ) : null}
                 </div>
                 <div>
                   <label htmlFor="pf-fees" className="block text-sm font-medium text-gray-800">
@@ -404,9 +518,21 @@ export default function ProfilePage() {
                     min="0"
                     step="0.01"
                     value={fees}
-                    onChange={(e) => setFees(e.target.value)}
-                    className="mt-1.5 h-11 w-full rounded-xl border border-gray-200 bg-white px-3 text-gray-900 shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                    onChange={(e) => {
+                      const v = e.target.value
+                      setFees(v)
+                      patchField('profileFees', v)
+                    }}
+                    aria-invalid={Boolean(fieldErrors.profileFees)}
+                    className={`mt-1.5 h-11 w-full rounded-xl border bg-white px-3 text-gray-900 shadow-sm outline-none focus:ring-2 ${
+                      fieldErrors.profileFees
+                        ? 'border-red-400 ring-1 ring-red-200 focus:border-red-500 focus:ring-red-500/20'
+                        : 'border-gray-200 focus:border-blue-500 focus:ring-blue-500/20'
+                    }`}
                   />
+                  {fieldErrors.profileFees ? (
+                    <p className="mt-1 text-xs text-red-600">{fieldErrors.profileFees}</p>
+                  ) : null}
                 </div>
               </div>
             </>

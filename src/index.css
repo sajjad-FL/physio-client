@@ -1,16 +1,16 @@
 @import 'tailwindcss';
 
-/* SaaS palette: gray neutrals + blue-600 primary */
+/* SaaS palette: slate neutrals + teal primary (health-tech) */
 @theme {
   --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
 
-  --color-canvas: #f9fafb;
-  --color-ink: #111827;
-  --color-ink-muted: #6b7280;
-  --color-border-subtle: #e5e7eb;
-  --color-brand: #2563eb;
-  --color-brand-hover: #1d4ed8;
-  --color-brand-soft: #eff6ff;
+  --color-canvas: #f8fafc;
+  --color-ink: #0f172a;
+  --color-ink-muted: #64748b;
+  --color-border-subtle: #e2e8f0;
+  --color-brand: #0d9488;
+  --color-brand-hover: #0f766e;
+  --color-brand-soft: #ccfbf1;
 
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -68,7 +68,7 @@
   }
 
   body {
-    @apply font-sans bg-gray-50 text-gray-900 antialiased;
+    @apply font-sans bg-slate-50 text-slate-900 antialiased;
   }
 }
 
@@ -84,10 +84,10 @@
 
   .bg-mesh-hero {
     background:
-      radial-gradient(ellipse 80% 60% at 50% -30%, rgba(37, 99, 235, 0.12), transparent),
-      radial-gradient(ellipse 50% 40% at 100% 0%, rgba(17, 24, 39, 0.05), transparent),
-      radial-gradient(ellipse 40% 35% at 0% 20%, rgba(37, 99, 235, 0.06), transparent),
-      #f9fafb;
+      radial-gradient(ellipse 80% 60% at 50% -30%, rgba(13, 148, 136, 0.14), transparent),
+      radial-gradient(ellipse 50% 40% at 100% 0%, rgba(15, 23, 42, 0.05), transparent),
+      radial-gradient(ellipse 40% 35% at 0% 20%, rgba(13, 148, 136, 0.07), transparent),
+      #f8fafc;
   }
 
   .text-balance {
@@ -144,9 +144,16 @@
     transition: transform 0.2s ease-out;
   }
 
+  /** Tappable controls: quick press feedback on touch devices */
+  .tap-feedback {
+    @apply transition-[transform,colors,opacity,background-color] duration-200 ease-out;
+  }
+
   .surface-card {
-    @apply rounded-2xl border border-gray-100 bg-white shadow-sm;
-    transition: box-shadow 0.35s ease-out;
+    @apply rounded-2xl border border-slate-100 bg-white shadow-sm;
+    transition:
+      box-shadow 0.35s ease-out,
+      transform 0.3s var(--ease-out-expo);
   }
 
   @media (prefers-reduced-motion: no-preference) {
@@ -156,6 +163,10 @@
 
     .interactive-press:active {
       transform: scale(0.985);
+    }
+
+    .tap-feedback:active {
+      transform: scale(0.98);
     }
 
     .surface-card:hover {
@@ -178,6 +189,10 @@
     }
 
     .interactive-press:active {
+      transform: none !important;
+    }
+
+    .tap-feedback:active {
       transform: none !important;
     }
   }
@@ -245,8 +260,8 @@
 }
 
 .home-plan-calendar .react-datepicker__day:hover:not(.react-datepicker__day--disabled):not(.react-datepicker__day--selected) {
-  background-color: #eff6ff !important;
-  color: #1d4ed8 !important;
+  background-color: #ccfbf1 !important;
+  color: #0f766e !important;
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -257,15 +272,15 @@
 
 .home-plan-calendar .react-datepicker__day--selected,
 .home-plan-calendar .react-datepicker__day--selected:hover {
-  background-color: #2563eb !important;
+  background-color: #0d9488 !important;
   color: #fff !important;
   font-weight: 600;
-  box-shadow: 0 2px 10px rgba(37, 99, 235, 0.35);
+  box-shadow: 0 2px 10px rgba(13, 148, 136, 0.35);
 }
 
 .home-plan-calendar .react-datepicker__day--keyboard-selected:not(.react-datepicker__day--selected) {
-  background-color: #dbeafe !important;
-  color: #1e3a8a !important;
+  background-color: #99f6e4 !important;
+  color: #115e59 !important;
 }
 
 .home-plan-calendar .react-datepicker__day--disabled {
@@ -317,23 +332,23 @@
 }
 
 .physio-calendar-shell .react-calendar__tile--active {
-  background: #2563eb !important;
+  background: #0d9488 !important;
   color: #fff !important;
   font-weight: 600;
 }
 
 .physio-calendar-shell .react-calendar__tile--now {
-  background: #eff6ff;
-  color: #1d4ed8;
+  background: #ccfbf1;
+  color: #0f766e;
   font-weight: 600;
 }
 
 .physio-calendar-shell .react-calendar__tile.physio-cal-tile--busy:not(.react-calendar__tile--active) {
-  background: #dbeafe;
-  color: #1e40af;
+  background: #99f6e4;
+  color: #134e4a;
   font-weight: 600;
 }
 
 .physio-calendar-shell .react-calendar__tile:enabled:hover {
-  background: #eff6ff;
+  background: #ccfbf1;
 }

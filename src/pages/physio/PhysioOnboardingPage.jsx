@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { api } from '../../config/api'
 import { resolveFileUrl } from '../../utils/serverOrigin'
+import DocumentUploadPreview from '../../components/physio/DocumentUploadPreview'
 import { toastApiError, toastSaved, toastValidationErrors } from '../../utils/formToast'
 import {
   validateAvatarFile,
@@ -11,6 +13,7 @@ import {
   validateQualificationSection,
   validateSubmitForm,
 } from '../../utils/onboardingValidation'
+import { validateLiveField } from '../../utils/liveFieldValidation'
 
 const baseInputClass =
   'h-11 w-full rounded-lg border bg-white px-3 text-sm text-ink shadow-sm outline-none focus:ring-2 focus:ring-brand/20'
@@ -31,7 +34,7 @@ function dobInputValue(iso) {
 }
 
 function ErrorBanner({ formError, fieldErrors }) {
-  const entries = Object.entries(fieldErrors || {})
+  const entries = Object.entries(fieldErrors || {}).filter(([, v]) => Boolean(v))
   if (!formError && entries.length === 0) return null
   return (
     <div
@@ -47,24 +50,6 @@ function ErrorBanner({ formError, fieldErrors }) {
         </ul>
       ) : null}
     </div>
-  )
-}
-
-function UploadedHint({ url }) {
-  if (!url) return null
-  return (
-    <p className="mb-1 text-xs text-emerald-700">
-      Uploaded -{' '}
-      <a
-        href={resolveFileUrl(url)}
-        target="_blank"
-        rel="noreferrer"
-        className="font-medium underline"
-      >
-        view file
-      </a>{' '}
-      (will be replaced if you choose a new file)
-    </p>
   )
 }
 
@@ -97,16 +82,25 @@ export default function PhysioOnboardingPage() {
   const [fIdProof, setFIdProof] = useState(null)
   const [fRegCert, setFRegCert] = useState(null)
   const [fSelfie, setFSelfie] = useState(null)
+  const [fSignedNda, setFSignedNda] = useState(null)
+
+  const [ndaPolicy, setNdaPolicy] = useState({
+    requireSignedNda: false,
+    templateUrl: '',
+    originalName: '',
+  })
 
   const [docUrls, setDocUrls] = useState({
     certificate: '',
     idProof: '',
     registration: '',
     selfie: '',
+    signedNda: '',
   })
 
   const [vStatus, setVStatus] = useState('pending')
   const [vReason, setVReason] = useState('')
+  const [onboardingLocked, setOnboardingLocked] = useState(false)
 
   const [fieldErrors, setFieldErrors] = useState({})
   const [formError, setFormError] = useState('')
@@ -115,6 +109,18 @@ export default function PhysioOnboardingPage() {
     setFieldErrors({})
     setFormError('')
   }
+
+  const patchField = useCallback((name, value, extra = {}) => {
+    setFieldErrors((prev) => ({
+      ...prev,
+      [name]: validateLiveField(name, value, {
+        mode: 'physio',
+        isPhysio: true,
+        requireCoords: false,
+        ...extra,
+      }),
+    }))
+  }, [])
 
   const inputClass = (name) =>
     [
@@ -147,11 +153,27 @@ export default function PhysioOnboardingPage() {
       setStep(Math.min(5, Math.max(1, data.onboarding?.currentStep || 1)))
       setVStatus(data.verification?.status || 'pending')
       setVReason(data.verification?.rejectionReason || '')
+      const apiLocked = data.onboardingLocked
+      setOnboardingLocked(
+        apiLocked === true ||
+          (apiLocked == null &&
+            (data.verificationStatus === 'approved' ||
+              data.verification?.status === 'verified' ||
+              data.verification?.level === 'verified')),
+      )
+      setNdaPolicy(
+        data.ndaPolicy || {
+          requireSignedNda: false,
+          templateUrl: '',
+          originalName: '',
+        },
+      )
       setDocUrls({
         certificate: data.qualification?.certificateUrl || '',
         idProof: data.documentUrls?.idProof || '',
         registration: data.documentUrls?.registrationCertificate || '',
         selfie: data.documentUrls?.selfieWithId || '',
+        signedNda: data.documentUrls?.signedNda || '',
       })
     } catch (e) {
       toastApiError(e, 'Could not load your profile')
@@ -178,6 +200,7 @@ export default function PhysioOnboardingPage() {
   }
 
   async function goNext(fromStep) {
+    if (onboardingLocked) return
     clearErrors()
     setSaving(true)
     try {
@@ -245,13 +268,15 @@ export default function PhysioOnboardingPage() {
 
       if (fromStep === 4) {
         const { errors, ok } = validateDocumentsStep(
-          { fCertificate, fIdProof, fRegCert, fSelfie },
+          { fCertificate, fIdProof, fRegCert, fSelfie, fSignedNda },
           {
             certificate: docUrls.certificate,
             idProof: docUrls.idProof,
             registration: docUrls.registration,
             selfie: docUrls.selfie,
-          }
+            signedNda: docUrls.signedNda,
+          },
+          { requireSignedNda: ndaPolicy.requireSignedNda },
         )
         if (!ok) {
           setFieldErrors(errors)
@@ -264,6 +289,7 @@ export default function PhysioOnboardingPage() {
           [fIdProof, 'ID proof'],
           [fRegCert, 'Registration certificate'],
           [fSelfie, 'Selfie with ID'],
+          ...(ndaPolicy.requireSignedNda ? [[fSignedNda, 'Signed NDA']] : []),
         ]
         for (const [file, label] of checks) {
           if (file) {
@@ -282,11 +308,13 @@ export default function PhysioOnboardingPage() {
           idProof: fIdProof || undefined,
           registrationCertificate: fRegCert || undefined,
           selfieWithId: fSelfie || undefined,
+          signedNda: fSignedNda || undefined,
         })
         setFCertificate(null)
         setFIdProof(null)
         setFRegCert(null)
         setFSelfie(null)
+        setFSignedNda(null)
         await load()
       }
 
@@ -338,6 +366,7 @@ export default function PhysioOnboardingPage() {
   }
 
   async function handleSubmit() {
+    if (onboardingLocked) return
     clearErrors()
     setSaving(true)
     try {
@@ -361,6 +390,8 @@ export default function PhysioOnboardingPage() {
         docIdProof: docUrls.idProof,
         docRegistration: docUrls.registration,
         docSelfie: docUrls.selfie,
+        docSignedNda: docUrls.signedNda,
+        requireSignedNda: ndaPolicy.requireSignedNda,
       }
       const { errors, ok } = validateSubmitForm(submitValues)
       if (!ok) {
@@ -393,6 +424,56 @@ export default function PhysioOnboardingPage() {
           aria-hidden
         />
         <p className="text-sm text-ink-muted">Loading onboarding…</p>
+      </div>
+    )
+  }
+
+  if (onboardingLocked) {
+    return (
+      <div className="mx-auto max-w-3xl space-y-6">
+        <div className="rounded-2xl border border-emerald-200/90 bg-emerald-50/60 p-6 ring-1 ring-emerald-100/80">
+          <h1 className="text-xl font-semibold text-ink">Profile verified</h1>
+          <p className="mt-2 text-sm leading-relaxed text-ink-muted">
+            Your account has been verified. Onboarding is closed — you cannot change these steps or submit again. Update
+            your photo, address, and account details from{' '}
+            <Link to="/profile" className="font-semibold text-brand underline-offset-2 hover:underline">
+              Profile
+            </Link>
+            .
+          </p>
+          <p className="mt-3 text-sm text-ink-muted">
+            Verification: <span className="font-medium text-ink">{vStatus}</span>
+            {vReason ? ` — ${vReason}` : ''}
+          </p>
+          <Link
+            to="/physio/bookings"
+            className="mt-5 inline-flex items-center justify-center rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-brand-hover"
+          >
+            Go to dashboard
+          </Link>
+        </div>
+
+        <section className="surface-card rounded-2xl p-6 ring-1 ring-border-subtle">
+          <h2 className="text-lg font-semibold text-ink">On file (read-only)</h2>
+          <dl className="mt-4 grid gap-2 text-sm">
+            <div className="flex justify-between gap-4 border-b border-border-subtle py-2">
+              <dt className="text-ink-muted">Name</dt>
+              <dd className="text-right font-medium text-ink">{name || '—'}</dd>
+            </div>
+            <div className="flex justify-between gap-4 border-b border-border-subtle py-2">
+              <dt className="text-ink-muted">Specialization</dt>
+              <dd className="text-right font-medium text-ink">{specialization || '—'}</dd>
+            </div>
+            <div className="flex justify-between gap-4 border-b border-border-subtle py-2">
+              <dt className="text-ink-muted">Experience</dt>
+              <dd className="text-right font-medium text-ink">{experience !== '' ? `${experience} yrs` : '—'}</dd>
+            </div>
+            <div className="flex justify-between gap-4 border-b border-border-subtle py-2">
+              <dt className="text-ink-muted">Fee / session</dt>
+              <dd className="text-right font-medium text-ink">{fees ? `₹${fees}` : '—'}</dd>
+            </div>
+          </dl>
+        </section>
       </div>
     )
   }
@@ -447,12 +528,9 @@ export default function PhysioOnboardingPage() {
                 className={inputClass('name')}
                 value={name}
                 onChange={(e) => {
-                  setName(e.target.value)
-                  setFieldErrors((f) => {
-                    const n = { ...f }
-                    delete n.name
-                    return n
-                  })
+                  const v = e.target.value
+                  setName(v)
+                  patchField('name', v)
                 }}
                 aria-invalid={Boolean(fieldErrors.name)}
                 autoComplete="name"
@@ -469,12 +547,9 @@ export default function PhysioOnboardingPage() {
                 type="email"
                 value={email}
                 onChange={(e) => {
-                  setEmail(e.target.value)
-                  setFieldErrors((f) => {
-                    const n = { ...f }
-                    delete n.email
-                    return n
-                  })
+                  const v = e.target.value
+                  setEmail(v)
+                  patchField('email', v)
                 }}
                 aria-invalid={Boolean(fieldErrors.email)}
                 autoComplete="email"
@@ -491,12 +566,9 @@ export default function PhysioOnboardingPage() {
                 type="date"
                 value={dob}
                 onChange={(e) => {
-                  setDob(e.target.value)
-                  setFieldErrors((f) => {
-                    const n = { ...f }
-                    delete n.dob
-                    return n
-                  })
+                  const v = e.target.value
+                  setDob(v)
+                  patchField('dob', v)
                 }}
                 aria-invalid={Boolean(fieldErrors.dob)}
               />
@@ -511,12 +583,9 @@ export default function PhysioOnboardingPage() {
                 className={inputClass('gender')}
                 value={gender}
                 onChange={(e) => {
-                  setGender(e.target.value)
-                  setFieldErrors((f) => {
-                    const n = { ...f }
-                    delete n.gender
-                    return n
-                  })
+                  const v = e.target.value
+                  setGender(v)
+                  patchField('gender', v)
                 }}
                 aria-invalid={Boolean(fieldErrors.gender)}
               >
@@ -537,12 +606,9 @@ export default function PhysioOnboardingPage() {
                 className={`${inputClass('address')} min-h-[88px] py-2`}
                 value={address}
                 onChange={(e) => {
-                  setAddress(e.target.value)
-                  setFieldErrors((f) => {
-                    const n = { ...f }
-                    delete n.address
-                    return n
-                  })
+                  const v = e.target.value
+                  setAddress(v)
+                  patchField('address', v)
                 }}
                 rows={3}
                 aria-invalid={Boolean(fieldErrors.address)}
@@ -558,12 +624,9 @@ export default function PhysioOnboardingPage() {
                 className={inputClass('location')}
                 value={location}
                 onChange={(e) => {
-                  setLocation(e.target.value)
-                  setFieldErrors((f) => {
-                    const n = { ...f }
-                    delete n.location
-                    return n
-                  })
+                  const v = e.target.value
+                  setLocation(v)
+                  patchField('location', v)
                 }}
                 aria-invalid={Boolean(fieldErrors.location)}
               />
@@ -587,11 +650,7 @@ export default function PhysioOnboardingPage() {
                 onChange={(e) => {
                   const f = e.target.files?.[0] || null
                   setAvatarFile(f)
-                  setFieldErrors((err) => {
-                    const n = { ...err }
-                    delete n.avatar
-                    return n
-                  })
+                  patchField('avatar', f)
                 }}
                 aria-invalid={Boolean(fieldErrors.avatar)}
               />
@@ -611,12 +670,9 @@ export default function PhysioOnboardingPage() {
                 className={inputClass('degree')}
                 value={degree}
                 onChange={(e) => {
-                  setDegree(e.target.value)
-                  setFieldErrors((f) => {
-                    const n = { ...f }
-                    delete n.degree
-                    return n
-                  })
+                  const v = e.target.value
+                  setDegree(v)
+                  patchField('degree', v)
                 }}
                 aria-invalid={Boolean(fieldErrors.degree)}
               />
@@ -628,12 +684,9 @@ export default function PhysioOnboardingPage() {
                 className={inputClass('university')}
                 value={university}
                 onChange={(e) => {
-                  setUniversity(e.target.value)
-                  setFieldErrors((f) => {
-                    const n = { ...f }
-                    delete n.university
-                    return n
-                  })
+                  const v = e.target.value
+                  setUniversity(v)
+                  patchField('university', v)
                 }}
                 aria-invalid={Boolean(fieldErrors.university)}
               />
@@ -648,12 +701,9 @@ export default function PhysioOnboardingPage() {
                 type="number"
                 value={year}
                 onChange={(e) => {
-                  setYear(e.target.value)
-                  setFieldErrors((f) => {
-                    const n = { ...f }
-                    delete n.year
-                    return n
-                  })
+                  const v = e.target.value
+                  setYear(v)
+                  patchField('year', v)
                 }}
                 aria-invalid={Boolean(fieldErrors.year)}
               />
@@ -665,12 +715,9 @@ export default function PhysioOnboardingPage() {
                 className={inputClass('registrationNumber')}
                 value={registrationNumber}
                 onChange={(e) => {
-                  setRegistrationNumber(e.target.value)
-                  setFieldErrors((f) => {
-                    const n = { ...f }
-                    delete n.registrationNumber
-                    return n
-                  })
+                  const v = e.target.value
+                  setRegistrationNumber(v)
+                  patchField('registrationNumber', v)
                 }}
                 aria-invalid={Boolean(fieldErrors.registrationNumber)}
               />
@@ -694,12 +741,9 @@ export default function PhysioOnboardingPage() {
                 min="0"
                 value={experience}
                 onChange={(e) => {
-                  setExperience(e.target.value)
-                  setFieldErrors((f) => {
-                    const n = { ...f }
-                    delete n.experience
-                    return n
-                  })
+                  const v = e.target.value
+                  setExperience(v)
+                  patchField('experience', v)
                 }}
                 aria-invalid={Boolean(fieldErrors.experience)}
               />
@@ -713,12 +757,9 @@ export default function PhysioOnboardingPage() {
                 className={inputClass('specialization')}
                 value={specialization}
                 onChange={(e) => {
-                  setSpecialization(e.target.value)
-                  setFieldErrors((f) => {
-                    const n = { ...f }
-                    delete n.specialization
-                    return n
-                  })
+                  const v = e.target.value
+                  setSpecialization(v)
+                  patchField('specialization', v)
                 }}
                 aria-invalid={Boolean(fieldErrors.specialization)}
               />
@@ -732,12 +773,9 @@ export default function PhysioOnboardingPage() {
                 className={inputClass('serviceType')}
                 value={serviceType}
                 onChange={(e) => {
-                  setServiceType(e.target.value)
-                  setFieldErrors((f) => {
-                    const n = { ...f }
-                    delete n.serviceType
-                    return n
-                  })
+                  const v = e.target.value
+                  setServiceType(v)
+                  patchField('serviceType', v)
                 }}
                 aria-invalid={Boolean(fieldErrors.serviceType)}
               >
@@ -755,12 +793,9 @@ export default function PhysioOnboardingPage() {
                 className={inputClass('areas')}
                 value={areas}
                 onChange={(e) => {
-                  setAreas(e.target.value)
-                  setFieldErrors((f) => {
-                    const n = { ...f }
-                    delete n.areas
-                    return n
-                  })
+                  const v = e.target.value
+                  setAreas(v)
+                  patchField('areas', v)
                 }}
                 placeholder="e.g. Indiranagar, Koramangala"
                 aria-invalid={Boolean(fieldErrors.areas)}
@@ -775,12 +810,9 @@ export default function PhysioOnboardingPage() {
                 min="0"
                 value={fees}
                 onChange={(e) => {
-                  setFees(e.target.value)
-                  setFieldErrors((f) => {
-                    const n = { ...f }
-                    delete n.fees
-                    return n
-                  })
+                  const v = e.target.value
+                  setFees(v)
+                  patchField('fees', v)
                 }}
                 aria-invalid={Boolean(fieldErrors.fees)}
               />
@@ -794,92 +826,131 @@ export default function PhysioOnboardingPage() {
         <section className="surface-card rounded-2xl p-6 ring-1 ring-border-subtle">
           <h2 className="text-lg font-semibold text-ink">Documents</h2>
           <p className="mt-1 text-sm text-ink-muted">
-            PDF or images (max 2MB each). All four documents are required before you can continue.
+            PDF or images (max 2MB each). All four identity documents are required
+            {ndaPolicy.requireSignedNda ? ', plus a signed non-disclosure agreement.' : '.'}
           </p>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            <div>
-              <label className="mb-1 block text-xs font-medium text-ink-muted">Qualification certificate</label>
-              <UploadedHint url={docUrls.certificate} />
-              <input
-                type="file"
-                accept="image/*,.pdf"
-                className={fieldErrors.certificate ? 'rounded border border-red-300 p-1' : ''}
-                onChange={(e) => {
-                  setFCertificate(e.target.files?.[0] || null)
-                  setFieldErrors((f) => {
-                    const n = { ...f }
-                    delete n.certificate
-                    delete n.file
-                    return n
-                  })
-                }}
-              />
-              {fieldErrors.certificate ? (
-                <p className="mt-1 text-xs text-red-600">{fieldErrors.certificate}</p>
-              ) : null}
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-ink-muted">ID proof</label>
-              <UploadedHint url={docUrls.idProof} />
-              <input
-                type="file"
-                accept="image/*,.pdf"
-                className={fieldErrors.idProof ? 'rounded border border-red-300 p-1' : ''}
-                onChange={(e) => {
-                  setFIdProof(e.target.files?.[0] || null)
-                  setFieldErrors((f) => {
-                    const n = { ...f }
-                    delete n.idProof
-                    delete n.file
-                    return n
-                  })
-                }}
-              />
-              {fieldErrors.idProof ? <p className="mt-1 text-xs text-red-600">{fieldErrors.idProof}</p> : null}
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-ink-muted">Registration certificate</label>
-              <UploadedHint url={docUrls.registration} />
-              <input
-                type="file"
-                accept="image/*,.pdf"
-                className={fieldErrors.registrationCertificate ? 'rounded border border-red-300 p-1' : ''}
-                onChange={(e) => {
-                  setFRegCert(e.target.files?.[0] || null)
-                  setFieldErrors((f) => {
-                    const n = { ...f }
-                    delete n.registrationCertificate
-                    delete n.file
-                    return n
-                  })
-                }}
-              />
-              {fieldErrors.registrationCertificate ? (
-                <p className="mt-1 text-xs text-red-600">{fieldErrors.registrationCertificate}</p>
-              ) : null}
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-ink-muted">Selfie with ID</label>
-              <UploadedHint url={docUrls.selfie} />
-              <input
-                type="file"
-                accept="image/*,.pdf"
-                className={fieldErrors.selfieWithId ? 'rounded border border-red-300 p-1' : ''}
-                onChange={(e) => {
-                  setFSelfie(e.target.files?.[0] || null)
-                  setFieldErrors((f) => {
-                    const n = { ...f }
-                    delete n.selfieWithId
-                    delete n.file
-                    return n
-                  })
-                }}
-              />
-              {fieldErrors.selfieWithId ? (
-                <p className="mt-1 text-xs text-red-600">{fieldErrors.selfieWithId}</p>
-              ) : null}
-            </div>
+            <DocumentUploadPreview
+              label="Qualification certificate"
+              file={fCertificate}
+              serverUrl={docUrls.certificate}
+              error={fieldErrors.certificate}
+              inputId="ob-doc-cert"
+              onFileChange={(f) => {
+                setFCertificate(f)
+                setFieldErrors((prev) => ({
+                  ...prev,
+                  certificate: validateLiveField('certificate', f, {
+                    mode: 'physio',
+                    isPhysio: true,
+                    requireCoords: false,
+                  }),
+                  file: '',
+                }))
+              }}
+            />
+            <DocumentUploadPreview
+              label="ID proof"
+              file={fIdProof}
+              serverUrl={docUrls.idProof}
+              error={fieldErrors.idProof}
+              inputId="ob-doc-id"
+              onFileChange={(f) => {
+                setFIdProof(f)
+                setFieldErrors((prev) => ({
+                  ...prev,
+                  idProof: validateLiveField('idProof', f, {
+                    mode: 'physio',
+                    isPhysio: true,
+                    requireCoords: false,
+                  }),
+                  file: '',
+                }))
+              }}
+            />
+            <DocumentUploadPreview
+              label="Registration certificate"
+              file={fRegCert}
+              serverUrl={docUrls.registration}
+              error={fieldErrors.registrationCertificate}
+              inputId="ob-doc-reg"
+              onFileChange={(f) => {
+                setFRegCert(f)
+                setFieldErrors((prev) => ({
+                  ...prev,
+                  registrationCertificate: validateLiveField('registrationCertificate', f, {
+                    mode: 'physio',
+                    isPhysio: true,
+                    requireCoords: false,
+                  }),
+                  file: '',
+                }))
+              }}
+            />
+            <DocumentUploadPreview
+              label="Selfie with ID"
+              file={fSelfie}
+              serverUrl={docUrls.selfie}
+              error={fieldErrors.selfieWithId}
+              inputId="ob-doc-selfie"
+              onFileChange={(f) => {
+                setFSelfie(f)
+                setFieldErrors((prev) => ({
+                  ...prev,
+                  selfieWithId: validateLiveField('selfieWithId', f, {
+                    mode: 'physio',
+                    isPhysio: true,
+                    requireCoords: false,
+                  }),
+                  file: '',
+                }))
+              }}
+            />
           </div>
+          {ndaPolicy.requireSignedNda && ndaPolicy.templateUrl ? (
+            <div className="mt-6 rounded-xl border border-border-subtle bg-canvas/40 p-4">
+              <h3 className="text-sm font-semibold text-ink">Non-disclosure agreement</h3>
+              <p className="mt-1 text-xs text-ink-muted">
+                Download the template, sign it, then upload a scan or photo of the signed document (PDF or image, max
+                2MB).
+              </p>
+              <p className="mt-2">
+                <a
+                  href={resolveFileUrl(ndaPolicy.templateUrl)}
+                  download={ndaPolicy.originalName || 'physio-nda-template'}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-sm font-medium text-brand underline"
+                >
+                  Download NDA template
+                </a>
+                {ndaPolicy.originalName ? (
+                  <span className="ml-2 text-xs text-ink-muted">({ndaPolicy.originalName})</span>
+                ) : null}
+              </p>
+              <div className="mt-3">
+                <DocumentUploadPreview
+                  label="Signed NDA (required)"
+                  file={fSignedNda}
+                  serverUrl={docUrls.signedNda}
+                  error={fieldErrors.signedNda}
+                  inputId="ob-doc-nda"
+                  onFileChange={(f) => {
+                    setFSignedNda(f)
+                    setFieldErrors((prev) => ({
+                      ...prev,
+                      signedNda: validateLiveField('signedNda', f, {
+                        mode: 'physio',
+                        isPhysio: true,
+                        requireCoords: false,
+                      }),
+                      file: '',
+                    }))
+                  }}
+                />
+              </div>
+            </div>
+          ) : null}
           {fieldErrors.file ? <p className="mt-2 text-sm text-red-600">{fieldErrors.file}</p> : null}
         </section>
       )}
