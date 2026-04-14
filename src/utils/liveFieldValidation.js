@@ -9,6 +9,8 @@ import {
   validateFile,
   validateAvatarFile,
 } from './onboardingValidation.js'
+import { PHYSIO_DEGREE_OPTIONS } from '../constants/physioQualification.js'
+import { isValidIdProofType } from '../constants/idProofTypes.js'
 
 /**
  * @param {string} name - field id
@@ -20,6 +22,7 @@ import {
  *   isPhysio?: boolean,
  *   requiredGender?: boolean,
  *   requireCoords?: boolean,
+ *   feeMinStr?: string,
  * }} [ctx]
  */
 export function validateLiveField(name, value, ctx = {}) {
@@ -108,7 +111,7 @@ export function validateLiveField(name, value, ctx = {}) {
     case 'degree': {
       const t = str.trim()
       if (!t) return 'Degree is required'
-      if (t.length > 200) return 'Degree is too long'
+      if (!PHYSIO_DEGREE_OPTIONS.includes(t)) return 'Select BPT or MPT'
       return ''
     }
     case 'university': {
@@ -118,18 +121,18 @@ export function validateLiveField(name, value, ctx = {}) {
       return ''
     }
     case 'year': {
-      if (str === '' || str == null) return 'Graduation year is required'
+      if (str === '' || str == null) return 'Passing year is required'
       const y = Number(str)
       const current = new Date().getFullYear()
-      if (!Number.isFinite(y)) return 'Enter a valid graduation year'
-      if (y < 1950 || y > current + 1) return `Year must be between 1950 and ${current + 1}`
+      if (!Number.isFinite(y)) return 'Enter a valid passing year'
+      if (y < 1950 || y > current + 1) return `Passing year must be between 1950 and ${current + 1}`
       return ''
     }
     case 'registrationNumber': {
       const t = str.trim()
-      if (!t) return 'Registration number is required'
-      if (t.length < 3) return 'Registration number is too short'
-      if (t.length > 80) return 'Registration number is too long'
+      if (!t) return ''
+      if (t.length < 3) return 'Council registration number is too short'
+      if (t.length > 80) return 'Council registration number is too long'
       return ''
     }
     case 'experience': {
@@ -163,10 +166,29 @@ export function validateLiveField(name, value, ctx = {}) {
       return ''
     }
     case 'fees': {
-      if (str === '' || str == null) return 'Fee per session is required'
+      if (str === '' || str == null) return 'Minimum fee per session is required'
       const fee = Number(str)
-      if (!Number.isFinite(fee) || fee <= 0) return 'Enter a valid fee greater than zero (₹)'
+      if (!Number.isFinite(fee) || fee <= 0) return 'Enter a valid minimum fee greater than zero (₹)'
       if (fee > 500000) return 'Fee seems unreasonably high — please check'
+      return ''
+    }
+    case 'feeMin': {
+      if (str === '' || str == null) return 'Minimum fee per session is required'
+      const fee = Number(str)
+      if (!Number.isFinite(fee) || fee <= 0) return 'Enter a valid minimum fee greater than zero (₹)'
+      if (fee > 500000) return 'Fee seems unreasonably high — please check'
+      return ''
+    }
+    case 'feeMax': {
+      if (str === '' || str == null) return ''
+      const fee = Number(str)
+      if (!Number.isFinite(fee) || fee <= 0) return 'Enter a valid maximum fee (₹)'
+      if (fee > 500000) return 'Fee seems unreasonably high — please check'
+      const minStr = ctx.feeMinStr != null ? String(ctx.feeMinStr).trim() : ''
+      if (minStr !== '') {
+        const min = Number(minStr)
+        if (Number.isFinite(min) && fee < min) return 'Maximum must be greater than or equal to minimum'
+      }
       return ''
     }
     case 'profileFees': {
@@ -174,6 +196,18 @@ export function validateLiveField(name, value, ctx = {}) {
       const fee = Number(str)
       if (!Number.isFinite(fee) || fee < 0) return 'Enter a valid fee (₹)'
       if (fee > 500000) return 'Fee seems unreasonably high — please check'
+      return ''
+    }
+    case 'profileFeeMax': {
+      if (str === '' || str == null) return ''
+      const fee = Number(str)
+      if (!Number.isFinite(fee) || fee <= 0) return 'Enter a valid maximum fee (₹)'
+      if (fee > 500000) return 'Fee seems unreasonably high — please check'
+      const minStr = ctx.feeMinStr != null ? String(ctx.feeMinStr).trim() : ''
+      if (minStr !== '') {
+        const min = Number(minStr)
+        if (Number.isFinite(min) && fee < min) return 'Maximum must be greater than or equal to minimum'
+      }
       return ''
     }
     case 'profileExperience': {
@@ -201,10 +235,17 @@ export function validateLiveField(name, value, ctx = {}) {
       const r = validateAvatarFile(v)
       return r.ok ? '' : r.message
     }
+    case 'idProofType': {
+      const t = String(str).trim().toLowerCase()
+      if (!t) return 'Select the type of ID you are uploading'
+      return isValidIdProofType(t) ? '' : 'Select Aadhaar, PAN, Passport, or Voter ID'
+    }
     case 'certificate':
     case 'idProof':
     case 'registrationCertificate':
     case 'selfieWithId':
+    case 'internshipCertificate':
+    case 'councilRegistrationCertificate':
     case 'signedNda': {
       if (!v || !(v instanceof File)) return ''
       const r = validateFile(v, 'File')

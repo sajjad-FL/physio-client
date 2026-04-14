@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { api } from '../config/api'
-import { ISSUE_OPTIONS } from '../constants/issues'
+import { ISSUE_OPTIONS, ISSUE_OTHER_VALUE } from '../constants/issues'
 import Button from '../components/ui/Button'
 import Card from '../components/ui/Card'
 import Input from '../components/ui/Input'
@@ -67,7 +67,16 @@ export default function PhysioListPage() {
   const [timeSlot, setTimeSlot] = useState('')
   const [serviceType, setServiceType] = useState('home')
 
+  /** Dropdown value (may be `ISSUE_OTHER_VALUE`). */
   const [issue, setIssue] = useState('')
+  /** Free text when “Other” is selected; combined into `issue` sent to API. */
+  const [issueOther, setIssueOther] = useState('')
+
+  const resolvedIssue = useMemo(() => {
+    if (!issue) return ''
+    if (issue === ISSUE_OTHER_VALUE) return issueOther.trim()
+    return issue.trim()
+  }, [issue, issueOther])
 
   const [slots, setSlots] = useState([])
   /** Set after successful online booking (home bookings redirect away). */
@@ -132,7 +141,10 @@ export default function PhysioListPage() {
 
   const locOk = lat != null && lng != null && location.trim().length > 0
   const dateSlotOk = locOk && Boolean(date && timeSlot)
-  const issueOk = Boolean(issue.trim())
+  const issueOk = Boolean(
+    resolvedIssue &&
+      (issue !== ISSUE_OTHER_VALUE || issueOther.trim().length >= 2),
+  )
 
   function handlePlaceResolved(place) {
     if (place && place.lat != null && place.lng != null) {
@@ -171,8 +183,8 @@ export default function PhysioListPage() {
   }
 
   const canSubmit = useMemo(
-    () => Boolean(profileName && location.trim() && issue.trim() && date && timeSlot),
-    [profileName, location, issue, date, timeSlot],
+    () => Boolean(profileName && location.trim() && resolvedIssue && date && timeSlot && issueOk),
+    [profileName, location, resolvedIssue, date, timeSlot, issueOk],
   )
 
   async function createBooking() {
@@ -182,7 +194,7 @@ export default function PhysioListPage() {
       const body = {
         name: profileName,
         location: location.trim(),
-        issue: issue.trim(),
+        issue: resolvedIssue,
         date,
         timeSlot,
         consentAccepted: true,
@@ -369,7 +381,11 @@ export default function PhysioListPage() {
             <select
               id="bk-issue"
               value={issue}
-              onChange={(e) => setIssue(e.target.value)}
+              onChange={(e) => {
+                const v = e.target.value
+                setIssue(v)
+                if (v !== ISSUE_OTHER_VALUE) setIssueOther('')
+              }}
               className="mt-1 h-11 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
             >
               <option value="">Select your concern</option>
@@ -378,7 +394,25 @@ export default function PhysioListPage() {
                   {opt}
                 </option>
               ))}
+              <option value={ISSUE_OTHER_VALUE}>Other</option>
             </select>
+            {issue === ISSUE_OTHER_VALUE && (
+              <div className="mt-3">
+                <label htmlFor="bk-issue-other" className={label}>
+                  Describe your condition
+                </label>
+                <Input
+                  id="bk-issue-other"
+                  value={issueOther}
+                  onChange={(e) => setIssueOther(e.target.value)}
+                  placeholder="e.g. Sports injury, shoulder stiffness…"
+                  className="mt-1"
+                />
+                {issue === ISSUE_OTHER_VALUE && issueOther.trim().length === 1 ? (
+                  <p className="mt-1 text-xs text-amber-700">Enter at least 2 characters.</p>
+                ) : null}
+              </div>
+            )}
           </div>
         </StepShell>
 

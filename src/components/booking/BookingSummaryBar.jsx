@@ -1,5 +1,6 @@
 import Button from '../ui/Button'
 import { formatBookingDateAndSlot } from '../../utils/date'
+import { formatPhysioSessionFeeLabel } from '../../utils/physioSessionFee.js'
 
 /**
  * Sticky bottom booking summary + primary CTA.
@@ -14,7 +15,8 @@ export default function BookingSummaryBar({
   loading,
   onConfirm,
 }) {
-  const price = selectedPhysio?.pricePerSession
+  const priceLabel =
+    selectedPhysio && selectedPhysio._id ? formatPhysioSessionFeeLabel(selectedPhysio) : null
   const teamAssigns = !selectedPhysio?._id
 
   return (
@@ -38,8 +40,8 @@ export default function BookingSummaryBar({
               {date && timeSlot && (
                 <span className="text-gray-600">{formatBookingDateAndSlot(date, timeSlot)}</span>
               )}
-              {!teamAssigns && price != null && (
-                <span className="font-semibold tabular-nums text-gray-900">₹{price}</span>
+              {!teamAssigns && priceLabel && priceLabel !== '—' && (
+                <span className="font-semibold tabular-nums text-gray-900">{priceLabel}</span>
               )}
             </div>
             <p className="text-xs text-gray-500">

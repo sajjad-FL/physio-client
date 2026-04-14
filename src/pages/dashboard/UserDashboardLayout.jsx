@@ -79,7 +79,7 @@ export default function UserDashboardLayout() {
 
   return (
     <AppShell
-      brand="PhysioCare"
+      brand="NearbyPhysio"
       badge="Patient"
       topBarTitle={topBarTitle}
       topBarSubtitle=""
@@ -95,7 +95,7 @@ export default function UserDashboardLayout() {
           </Link>
           <Link
             to="/book"
-            className="tap-feedback inline-flex cursor-pointer items-center justify-center rounded-xl bg-teal-600 px-3 py-2 text-xs font-semibold text-white shadow-md transition hover:bg-teal-700 sm:hidden"
+            className="tap-feedback inline-flex cursor-pointer items-center justify-center rounded-xl bg-teal-600 px-3 py-2 text-xs font-semibold text-white shadow-md shadow-teal-600/25 transition hover:bg-teal-700 sm:hidden"
           >
             Book
           </Link>

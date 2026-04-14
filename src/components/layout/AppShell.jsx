@@ -44,7 +44,7 @@ function NavItemBadge({ count, active }) {
 }
 
 export default function AppShell({
-  brand = 'PhysioCare',
+  brand = 'NearbyPhysio',
   badge,
   navItems = [],
   bottomNavItems = null,

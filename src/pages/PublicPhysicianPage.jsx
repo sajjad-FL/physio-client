@@ -7,6 +7,7 @@ import Button from '../components/ui/Button'
 import { StarRatingDisplay } from '../components/reviews/StarRating'
 import Pagination from '../components/Pagination'
 import toast from 'react-hot-toast'
+import { formatPhysioSessionFeeLabel } from '../utils/physioSessionFee.js'
 
 export default function PublicPhysicianPage() {
   const { id } = useParams()
@@ -147,7 +148,9 @@ export default function PublicPhysicianPage() {
                 </div>
                 <div>
                   <dt className="text-xs font-semibold uppercase tracking-wide text-gray-400">Fee</dt>
-                  <dd className="mt-0.5 font-medium text-gray-900">₹{p.pricePerSession ?? 0}/session</dd>
+                  <dd className="mt-0.5 font-medium text-gray-900">
+                    {formatPhysioSessionFeeLabel(p)}/session
+                  </dd>
                 </div>
                 <div className="col-span-2 sm:col-span-1">
                   <dt className="text-xs font-semibold uppercase tracking-wide text-gray-400">Service</dt>

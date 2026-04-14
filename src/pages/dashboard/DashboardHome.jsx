@@ -36,6 +36,17 @@ function SectionSkeleton() {
   return <Skeleton className="h-32 w-full rounded-2xl" />
 }
 
+const btnSoftPrimary =
+  'tap-feedback inline-flex min-h-11 items-center justify-center rounded-xl px-5 py-2.5 text-sm font-semibold shadow-sm transition ' +
+  'bg-teal-50 text-teal-900 ring-1 ring-teal-200/70 hover:bg-teal-100/90 hover:ring-teal-300/60'
+
+const btnPrimaryBook =
+  'tap-feedback inline-flex min-h-11 items-center justify-center rounded-xl bg-teal-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-teal-600/25 transition hover:bg-teal-700'
+
+const btnSoftEmerald =
+  'tap-feedback inline-flex min-h-11 items-center justify-center rounded-xl px-5 py-2.5 text-sm font-semibold shadow-sm transition ' +
+  'bg-emerald-50 text-emerald-900 ring-1 ring-emerald-200/70 hover:bg-emerald-100/90 hover:ring-emerald-300/55'
+
 export default function DashboardHome() {
   const [bookings, setBookings] = useState(null)
   const [disputes, setDisputes] = useState(null)
@@ -96,7 +107,7 @@ export default function DashboardHome() {
   const isToday = nextSession && String(nextSession.row.date) === today
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-5">
       {loading ? (
         <>
           <SectionSkeleton />
@@ -122,7 +133,10 @@ export default function DashboardHome() {
           )}
 
           {/* Next session */}
-          <section aria-labelledby="next-heading" className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm ring-1 ring-slate-100/80 sm:p-6">
+          <section
+            aria-labelledby="next-heading"
+            className="rounded-2xl bg-gradient-to-br from-slate-50/95 via-white to-sky-50/30 p-4 sm:p-5"
+          >
             <h2 id="next-heading" className="text-xs font-semibold uppercase tracking-wide text-slate-500">
               Next session
             </h2>
@@ -135,17 +149,14 @@ export default function DashboardHome() {
                 <p className="mt-3 truncate text-sm font-medium text-slate-800">
                   {nextSession.booking.physioId?.name || 'Physiotherapist TBD'}
                 </p>
-                <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:gap-3">
-                  <Link
-                    to={`/dashboard/bookings/${nextSession.booking._id}`}
-                    className="tap-feedback flex min-h-11 w-full items-center justify-center rounded-xl bg-teal-600 px-4 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-teal-700 sm:w-auto sm:min-w-[8rem]"
-                  >
+                <div className="mt-4 flex flex-col flex-wrap gap-2 sm:flex-row sm:items-center sm:gap-3">
+                  <Link to={`/dashboard/bookings/${nextSession.booking._id}`} className={`${btnPrimaryBook} w-full justify-center sm:w-auto sm:min-w-32`}>
                     View details
                   </Link>
                   {nextSession.booking.physioId?.phone ? (
                     <a
                       href={`tel:${String(nextSession.booking.physioId.phone).replace(/\s/g, '')}`}
-                      className="tap-feedback flex min-h-11 w-full items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-800 transition hover:bg-slate-50 sm:w-auto sm:min-w-[8rem]"
+                      className="tap-feedback flex min-h-11 w-full items-center justify-center rounded-xl border border-slate-200/90 bg-white/80 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-white sm:w-auto sm:min-w-32"
                     >
                       Call
                     </a>
@@ -155,25 +166,23 @@ export default function DashboardHome() {
             ) : (
               <p className="mt-3 text-sm text-slate-600">No upcoming sessions.</p>
             )}
-            <Link
-              to="/book"
-              className="tap-feedback mt-4 flex min-h-11 w-full items-center justify-center rounded-xl border border-slate-200 bg-slate-50/80 px-4 py-3 text-sm font-semibold text-slate-800 transition hover:bg-slate-100"
-            >
-              Book a session
-            </Link>
+            <div className="mt-4 flex justify-start">
+              <Link to="/book" className={btnSoftPrimary}>
+                Book a session
+              </Link>
+            </div>
           </section>
 
           {/* Wallet summary */}
-          <section className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm ring-1 ring-slate-100/80 sm:p-6">
+          <section className="rounded-2xl bg-gradient-to-br from-slate-50/95 via-white to-emerald-50/25 p-4 sm:p-5">
             <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Care spend</h2>
             <p className="mt-2 text-3xl font-bold tabular-nums tracking-tight text-slate-900 sm:text-4xl">{formatInr(revenueTotal)}</p>
             <p className="mt-2 text-sm text-slate-500">Held and released payments across your bookings.</p>
-            <Link
-              to="/dashboard/wallet"
-              className="tap-feedback mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-teal-600/10 px-4 py-3 text-sm font-semibold text-teal-800 transition hover:bg-teal-600/15 sm:w-auto"
-            >
-              Open wallet
-            </Link>
+            <div className="mt-4 flex justify-start">
+              <Link to="/dashboard/wallet" className={btnSoftEmerald}>
+                Open wallet
+              </Link>
+            </div>
           </section>
 
           {/* Recent activity */}
@@ -199,7 +208,7 @@ export default function DashboardHome() {
                     <li key={b._id}>
                       <Link
                         to={`/dashboard/bookings/${b._id}`}
-                        className="tap-feedback flex min-h-[3.25rem] items-center justify-between gap-3 rounded-xl border border-slate-100 bg-white px-3 py-3 ring-1 ring-slate-100/60 transition active:bg-slate-50 sm:px-4"
+                        className="tap-feedback flex min-h-13 items-center justify-between gap-3 rounded-xl bg-white/90 px-3 py-3 shadow-sm ring-1 ring-slate-200/40 transition hover:bg-white active:bg-slate-50/80 sm:px-4"
                       >
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-sm font-semibold text-slate-900">

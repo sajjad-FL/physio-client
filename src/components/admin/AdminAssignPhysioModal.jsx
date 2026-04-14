@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import { resolveFileUrl } from '../../utils/serverOrigin'
 import { distanceKm, parseLatLng } from '../../utils/geoDistance'
+import { formatPhysioSessionFeeLabel } from '../../utils/physioSessionFee.js'
 
 const RADIUS_OPTIONS = [
   { value: 'any', label: 'Any distance' },
@@ -393,7 +394,7 @@ export default function AdminAssignPhysioModal({
                           {p.pricePerSession != null && (
                             <>
                               <span className="text-slate-300"> · </span>
-                              <span className="tabular-nums">₹{p.pricePerSession}/session</span>
+                              <span className="tabular-nums">{formatPhysioSessionFeeLabel(p)}/session</span>
                             </>
                           )}
                           {p.location ? (

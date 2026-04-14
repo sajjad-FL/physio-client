@@ -170,7 +170,7 @@ export default function PhysioLayout() {
 
   return (
     <AppShell
-      brand="PhysioCare"
+      brand="NearbyPhysio"
       badge="Physio"
       topBarTitle="Workspace"
       topBarSubtitle="Sessions, availability, and notes"

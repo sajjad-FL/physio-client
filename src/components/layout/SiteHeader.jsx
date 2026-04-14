@@ -35,7 +35,7 @@ export default function SiteHeader() {
               />
             </svg>
           </span>
-          <span className="truncate">PhysioCare</span>
+          <span className="truncate">NearbyPhysio</span>
         </Link>
 
         <div className="flex items-center gap-2 sm:gap-3">

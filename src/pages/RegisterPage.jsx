@@ -156,7 +156,7 @@ export default function RegisterPage() {
       <header className="relative border-b border-slate-200 bg-white/90 shadow-sm backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
           <Link to="/" className="text-[15px] font-semibold text-slate-900 hover:opacity-80">
-            ← PhysioCare
+            ← NearbyPhysio
           </Link>
         </div>
       </header>

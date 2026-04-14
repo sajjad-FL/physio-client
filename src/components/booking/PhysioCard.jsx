@@ -5,6 +5,7 @@ import Button from '../ui/Button'
 import VerificationBadge from '../physio/VerificationBadge'
 import { StarRatingDisplay } from '../reviews/StarRating'
 import { assetUrl } from '../../utils/assetUrl'
+import { formatPhysioSessionFeeLabel } from '../../utils/physioSessionFee.js'
 
 function PhysioCard({ physio: p, selected, onSelect }) {
   const dist =
@@ -68,7 +69,9 @@ function PhysioCard({ physio: p, selected, onSelect }) {
                   </div>
                 ) : null}
               </div>
-              <p className="shrink-0 text-lg font-bold tabular-nums text-slate-900">₹{p.pricePerSession ?? 0}</p>
+              <p className="shrink-0 text-lg font-bold tabular-nums text-slate-900">
+                {formatPhysioSessionFeeLabel(p)}
+              </p>
             </div>
           </div>
         </div>

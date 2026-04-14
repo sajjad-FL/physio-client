@@ -42,6 +42,7 @@ export default function ProfilePage() {
   const [specialization, setSpecialization] = useState('')
   const [experience, setExperience] = useState('')
   const [fees, setFees] = useState('')
+  const [feesMax, setFeesMax] = useState('')
   const [addressText, setAddressText] = useState('')
   const [addressLat, setAddressLat] = useState(null)
   const [addressLng, setAddressLng] = useState(null)
@@ -51,10 +52,10 @@ export default function ProfilePage() {
   const [fieldErrors, setFieldErrors] = useState({})
 
   const patchField = useCallback(
-    (name, value) => {
+    (name, value, extra = {}) => {
       const physio = role === 'physio'
       setFieldErrors((prev) => {
-        const ctx = { isPhysio: physio, requiredGender: true }
+        const ctx = { isPhysio: physio, requiredGender: true, ...extra }
         if (name === 'addressCoords') {
           ctx.addressLat = addressLat
           ctx.addressLng = addressLng
@@ -84,6 +85,13 @@ export default function ProfilePage() {
       setSpecialization(d.physio?.specialization || '')
       setExperience(d.physio?.experience != null ? String(d.physio.experience) : '')
       setFees(d.physio?.fees != null ? String(d.physio.fees) : '')
+      setFeesMax(
+        d.physio?.feesMax != null &&
+          d.physio.feesMax !== '' &&
+          Number(d.physio.feesMax) > Number(d.physio?.fees ?? 0)
+          ? String(d.physio.feesMax)
+          : '',
+      )
       setAddressText(d.address?.text || '')
       setAddressLat(Number.isFinite(d.address?.lat) ? d.address.lat : null)
       setAddressLng(Number.isFinite(d.address?.lng) ? d.address.lng : null)
@@ -162,6 +170,7 @@ export default function ProfilePage() {
       nextErrors.specialization = validateLiveField('specialization', specialization, { isPhysio: true })
       nextErrors.profileExperience = validateLiveField('profileExperience', experience)
       nextErrors.profileFees = validateLiveField('profileFees', fees)
+      nextErrors.profileFeeMax = validateLiveField('profileFeeMax', feesMax, { feeMinStr: fees })
     }
     setFieldErrors(nextErrors)
     if (Object.values(nextErrors).some(Boolean)) {
@@ -186,6 +195,7 @@ export default function ProfilePage() {
               specialization: specialization.trim(),
               experience: experience === '' ? 0 : Number(experience),
               fees: fees === '' ? 0 : Number(fees),
+              feesMax: feesMax.trim() === '' ? null : Number(feesMax),
             }
           : {}),
       })
@@ -199,6 +209,13 @@ export default function ProfilePage() {
       setSpecialization(d.physio?.specialization || '')
       setExperience(d.physio?.experience != null ? String(d.physio.experience) : '')
       setFees(d.physio?.fees != null ? String(d.physio.fees) : '')
+      setFeesMax(
+        d.physio?.feesMax != null &&
+          d.physio.feesMax !== '' &&
+          Number(d.physio.feesMax) > Number(d.physio?.fees ?? 0)
+          ? String(d.physio.feesMax)
+          : '',
+      )
       setAddressText(d.address?.text || '')
       setAddressLat(Number.isFinite(d.address?.lat) ? d.address.lat : null)
       setAddressLng(Number.isFinite(d.address?.lng) ? d.address.lng : null)
@@ -510,7 +527,7 @@ export default function ProfilePage() {
                 </div>
                 <div>
                   <label htmlFor="pf-fees" className="block text-sm font-medium text-gray-800">
-                    Fees per session (INR)
+                    Fee per session — minimum (INR)
                   </label>
                   <input
                     id="pf-fees"
@@ -522,6 +539,10 @@ export default function ProfilePage() {
                       const v = e.target.value
                       setFees(v)
                       patchField('profileFees', v)
+                      setFieldErrors((prev) => ({
+                        ...prev,
+                        profileFeeMax: validateLiveField('profileFeeMax', feesMax, { feeMinStr: v }),
+                      }))
                     }}
                     aria-invalid={Boolean(fieldErrors.profileFees)}
                     className={`mt-1.5 h-11 w-full rounded-xl border bg-white px-3 text-gray-900 shadow-sm outline-none focus:ring-2 ${
@@ -532,6 +553,32 @@ export default function ProfilePage() {
                   />
                   {fieldErrors.profileFees ? (
                     <p className="mt-1 text-xs text-red-600">{fieldErrors.profileFees}</p>
+                  ) : null}
+                </div>
+                <div>
+                  <label htmlFor="pf-fees-max" className="block text-sm font-medium text-gray-800">
+                    Maximum fee (optional)
+                  </label>
+                  <input
+                    id="pf-fees-max"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={feesMax}
+                    onChange={(e) => {
+                      const v = e.target.value
+                      setFeesMax(v)
+                      patchField('profileFeeMax', v, { feeMinStr: fees })
+                    }}
+                    aria-invalid={Boolean(fieldErrors.profileFeeMax)}
+                    className={`mt-1.5 h-11 w-full rounded-xl border bg-white px-3 text-gray-900 shadow-sm outline-none focus:ring-2 ${
+                      fieldErrors.profileFeeMax
+                        ? 'border-red-400 ring-1 ring-red-200 focus:border-red-500 focus:ring-red-500/20'
+                        : 'border-gray-200 focus:border-blue-500 focus:ring-blue-500/20'
+                    }`}
+                  />
+                  {fieldErrors.profileFeeMax ? (
+                    <p className="mt-1 text-xs text-red-600">{fieldErrors.profileFeeMax}</p>
                   ) : null}
                 </div>
               </div>

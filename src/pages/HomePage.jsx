@@ -1,15 +1,182 @@
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { Activity, Bandage, Brain, Footprints, MessageCircleQuestion, PersonStanding } from 'lucide-react'
 import { ISSUE_OPTIONS } from '../constants/issues'
 import SiteHeader from '../components/layout/SiteHeader'
 import FeaturedPhysiosSection from '../components/home/FeaturedPhysiosSection'
 
-const services = ISSUE_OPTIONS.map((title) => ({
-  title,
-  blurb:
-    title === 'Post Surgery Rehab'
-      ? 'Guided recovery at home after your procedure.'
-      : `Focused care and exercises for ${title.toLowerCase()}.`,
-}))
+function serviceBlurb(title) {
+  if (title === 'Post Surgery Rehab') return 'Guided recovery at home after your procedure.'
+  if (title === 'Stroke/Paralysis')
+    return 'Rehabilitation, mobility, and daily-life support after stroke or paralysis.'
+  return `Focused care and exercises for ${title.toLowerCase()}.`
+}
+
+/** Marketing tiles: catalogue + “Other” (shown in a single scrollable row on home). */
+const services = [
+  ...ISSUE_OPTIONS.map((title) => ({ title, blurb: serviceBlurb(title) })),
+  {
+    title: 'Other condition',
+    blurb: 'Something else entirely? When you book, pick “Other” and describe your concern — we’ll match you carefully.',
+  },
+]
+
+const serviceCardDelays = ['animate-delay-2', 'animate-delay-3', 'animate-delay-4', 'animate-delay-5']
+
+const iconStroke = 1.75
+
+function ServiceConditionIcon({ title }) {
+  const cn = 'h-[22px] w-[22px] shrink-0'
+  switch (title) {
+    case 'Back Pain':
+      return <Activity className={cn} strokeWidth={iconStroke} aria-hidden />
+    case 'Neck Pain':
+      return <PersonStanding className={cn} strokeWidth={iconStroke} aria-hidden />
+    case 'Knee Pain':
+      return <Footprints className={cn} strokeWidth={iconStroke} aria-hidden />
+    case 'Post Surgery Rehab':
+      return <Bandage className={cn} strokeWidth={iconStroke} aria-hidden />
+    case 'Stroke/Paralysis':
+      return <Brain className={cn} strokeWidth={iconStroke} aria-hidden />
+    case 'Other condition':
+      return <MessageCircleQuestion className={cn} strokeWidth={iconStroke} aria-hidden />
+    default:
+      return <Activity className={cn} strokeWidth={iconStroke} aria-hidden />
+  }
+}
+
+function ChevronLeft({ className = '' }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2.5}
+        d="M15.75 19.5L8.25 12l7.5-7.5"
+      />
+    </svg>
+  )
+}
+
+function ChevronRight({ className = '' }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2.5}
+        d="M8.25 4.5L15.75 12l-7.5 7.5"
+      />
+    </svg>
+  )
+}
+
+/** Single-row strip with hidden scrollbar and arrow controls (carousel-style). */
+function ServicesConditionsCarousel() {
+  const scrollerRef = useRef(null)
+  const [canPrev, setCanPrev] = useState(false)
+  const [canNext, setCanNext] = useState(true)
+
+  const measureStep = useCallback(() => {
+    const el = scrollerRef.current
+    if (!el) return 300
+    const flex = el.firstElementChild
+    const card = flex?.querySelector('[data-service-card]')
+    if (!card || !flex) return 300
+    const gapStr = getComputedStyle(flex).gap || '16px'
+    const gap = parseFloat(gapStr) || 16
+    return card.getBoundingClientRect().width + gap
+  }, [])
+
+  const updateState = useCallback(() => {
+    const el = scrollerRef.current
+    if (!el) return
+    const { scrollLeft, clientWidth, scrollWidth } = el
+    setCanPrev(scrollLeft > 4)
+    setCanNext(scrollLeft + clientWidth < scrollWidth - 4)
+  }, [])
+
+  useEffect(() => {
+    const el = scrollerRef.current
+    if (!el) return
+    updateState()
+    el.addEventListener('scroll', updateState, { passive: true })
+    const ro = new ResizeObserver(updateState)
+    ro.observe(el)
+    window.addEventListener('resize', updateState)
+    return () => {
+      el.removeEventListener('scroll', updateState)
+      ro.disconnect()
+      window.removeEventListener('resize', updateState)
+    }
+  }, [updateState])
+
+  const scrollByDir = useCallback((dir) => {
+    const el = scrollerRef.current
+    if (!el) return
+    el.scrollBy({ left: dir * measureStep(), behavior: 'smooth' })
+  }, [measureStep])
+
+  const navGhost =
+    'absolute top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border-0 bg-transparent text-slate-500/40 shadow-none ring-0 transition sm:h-11 sm:w-11 ' +
+    'group-hover/carousel:bg-white/35 group-hover/carousel:text-slate-600/85 ' +
+    'hover:bg-white/60 hover:text-teal-900 hover:shadow-sm motion-reduce:transition-none ' +
+    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-1 ' +
+    'disabled:pointer-events-none disabled:opacity-0'
+
+  return (
+    <div className="group/carousel relative mt-10 sm:mt-12">
+      <button
+        type="button"
+        aria-label="Previous conditions"
+        disabled={!canPrev}
+        onClick={() => scrollByDir(-1)}
+        className={`${navGhost} left-0 sm:left-0.5`}
+      >
+        <ChevronLeft className="h-5 w-5 sm:h-[22px] sm:w-[22px]" />
+      </button>
+      <button
+        type="button"
+        aria-label="Next conditions"
+        disabled={!canNext}
+        onClick={() => scrollByDir(1)}
+        className={`${navGhost} right-0 sm:right-0.5`}
+      >
+        <ChevronRight className="h-5 w-5 sm:h-[22px] sm:w-[22px]" />
+      </button>
+
+      <div
+        ref={scrollerRef}
+        className="w-full min-w-0 snap-x snap-mandatory overflow-x-auto overflow-y-hidden scroll-smooth [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        role="region"
+        aria-label="Conditions we treat"
+        aria-roledescription="carousel"
+      >
+        <div className="flex flex-nowrap gap-3.5 sm:gap-5">
+          {services.map((s, i) => (
+            <div
+              key={s.title}
+              data-service-card
+              className={
+                'interactive-lift group w-[min(272px,82vw)] max-w-[300px] min-w-[232px] shrink-0 snap-start rounded-2xl border border-slate-200/90 bg-white p-5 shadow-sm ring-1 ring-slate-900/[0.025] motion-safe:animate-enter-up sm:p-6 ' +
+                'hover:border-slate-300/90 hover:shadow-md hover:ring-slate-900/[0.04] ' +
+                serviceCardDelays[i % serviceCardDelays.length]
+              }
+            >
+              <div className="mb-3.5 flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-teal-50 to-emerald-50/80 text-teal-700 shadow-sm ring-1 ring-teal-100/70 transition-all duration-300 ease-out group-hover:from-teal-600 group-hover:to-teal-600 group-hover:text-white group-hover:ring-teal-600/40">
+                <ServiceConditionIcon title={s.title} />
+              </div>
+              <h3 className="text-[17px] font-semibold tracking-tight text-slate-900">{s.title}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-slate-600">{s.blurb}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
 
 const steps = [
   { title: 'Book', text: 'Share your details and what you need help with.' },
@@ -92,25 +259,7 @@ export default function HomePage() {
                 Common conditions our physiotherapists treat during home visits.
               </p>
             </div>
-            <div className="mt-16 grid gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4 lg:gap-px lg:overflow-hidden lg:rounded-2xl lg:border lg:border-slate-200 lg:bg-slate-200 lg:shadow-sm">
-              {services.map((s, i) => (
-                <div
-                  key={s.title}
-                  className={
-                    'interactive-lift group rounded-2xl border border-slate-200 bg-slate-50/50 p-7 motion-safe:animate-enter-up lg:border-0 lg:bg-white ' +
-                    ['animate-delay-2', 'animate-delay-3', 'animate-delay-4', 'animate-delay-5'][i]
-                  }
-                >
-                  <div className="mb-5 flex h-11 w-11 items-center justify-center rounded-xl bg-teal-50 text-teal-700 transition-all duration-300 ease-out group-hover:bg-teal-600 group-hover:text-white">
-                    <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                  <h3 className="text-[17px] font-semibold text-slate-900">{s.title}</h3>
-                  <p className="mt-3 text-sm leading-relaxed text-slate-500">{s.blurb}</p>
-                </div>
-              ))}
-            </div>
+            <ServicesConditionsCarousel />
           </div>
         </section>
 
@@ -163,7 +312,7 @@ export default function HomePage() {
       <footer className="border-t border-slate-800 bg-slate-900 text-white">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-8 px-4 py-14 sm:flex-row sm:px-6 lg:px-8">
           <div>
-            <p className="text-sm font-semibold">PhysioCare</p>
+            <p className="text-sm font-semibold">NearbyPhysio</p>
             <p className="mt-2 text-sm text-white/60">&copy; {new Date().getFullYear()} Home visit physiotherapy.</p>
           </div>
           <Link

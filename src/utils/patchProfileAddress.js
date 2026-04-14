@@ -21,6 +21,7 @@ export async function patchProfileAddress({ text, lat, lng }) {
     body.specialization = data.physio.specialization || ''
     body.experience = data.physio.experience ?? 0
     body.fees = data.physio.fees ?? 0
+    body.feesMax = data.physio.feesMax ?? null
   }
   await api.patch('/profile', body)
 }

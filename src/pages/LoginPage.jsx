@@ -88,7 +88,7 @@ export default function LoginPage() {
             to="/"
             className="text-[15px] font-semibold text-slate-900 transition-opacity duration-200 hover:opacity-80"
           >
-            ← PhysioCare
+            ← NearbyPhysio
           </Link>
         </div>
       </header>

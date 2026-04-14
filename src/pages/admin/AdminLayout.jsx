@@ -127,7 +127,7 @@ export default function AdminLayout() {
 
   return (
     <AppShell
-      brand="PhysioCare"
+      brand="NearbyPhysio"
       badge="Admin"
       topBarTitle="Admin console"
       topBarSubtitle="Operations and compliance"

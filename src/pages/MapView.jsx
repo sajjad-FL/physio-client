@@ -6,6 +6,7 @@ import { api } from '../config/api'
 import Button from '../components/ui/Button'
 import Skeleton from '../components/ui/Skeleton'
 import EmptyState from '../components/ui/EmptyState'
+import { formatPhysioSessionFeeLabel } from '../utils/physioSessionFee.js'
 
 const ROUTE_SOURCE_ID = 'directions-route'
 const ROUTE_LAYER_ID = 'directions-route-line'
@@ -125,7 +126,7 @@ export default function MapView() {
       <div style="min-width:180px;font-size:13px;line-height:1.35">
         <p style="font-weight:600;margin:0 0 4px">${p.name || 'Physiotherapist'}</p>
         <p style="margin:0 0 2px;color:#4b5563">${p.experience || 0} years experience</p>
-        <p style="margin:0 0 8px;color:#111827">INR ${p.pricePerSession || 0}/session</p>
+        <p style="margin:0 0 8px;color:#111827">INR ${formatPhysioSessionFeeLabel(p).replace(/^₹/, '')}/session</p>
         <button data-action="select" data-physio-id="${p._id}" style="width:100%;background:#2563eb;color:#fff;border:none;border-radius:8px;padding:7px 10px;cursor:pointer;font-size:12px;font-weight:600">
           Select Physio
         </button>
@@ -423,7 +424,9 @@ export default function MapView() {
                     >
                       <h3 className="text-base font-semibold text-gray-900">{p.name || 'Physiotherapist'}</h3>
                       <p className="mt-1 text-sm text-gray-500">{p.experience || 0} years experience</p>
-                      <p className="mt-2 text-sm font-medium text-gray-900">₹{p.pricePerSession || 0}/session</p>
+                      <p className="mt-2 text-sm font-medium text-gray-900">
+                        {formatPhysioSessionFeeLabel(p)}/session
+                      </p>
                       <p className="mt-1 text-xs text-gray-500">
                         {p.distanceKm == null ? 'Distance unavailable' : `${p.distanceKm.toFixed(1)} km away`}
                       </p>

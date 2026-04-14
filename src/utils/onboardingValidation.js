@@ -1,4 +1,6 @@
 import { validateIndianMobile } from './phoneIndia.js'
+import { isPhysioDegreeOption } from '../constants/physioQualification.js'
+import { isValidIdProofType } from '../constants/idProofTypes.js'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -56,7 +58,7 @@ export function validateQualificationSection(qualification) {
   const errors = {}
   const degree = String(qualification?.degree ?? '').trim()
   if (!degree) errors.degree = 'Degree is required'
-  else if (degree.length > 200) errors.degree = 'Degree is too long'
+  else if (!isPhysioDegreeOption(degree)) errors.degree = 'Select BPT or MPT'
 
   const university = String(qualification?.university ?? '').trim()
   if (!university) errors.university = 'University is required'
@@ -65,16 +67,17 @@ export function validateQualificationSection(qualification) {
   if (qualification?.year != null && qualification.year !== '') {
     const y = Number(qualification.year)
     const current = new Date().getFullYear()
-    if (!Number.isFinite(y)) errors.year = 'Enter a valid graduation year'
-    else if (y < 1950 || y > current + 1) errors.year = `Year must be between 1950 and ${current + 1}`
+    if (!Number.isFinite(y)) errors.year = 'Enter a valid passing year'
+    else if (y < 1950 || y > current + 1) errors.year = `Passing year must be between 1950 and ${current + 1}`
   } else {
-    errors.year = 'Graduation year is required'
+    errors.year = 'Passing year is required'
   }
 
   const reg = String(qualification?.registrationNumber ?? '').trim()
-  if (!reg) errors.registrationNumber = 'Registration number is required'
-  else if (reg.length < 3) errors.registrationNumber = 'Registration number is too short'
-  else if (reg.length > 80) errors.registrationNumber = 'Registration number is too long'
+  if (reg) {
+    if (reg.length < 3) errors.registrationNumber = 'Council registration number is too short'
+    else if (reg.length > 80) errors.registrationNumber = 'Council registration number is too long'
+  }
 
   return { errors }
 }
@@ -108,12 +111,34 @@ export function validatePracticeSection(practice) {
         : []
   if (areaList.length === 0) errors.areas = 'Add at least one service area'
 
-  if (practice?.fees == null || practice.fees === '') {
-    errors.fees = 'Fee per session is required'
+  const MAX_FEE = 500000
+  const minStr =
+    practice?.feeMin !== undefined && practice?.feeMin !== null && String(practice.feeMin).trim() !== ''
+      ? String(practice.feeMin).trim()
+      : String(practice?.fees ?? '').trim()
+  const maxStr =
+    practice?.feeMax !== undefined && practice?.feeMax !== null ? String(practice.feeMax).trim() : ''
+
+  if (!minStr) {
+    errors.feeMin = 'Minimum fee per session is required'
   } else {
-    const fee = Number(practice.fees)
-    if (!Number.isFinite(fee) || fee <= 0) errors.fees = 'Enter a valid fee greater than zero (₹)'
-    else if (fee > 500000) errors.fees = 'Fee seems unreasonably high — please check'
+    const min = Number(minStr)
+    if (!Number.isFinite(min) || min <= 0) {
+      errors.feeMin = 'Enter a valid minimum fee greater than zero (₹)'
+    } else if (min > MAX_FEE) {
+      errors.feeMin = 'Fee seems unreasonably high — please check'
+    }
+    if (maxStr !== '') {
+      const min = Number(minStr)
+      const max = Number(maxStr)
+      if (!Number.isFinite(max) || max <= 0) {
+        errors.feeMax = 'Enter a valid maximum fee (₹)'
+      } else if (max > MAX_FEE) {
+        errors.feeMax = 'Fee seems unreasonably high — please check'
+      } else if (Number.isFinite(min) && max < min) {
+        errors.feeMax = 'Maximum must be greater than or equal to minimum'
+      }
+    }
   }
 
   return { errors }
@@ -127,8 +152,9 @@ function hasUrl(s) {
  * @param {{
  *   name: string, email: string, location: string, dob?: string, gender?: string, address?: string,
  *   degree: string, university: string, year: string, registrationNumber: string,
- *   experience: string, specialization: string, serviceType: string, areas: string, fees: string,
+ *   experience: string, specialization: string, serviceType: string, areas: string, feeMin: string, feeMax?: string,
  *   docCertificate: string, docIdProof: string, docRegistration: string, docSelfie: string,
+ *   idProofType?: string,
  *   docSignedNda?: string, requireSignedNda?: boolean
  * }} values
  */
@@ -161,7 +187,8 @@ export function validateSubmitForm(values) {
       specialization: values.specialization,
       serviceType: values.serviceType,
       areas: values.areas,
-      fees: values.fees,
+      feeMin: values.feeMin !== undefined ? values.feeMin : values.fees,
+      feeMax: values.feeMax !== undefined ? values.feeMax : '',
     }).errors
   )
 
@@ -170,8 +197,23 @@ export function validateSubmitForm(values) {
   if (!hasUrl(values.docRegistration)) errors.registrationCertificate = 'Upload registration certificate'
   if (!hasUrl(values.docSelfie)) errors.selfieWithId = 'Upload a selfie with your ID'
 
+  if (!isValidIdProofType(values.idProofType)) {
+    errors.idProofType = 'Select the type of government ID you uploaded (Aadhaar, PAN, Passport, or Voter ID)'
+  }
+
   if (values.requireSignedNda && !hasUrl(values.docSignedNda)) {
     errors.signedNda = 'Download the NDA, sign it, and upload the signed copy'
+  }
+
+  if (values.requireQualificationDeclaration) {
+    const accepted =
+      values.qualificationDeclarationAccepted === true ||
+      (values.qualificationDeclarationAcceptedAt != null &&
+        String(values.qualificationDeclarationAcceptedAt).trim() !== '')
+    const legacyNda = hasUrl(values.docSignedNda)
+    if (!accepted && !legacyNda) {
+      errors.qualificationDeclaration = 'Confirm the qualification declaration to continue'
+    }
   }
 
   return { errors, ok: Object.keys(errors).length === 0 }
@@ -220,6 +262,8 @@ export function validateRegistrationAccount({ phone, password }) {
  *   fIdProof?: File | null,
  *   fRegCert?: File | null,
  *   fSelfie?: File | null,
+ *   fInternship?: File | null,
+ *   fCouncil?: File | null,
  *   fSignedNda?: File | null
  * }} files
  * @param {{
@@ -229,7 +273,7 @@ export function validateRegistrationAccount({ phone, password }) {
  *   selfie?: string,
  *   signedNda?: string
  * }} existing
- * @param {{ requireSignedNda?: boolean }} [opts]
+ * @param {{ requireSignedNda?: boolean, requireQualificationDeclaration?: boolean, declarationAccepted?: boolean, idProofType?: string }} [opts]
  */
 export function validateDocumentsStep(files, existing = {}, opts = {}) {
   const errors = {}
@@ -246,8 +290,16 @@ export function validateDocumentsStep(files, existing = {}, opts = {}) {
   if (!has(existing.selfie, files.fSelfie)) {
     errors.selfieWithId = 'Selfie with ID is required'
   }
+
+  const idType = opts.idProofType != null ? String(opts.idProofType).trim().toLowerCase() : ''
+  if (has(existing.idProof, files.fIdProof) && !isValidIdProofType(idType)) {
+    errors.idProofType = 'Select ID type (Aadhaar, PAN, Passport, or Voter ID)'
+  }
   if (opts.requireSignedNda && !has(existing.signedNda, files.fSignedNda)) {
     errors.signedNda = 'Download the NDA, sign it, and upload the signed copy'
+  }
+  if (opts.requireQualificationDeclaration && !opts.declarationAccepted) {
+    errors.qualificationDeclaration = 'You must agree to the qualification declaration'
   }
   return { errors, ok: Object.keys(errors).length === 0 }
 }

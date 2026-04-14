@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { api } from '../../config/api'
 import toast from 'react-hot-toast'
 import { resolveFileUrl } from '../../utils/serverOrigin'
+import { formatPhysioSessionFeeLabel } from '../../utils/physioSessionFee.js'
 
 function DocLink({ label, url }) {
   if (!url) return <span className="text-ink-muted">{label}: —</span>
@@ -58,8 +59,8 @@ function DetailGrid({ p }) {
         <dl className="mt-3 space-y-2 text-sm">
           <Row label="Degree" value={q.degree} />
           <Row label="University" value={q.university} />
-          <Row label="Year" value={q.year != null ? String(q.year) : null} />
-          <Row label="Registration #" value={q.registrationNumber} />
+          <Row label="Passing Year" value={q.year != null ? String(q.year) : null} />
+          <Row label="Council reg. no." value={q.registrationNumber} />
         </dl>
       </section>
 
@@ -74,7 +75,10 @@ function DetailGrid({ p }) {
             value={(p.serviceAreas || []).filter(Boolean).join(', ') || null}
             multiline
           />
-          <Row label="Fee / session" value={p.pricePerSession != null ? `₹${p.pricePerSession}` : null} />
+          <Row
+            label="Fee / session"
+            value={p.pricePerSession != null ? `${formatPhysioSessionFeeLabel(p)}/session` : null}
+          />
         </dl>
       </section>
 

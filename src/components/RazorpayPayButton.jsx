@@ -41,7 +41,7 @@ export default function RazorpayPayButton({ bookingId, onPaid }) {
         key: keyId,
         amount,
         currency,
-        name: 'PhysioCare',
+        name: 'NearbyPhysio',
         order_id: orderId,
         handler: async function (response) {
           try {

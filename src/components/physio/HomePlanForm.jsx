@@ -3,6 +3,7 @@ import { DAILY_SLOTS } from '../../constants/slots'
 import { formatBookingTimeSlot } from '../../utils/date'
 import Button from '../ui/Button'
 import DragSelectCalendar from './DragSelectCalendar'
+import { formatPhysioSessionFeeLabel } from '../../utils/physioSessionFee.js'
 
 function round2(n) {
   return Math.round((Number(n) + Number.EPSILON) * 100) / 100
@@ -37,6 +38,10 @@ export default function HomePlanForm({ booking, busy, onSubmit }) {
   const defaultSlot =
     booking?.timeSlot && DAILY_SLOTS.includes(booking.timeSlot) ? booking.timeSlot : DAILY_SLOTS[0]
   const defaultAmount = booking?.physioId?.pricePerSession != null ? String(booking.physioId.pricePerSession) : ''
+  const physio = booking?.physioId
+  const feeLo = Number(physio?.pricePerSession)
+  const feeHi = physio?.pricePerSessionMax != null ? Number(physio.pricePerSessionMax) : NaN
+  const hasFeeRange = Number.isFinite(feeLo) && Number.isFinite(feeHi) && feeHi > feeLo
 
   const [sessions, setSessions] = useState(1)
   const [amountPerSession, setAmountPerSession] = useState(defaultAmount)
@@ -72,9 +77,12 @@ export default function HomePlanForm({ booking, busy, onSubmit }) {
   }, [amountPerSession, sessions, discount])
 
   const dateMismatch = selectedDates.length !== Number(sessions)
+  const amt = Number(amountPerSession)
+  const feeInRange = !hasFeeRange || (Number.isFinite(amt) && amt >= feeLo && amt <= feeHi)
   const canSubmit =
     Number(sessions) >= 1 &&
     Number(amountPerSession) > 0 &&
+    feeInRange &&
     !dateMismatch &&
     totals.final > 0 &&
     !busy
@@ -119,15 +127,24 @@ export default function HomePlanForm({ booking, busy, onSubmit }) {
               </div>
               <div>
                 <label className={fieldLabel}>Amount per session (₹)</label>
+                {physio && hasFeeRange ? (
+                  <p className="mb-2 text-xs text-gray-600">
+                    Agreed fee band: {formatPhysioSessionFeeLabel(physio)}/session — enter an amount in this range.
+                  </p>
+                ) : null}
                 <input
                   type="number"
-                  min={1}
+                  min={hasFeeRange ? feeLo : 1}
+                  max={hasFeeRange ? feeHi : undefined}
                   step={1}
                   value={amountPerSession}
                   onChange={(e) => setAmountPerSession(e.target.value)}
-                  placeholder="e.g. 800"
+                  placeholder={hasFeeRange ? `${feeLo}–${feeHi}` : 'e.g. 800'}
                   className={fieldInput}
                 />
+                {hasFeeRange && Number.isFinite(amt) && !feeInRange ? (
+                  <p className="mt-1 text-xs text-red-600">Enter an amount between ₹{feeLo} and ₹{feeHi}.</p>
+                ) : null}
               </div>
             </div>
             <div>

@@ -1,29 +1,22 @@
 import { useCallback, useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import { api } from '../../config/api'
-import { resolveFileUrl } from '../../utils/serverOrigin'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
+import { DEFAULT_QUALIFICATION_DECLARATION } from '../../constants/qualificationDeclaration'
 
 export default function AdminPlatformSettingsPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [settings, setSettings] = useState({
-    physioNdaTemplateUrl: '',
-    physioNdaOriginalName: '',
-    physioNdaUpdatedAt: null,
-  })
-  const [file, setFile] = useState(null)
+  const [declarationText, setDeclarationText] = useState('')
+  const [updatedAt, setUpdatedAt] = useState(null)
 
   const load = useCallback(async () => {
     setLoading(true)
     try {
       const { data } = await api.get('/admin/platform/settings')
-      setSettings({
-        physioNdaTemplateUrl: data.physioNdaTemplateUrl || '',
-        physioNdaOriginalName: data.physioNdaOriginalName || '',
-        physioNdaUpdatedAt: data.physioNdaUpdatedAt || null,
-      })
+      setDeclarationText(data.qualificationDeclarationResolved || DEFAULT_QUALIFICATION_DECLARATION)
+      setUpdatedAt(data.qualificationDeclarationUpdatedAt || null)
     } catch (e) {
       toast.error(e.response?.data?.message || 'Failed to load platform settings')
     } finally {
@@ -35,27 +28,26 @@ export default function AdminPlatformSettingsPage() {
     load()
   }, [load])
 
-  async function onSubmit(e) {
+  async function onSave(e) {
     e.preventDefault()
-    if (!file) {
-      toast.error('Choose a PDF or image file (max 2MB)')
-      return
-    }
     setSaving(true)
     try {
-      const fd = new FormData()
-      fd.append('ndaTemplate', file)
-      const { data } = await api.post('/admin/platform/physio-nda', fd, {
-        headers: { 'Content-Type': 'multipart/form-data' },
+      const trimmed = declarationText.trim()
+      const { data } = await api.patch('/admin/platform/settings', {
+        qualificationDeclarationText: trimmed === DEFAULT_QUALIFICATION_DECLARATION.trim() ? '' : trimmed,
       })
-      toast.success(data.message || 'NDA template updated')
-      setFile(null)
-      await load()
+      toast.success(data.message || 'Declaration saved')
+      setUpdatedAt(data.qualificationDeclarationUpdatedAt || null)
+      setDeclarationText(data.qualificationDeclarationResolved || DEFAULT_QUALIFICATION_DECLARATION)
     } catch (e) {
-      toast.error(e.response?.data?.message || 'Upload failed')
+      toast.error(e.response?.data?.message || 'Save failed')
     } finally {
       setSaving(false)
     }
+  }
+
+  function onRestoreDefault() {
+    setDeclarationText(DEFAULT_QUALIFICATION_DECLARATION)
   }
 
   if (loading) {
@@ -67,51 +59,42 @@ export default function AdminPlatformSettingsPage() {
       <div>
         <h1 className="text-xl font-semibold text-slate-900">Platform documents</h1>
         <p className="mt-1 text-sm text-slate-600">
-          Upload the NDA template that physiotherapists download, sign offline, and upload again during onboarding or
-          registration.
+          Text shown to physiotherapists during registration and onboarding. They must check &quot;I agree&quot; before
+          submitting. Leaving the saved text empty (restore default) uses the built-in NearbyPhysio template.
         </p>
       </div>
 
       <Card>
-        <h2 className="text-lg font-semibold text-slate-900">Physio NDA template</h2>
-        {settings.physioNdaTemplateUrl ? (
-          <p className="mt-2 text-sm text-slate-600">
-            Current file:{' '}
-            <a
-              href={resolveFileUrl(settings.physioNdaTemplateUrl)}
-              target="_blank"
-              rel="noreferrer"
-              className="font-medium text-teal-700 underline"
-            >
-              {settings.physioNdaOriginalName || 'Download'}
-            </a>
-            {settings.physioNdaUpdatedAt ? (
-              <span className="mt-1 block text-xs text-slate-500">
-                Updated {new Date(settings.physioNdaUpdatedAt).toLocaleString()}
-              </span>
-            ) : null}
-          </p>
-        ) : (
-          <p className="mt-2 text-sm text-amber-900">
-            No template uploaded. Physios are not asked for a signed NDA until you upload one here.
-          </p>
-        )}
+        <h2 className="text-lg font-semibold text-slate-900">Qualification declaration</h2>
+        <p className="mt-2 text-sm text-slate-600">
+          This replaces the old PDF NDA download and upload flow. Edit the wording as needed for your jurisdiction;
+          keep it accurate and readable.
+        </p>
+        {updatedAt ? (
+          <p className="mt-2 text-xs text-slate-500">Last saved: {new Date(updatedAt).toLocaleString()}</p>
+        ) : null}
 
-        <form onSubmit={onSubmit} className="mt-4 space-y-4">
+        <form onSubmit={onSave} className="mt-4 space-y-4">
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-600" htmlFor="admin-nda-file">
-              Replace template (PDF or image, max 2MB)
+            <label className="mb-1 block text-xs font-medium text-slate-600" htmlFor="admin-declaration-text">
+              Declaration text (max 8,000 characters)
             </label>
-            <input
-              id="admin-nda-file"
-              type="file"
-              accept="image/*,.pdf,application/pdf"
-              onChange={(e) => setFile(e.target.files?.[0] || null)}
+            <textarea
+              id="admin-declaration-text"
+              value={declarationText}
+              onChange={(e) => setDeclarationText(e.target.value)}
+              rows={12}
+              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
             />
           </div>
-          <Button type="submit" loading={saving} disabled={saving}>
-            Upload template
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button type="submit" loading={saving} disabled={saving}>
+              Save declaration
+            </Button>
+            <Button type="button" variant="outline" onClick={onRestoreDefault} disabled={saving}>
+              Restore default wording
+            </Button>
+          </div>
         </form>
       </Card>
     </div>

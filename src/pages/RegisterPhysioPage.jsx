@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { api } from '../config/api'
-import { resolveFileUrl } from '../utils/serverOrigin'
 import DocumentUploadPreview from '../components/physio/DocumentUploadPreview'
 import { mapboxReverseGeocode } from '../utils/mapboxGeocode'
 import { toastApiError, toastValidationErrors } from '../utils/formToast'
@@ -20,6 +19,9 @@ import {
 } from '../utils/onboardingValidation'
 import { normalizeIndianPhone } from '../utils/phoneIndia'
 import { validateLiveField } from '../utils/liveFieldValidation'
+import { PHYSIO_DEGREE_OPTIONS, isPhysioDegreeOption } from '../constants/physioQualification.js'
+import { formatPhysioSessionFeeLabel } from '../utils/physioSessionFee.js'
+import { ID_PROOF_TYPE_OPTIONS } from '../constants/idProofTypes.js'
 
 const baseInputClass =
   'h-11 w-full rounded-lg border bg-white px-3 text-sm text-ink shadow-sm outline-none focus:ring-2 focus:ring-brand/20'
@@ -81,16 +83,22 @@ export default function RegisterPhysioPage() {
   const [specialization, setSpecialization] = useState('')
   const [serviceType, setServiceType] = useState('both')
   const [areas, setAreas] = useState('')
-  const [fees, setFees] = useState('')
+  const [feeMin, setFeeMin] = useState('')
+  const [feeMax, setFeeMax] = useState('')
 
   const [fCertificate, setFCertificate] = useState(null)
   const [fIdProof, setFIdProof] = useState(null)
   const [fRegCert, setFRegCert] = useState(null)
   const [fSelfie, setFSelfie] = useState(null)
-  const [fSignedNda, setFSignedNda] = useState(null)
+  const [fInternship, setFInternship] = useState(null)
+  const [fCouncil, setFCouncil] = useState(null)
+  const [idProofType, setIdProofType] = useState('')
+  const [qualificationAgreed, setQualificationAgreed] = useState(false)
 
   const [ndaPolicy, setNdaPolicy] = useState({
     requireSignedNda: false,
+    requireQualificationDeclaration: true,
+    declarationText: '',
     templateUrl: '',
     originalName: '',
   })
@@ -133,13 +141,21 @@ export default function RegisterPhysioPage() {
         const { data } = await api.get('/platform/physio-nda')
         if (cancelled) return
         setNdaPolicy({
-          requireSignedNda: Boolean(data.requireSignedNda && data.templateUrl),
-          templateUrl: data.templateUrl || '',
-          originalName: data.originalName || 'nda-template.pdf',
+          requireSignedNda: false,
+          requireQualificationDeclaration: data.requireQualificationDeclaration !== false,
+          declarationText: data.declarationText || '',
+          templateUrl: '',
+          originalName: '',
         })
       } catch {
         if (!cancelled) {
-          setNdaPolicy({ requireSignedNda: false, templateUrl: '', originalName: '' })
+          setNdaPolicy({
+            requireSignedNda: false,
+            requireQualificationDeclaration: true,
+            declarationText: '',
+            templateUrl: '',
+            originalName: '',
+          })
         }
       }
     })()
@@ -201,30 +217,50 @@ export default function RegisterPhysioPage() {
         : 'border-border-subtle focus:border-brand',
     ].join(' ')
 
+  function computeAccountBasicErrors() {
+    const e1 = validateRegistrationAccount({ phone, password }).errors
+    const e2 = validateBasicSection({
+      name,
+      email,
+      location,
+      dob: dob || undefined,
+      gender,
+      address,
+    }).errors
+    const merged = { ...e1, ...e2 }
+    if (avatarFile) {
+      const av = validateAvatarFile(avatarFile)
+      if (!av.ok) merged.avatar = av.message
+    }
+    if (locationLat == null || locationLng == null) {
+      merged.location =
+        merged.location ||
+        'Search with Mapbox or use Pick on map to set your coverage point (needed for bookings).'
+    }
+    return merged
+  }
+
+  function tryGoToStep(targetStep) {
+    if (targetStep === step) return
+    if (targetStep > 1 && targetStep > step) {
+      const merged = computeAccountBasicErrors()
+      if (Object.keys(merged).length) {
+        setFieldErrors(merged)
+        setFormError('Complete Account & basic before continuing')
+        toastValidationErrors(merged, 'Complete Account & basic before continuing')
+        return
+      }
+    }
+    setStep(targetStep)
+    clearErrors()
+  }
+
   async function goNext(fromStep) {
     clearErrors()
     setSaving(true)
     try {
       if (fromStep === 1) {
-        const e1 = validateRegistrationAccount({ phone, password }).errors
-        const e2 = validateBasicSection({
-          name,
-          email,
-          location,
-          dob: dob || undefined,
-          gender,
-          address,
-        }).errors
-        const merged = { ...e1, ...e2 }
-        if (avatarFile) {
-          const av = validateAvatarFile(avatarFile)
-          if (!av.ok) merged.avatar = av.message
-        }
-        if (locationLat == null || locationLng == null) {
-          merged.location =
-            merged.location ||
-            'Search with Mapbox or use Pick on map to set your coverage point (needed for bookings).'
-        }
+        const merged = computeAccountBasicErrors()
         if (Object.keys(merged).length) {
           setFieldErrors(merged)
           setFormError('Fix the errors below before continuing')
@@ -254,7 +290,8 @@ export default function RegisterPhysioPage() {
           specialization,
           serviceType,
           areas,
-          fees,
+          feeMin,
+          feeMax,
         })
         if (Object.keys(errors).length) {
           setFieldErrors(errors)
@@ -266,9 +303,13 @@ export default function RegisterPhysioPage() {
 
       if (fromStep === 4) {
         const { errors, ok } = validateDocumentsStep(
-          { fCertificate, fIdProof, fRegCert, fSelfie, fSignedNda },
-          { certificate: '', idProof: '', registration: '', selfie: '', signedNda: '' },
-          { requireSignedNda: ndaPolicy.requireSignedNda },
+          { fCertificate, fIdProof, fRegCert, fSelfie, fInternship, fCouncil },
+          { certificate: '', idProof: '', registration: '', selfie: '' },
+          {
+            requireQualificationDeclaration: ndaPolicy.requireQualificationDeclaration,
+            declarationAccepted: qualificationAgreed,
+            idProofType,
+          },
         )
         if (!ok) {
           setFieldErrors(errors)
@@ -281,7 +322,8 @@ export default function RegisterPhysioPage() {
           [fIdProof, 'ID proof'],
           [fRegCert, 'Registration certificate'],
           [fSelfie, 'Selfie with ID'],
-          ...(ndaPolicy.requireSignedNda ? [[fSignedNda, 'Signed NDA']] : []),
+          [fInternship, 'Internship certificate'],
+          [fCouncil, 'Council registration certificate'],
         ]
         for (const [file, label] of checks) {
           if (file) {
@@ -328,21 +370,23 @@ export default function RegisterPhysioPage() {
       fd.append('specialization', specialization.trim())
       fd.append('serviceType', serviceType)
       fd.append('areas', areas)
-      fd.append('fees', String(fees))
+      fd.append('feeMin', String(feeMin))
+      fd.append('feeMax', String(feeMax))
 
       if (avatarFile) fd.append('avatar', avatarFile)
       fd.append('certificate', fCertificate)
       fd.append('idProof', fIdProof)
+      fd.append('idProofType', String(idProofType).trim().toLowerCase())
       fd.append('registrationCertificate', fRegCert)
       fd.append('selfieWithId', fSelfie)
-      if (ndaPolicy.requireSignedNda) {
-        if (!fSignedNda) {
-          setFormError('Upload the signed NDA before submitting')
-          toast.error('Upload the signed NDA before submitting')
-          return
-        }
-        fd.append('signedNda', fSignedNda)
+      if (fInternship) fd.append('internshipCertificate', fInternship)
+      if (fCouncil) fd.append('councilRegistrationCertificate', fCouncil)
+      if (ndaPolicy.requireQualificationDeclaration !== false && !qualificationAgreed) {
+        setFormError('Confirm the qualification declaration')
+        toast.error('Confirm the qualification declaration')
+        return
       }
+      fd.append('qualificationDeclaration', qualificationAgreed ? 'true' : 'false')
 
       await api.post('/auth/register-physio', fd, {
         headers: { 'Content-Type': 'multipart/form-data' },
@@ -368,7 +412,7 @@ export default function RegisterPhysioPage() {
       <header className="border-b border-gray-200 bg-white/90 shadow-sm">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-4">
           <Link to="/" className="text-sm font-semibold text-gray-900 hover:opacity-80">
-            ← PhysioCare
+            ← NearbyPhysio
           </Link>
           <Link to="/login" className="text-sm text-blue-600 hover:underline">
             Sign in
@@ -390,10 +434,7 @@ export default function RegisterPhysioPage() {
             <li key={s.n}>
               <button
                 type="button"
-                onClick={() => {
-                  setStep(s.n)
-                  clearErrors()
-                }}
+                onClick={() => tryGoToStep(s.n)}
                 className={[
                   'rounded-full px-3 py-1 text-xs font-medium ring-1 ring-inset transition',
                   step === s.n
@@ -608,8 +649,11 @@ export default function RegisterPhysioPage() {
             <h2 className="text-lg font-semibold text-ink">Qualification</h2>
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
               <div className="sm:col-span-2">
-                <label className="mb-1 block text-xs font-medium text-ink-muted">Degree</label>
-                <input
+                <label className="mb-1 block text-xs font-medium text-ink-muted" htmlFor="reg-degree">
+                  Degree
+                </label>
+                <select
+                  id="reg-degree"
                   className={inputClass('degree')}
                   value={degree}
                   onChange={(e) => {
@@ -617,7 +661,17 @@ export default function RegisterPhysioPage() {
                     setDegree(v)
                     patchField('degree', v)
                   }}
-                />
+                >
+                  <option value="">—</option>
+                  {PHYSIO_DEGREE_OPTIONS.map((d) => (
+                    <option key={d} value={d}>
+                      {d}
+                    </option>
+                  ))}
+                  {degree && !isPhysioDegreeOption(degree) ? (
+                    <option value={degree}>{degree}</option>
+                  ) : null}
+                </select>
                 {fieldErrors.degree ? <p className="mt-1 text-xs text-red-600">{fieldErrors.degree}</p> : null}
               </div>
               <div className="sm:col-span-2">
@@ -636,8 +690,11 @@ export default function RegisterPhysioPage() {
                 ) : null}
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-ink-muted">Year</label>
+                <label className="mb-1 block text-xs font-medium text-ink-muted" htmlFor="reg-passing-year">
+                  Passing Year
+                </label>
                 <input
+                  id="reg-passing-year"
                   className={inputClass('year')}
                   type="number"
                   value={year}
@@ -650,8 +707,11 @@ export default function RegisterPhysioPage() {
                 {fieldErrors.year ? <p className="mt-1 text-xs text-red-600">{fieldErrors.year}</p> : null}
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-ink-muted">Registration number</label>
+                <label className="mb-1 block text-xs font-medium text-ink-muted" htmlFor="reg-council-reg">
+                  Council Registration No (if applicable)
+                </label>
                 <input
+                  id="reg-council-reg"
                   className={inputClass('registrationNumber')}
                   value={registrationNumber}
                   onChange={(e) => {
@@ -737,20 +797,53 @@ export default function RegisterPhysioPage() {
                 />
                 {fieldErrors.areas ? <p className="mt-1 text-xs text-red-600">{fieldErrors.areas}</p> : null}
               </div>
-              <div>
-                <label className="mb-1 block text-xs font-medium text-ink-muted">Fee per session (₹)</label>
-                <input
-                  className={inputClass('fees')}
-                  type="number"
-                  min="0"
-                  value={fees}
-                  onChange={(e) => {
-                    const v = e.target.value
-                    setFees(v)
-                    patchField('fees', v)
-                  }}
-                />
-                {fieldErrors.fees ? <p className="mt-1 text-xs text-red-600">{fieldErrors.fees}</p> : null}
+              <div className="sm:col-span-2">
+                <p className="mb-1 text-xs font-medium text-ink-muted">Fee per session (₹)</p>
+                <p className="mb-2 text-xs text-ink-muted">
+                  Enter minimum and optionally a higher maximum (e.g. 500 and 700 for ₹500–700).
+                </p>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-ink-muted" htmlFor="reg-fee-min">
+                      Minimum
+                    </label>
+                    <input
+                      id="reg-fee-min"
+                      className={inputClass('feeMin')}
+                      type="number"
+                      min="0"
+                      value={feeMin}
+                      onChange={(e) => {
+                        const v = e.target.value
+                        setFeeMin(v)
+                        patchField('feeMin', v)
+                        setFieldErrors((prev) => ({
+                          ...prev,
+                          feeMax: validateLiveField('feeMax', feeMax, { feeMinStr: v }),
+                        }))
+                      }}
+                    />
+                    {fieldErrors.feeMin ? <p className="mt-1 text-xs text-red-600">{fieldErrors.feeMin}</p> : null}
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-ink-muted" htmlFor="reg-fee-max">
+                      Maximum (optional)
+                    </label>
+                    <input
+                      id="reg-fee-max"
+                      className={inputClass('feeMax')}
+                      type="number"
+                      min="0"
+                      value={feeMax}
+                      onChange={(e) => {
+                        const v = e.target.value
+                        setFeeMax(v)
+                        patchField('feeMax', v, { feeMinStr: feeMin })
+                      }}
+                    />
+                    {fieldErrors.feeMax ? <p className="mt-1 text-xs text-red-600">{fieldErrors.feeMax}</p> : null}
+                  </div>
+                </div>
               </div>
             </div>
           </section>
@@ -760,12 +853,14 @@ export default function RegisterPhysioPage() {
           <section className="surface-card rounded-2xl p-6 ring-1 ring-border-subtle">
             <h2 className="text-lg font-semibold text-ink">Documents</h2>
             <p className="mt-1 text-sm text-ink-muted">
-              PDF or images (max 2MB each). All four identity documents are required
-              {ndaPolicy.requireSignedNda ? ', plus a signed non-disclosure agreement.' : '.'}
+              PDF or images (max 2MB each). Upload the required credentials below, choose your government ID type, and
+              agree to the declaration. Internship and council registration certificates are optional but help
+              verification.
             </p>
-            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <div className="mt-5 grid gap-4 sm:grid-cols-2">
               <DocumentUploadPreview
                 label="Qualification certificate"
+                description="Degree or final marksheet from your university."
                 file={fCertificate}
                 serverUrl=""
                 error={fieldErrors.certificate}
@@ -777,19 +872,45 @@ export default function RegisterPhysioPage() {
                 }}
               />
               <DocumentUploadPreview
-                label="ID proof"
+                label="Government ID"
+                description="Clear photo or scan of the same ID you will show in your selfie."
                 file={fIdProof}
                 serverUrl=""
-                error={fieldErrors.idProof}
+                error={fieldErrors.idProof || fieldErrors.idProofType}
                 inputId="reg-doc-id"
                 showServerHint={false}
                 onFileChange={(f) => {
                   setFIdProof(f)
                   patchField('idProof', f)
                 }}
-              />
+              >
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-ink-muted" htmlFor="reg-id-proof-type">
+                    ID type
+                  </label>
+                  <select
+                    id="reg-id-proof-type"
+                    className={inputClass('idProofType')}
+                    value={idProofType}
+                    onChange={(e) => {
+                      const v = e.target.value
+                      setIdProofType(v)
+                      patchField('idProofType', v)
+                      setFieldErrors((prev) => ({ ...prev, idProofType: '' }))
+                    }}
+                  >
+                    <option value="">Select type…</option>
+                    {ID_PROOF_TYPE_OPTIONS.map((o) => (
+                      <option key={o.value} value={o.value}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </DocumentUploadPreview>
               <DocumentUploadPreview
-                label="Registration certificate"
+                label="Professional / council registration"
+                description="State council or equivalent registration document."
                 file={fRegCert}
                 serverUrl=""
                 error={fieldErrors.registrationCertificate}
@@ -802,6 +923,7 @@ export default function RegisterPhysioPage() {
               />
               <DocumentUploadPreview
                 label="Selfie with ID"
+                description="Your face visible next to the same government ID."
                 file={fSelfie}
                 serverUrl=""
                 error={fieldErrors.selfieWithId}
@@ -812,44 +934,57 @@ export default function RegisterPhysioPage() {
                   patchField('selfieWithId', f)
                 }}
               />
+              <DocumentUploadPreview
+                required={false}
+                label="Internship certificate"
+                description="Upload if you have completed a formal internship."
+                file={fInternship}
+                serverUrl=""
+                error={fieldErrors.internshipCertificate}
+                inputId="reg-doc-internship"
+                showServerHint={false}
+                onFileChange={(f) => {
+                  setFInternship(f)
+                  patchField('internshipCertificate', f)
+                }}
+              />
+              <DocumentUploadPreview
+                required={false}
+                label="Council registration certificate"
+                description="Optional — separate council letter or card, if available."
+                file={fCouncil}
+                serverUrl=""
+                error={fieldErrors.councilRegistrationCertificate}
+                inputId="reg-doc-council"
+                showServerHint={false}
+                onFileChange={(f) => {
+                  setFCouncil(f)
+                  patchField('councilRegistrationCertificate', f)
+                }}
+              />
             </div>
-            {ndaPolicy.requireSignedNda && ndaPolicy.templateUrl ? (
-              <div className="mt-6 rounded-xl border border-border-subtle bg-canvas/40 p-4">
-                <h3 className="text-sm font-semibold text-ink">Non-disclosure agreement</h3>
-                <p className="mt-1 text-xs text-ink-muted">
-                  Download the template, sign it, then upload a scan or photo of the signed document (PDF or image, max
-                  2MB).
-                </p>
-                <p className="mt-2">
-                  <a
-                    href={resolveFileUrl(ndaPolicy.templateUrl)}
-                    download={ndaPolicy.originalName || 'physio-nda-template'}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-sm font-medium text-brand underline"
-                  >
-                    Download NDA template
-                  </a>
-                  {ndaPolicy.originalName ? (
-                    <span className="ml-2 text-xs text-ink-muted">({ndaPolicy.originalName})</span>
-                  ) : null}
-                </p>
-                <div className="mt-3">
-                  <DocumentUploadPreview
-                    label="Signed NDA (required)"
-                    file={fSignedNda}
-                    serverUrl=""
-                    error={fieldErrors.signedNda}
-                    inputId="reg-doc-nda"
-                    showServerHint={false}
-                    onFileChange={(f) => {
-                      setFSignedNda(f)
-                      patchField('signedNda', f)
-                    }}
-                  />
-                </div>
-              </div>
-            ) : null}
+            <div className="mt-6 rounded-xl border border-border-subtle bg-canvas/40 p-4">
+              <h3 className="text-sm font-semibold text-ink">Qualification declaration</h3>
+              <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-ink-muted">
+                {ndaPolicy.declarationText ||
+                  'I confirm that all qualifications and documents I submit to NearbyPhysio are accurate. Misrepresentation may result in removal from the platform and legal consequences.'}
+              </p>
+              <label className="mt-4 flex cursor-pointer items-start gap-3 text-sm text-ink">
+                <input
+                  type="checkbox"
+                  checked={qualificationAgreed}
+                  onChange={(e) => {
+                    setQualificationAgreed(e.target.checked)
+                    setFieldErrors((prev) => ({ ...prev, qualificationDeclaration: '' }))
+                  }}
+                  className="mt-1 h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                />
+                <span>I have read and agree to the declaration above.</span>
+              </label>
+              {fieldErrors.qualificationDeclaration ? (
+                <p className="mt-2 text-xs text-red-600">{fieldErrors.qualificationDeclaration}</p>
+              ) : null}
+            </div>
             {fieldErrors.file ? <p className="mt-2 text-sm text-red-600">{fieldErrors.file}</p> : null}
           </section>
         )}
@@ -880,7 +1015,14 @@ export default function RegisterPhysioPage() {
               </div>
               <div className="flex justify-between gap-4 border-b border-border-subtle py-2">
                 <dt className="text-ink-muted">Fee / session</dt>
-                <dd className="text-right font-medium text-ink">₹{fees || '—'}</dd>
+                <dd className="text-right font-medium text-ink">
+                  {feeMin === ''
+                    ? '—'
+                    : formatPhysioSessionFeeLabel({
+                        pricePerSession: Number(feeMin),
+                        pricePerSessionMax: feeMax === '' ? null : Number(feeMax),
+                      })}
+                </dd>
               </div>
               <div className="flex justify-between gap-4 border-b border-border-subtle py-2">
                 <dt className="text-ink-muted">Coverage (map)</dt>

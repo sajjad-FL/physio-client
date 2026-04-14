@@ -5,6 +5,7 @@ import { api } from '../../config/api'
 import { toastApiError } from '../../utils/formToast'
 import { resolveFileUrl } from '../../utils/serverOrigin'
 import VerificationBadge from '../../components/physio/VerificationBadge'
+import { formatPhysioSessionFeeLabel } from '../../utils/physioSessionFee.js'
 
 function verificationLevelForBadge(level) {
   if (level === 'verified' || level === 'premium') return 'verified'
@@ -185,11 +186,11 @@ export default function AdminPhysioDetailPage() {
               <dd>{q.university || '—'}</dd>
             </div>
             <div className="flex justify-between gap-2">
-              <dt className="text-ink-muted">Year</dt>
+              <dt className="text-ink-muted">Passing Year</dt>
               <dd>{q.year ?? '—'}</dd>
             </div>
             <div className="flex justify-between gap-2">
-              <dt className="text-ink-muted">Registration #</dt>
+              <dt className="text-ink-muted">Council reg. no.</dt>
               <dd>{q.registrationNumber || '—'}</dd>
             </div>
           </dl>
@@ -212,7 +213,7 @@ export default function AdminPhysioDetailPage() {
             </div>
             <div className="flex justify-between gap-2">
               <dt className="text-ink-muted">Fee / session</dt>
-              <dd>₹{p.pricePerSession ?? '—'}</dd>
+              <dd>{`${formatPhysioSessionFeeLabel(p)}/session`}</dd>
             </div>
           </dl>
         </section>
