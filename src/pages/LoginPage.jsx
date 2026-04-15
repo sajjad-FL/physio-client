@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Helmet } from 'react-helmet-async'
 import { Link, useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { api } from '../config/api'
@@ -8,6 +9,7 @@ import PasswordInput from '../components/ui/PasswordInput'
 import { setSession, getToken, getDefaultDashboardPath } from '../auth/session'
 import { validateIndianMobile } from '../utils/phoneIndia'
 import { validateLiveField } from '../utils/liveFieldValidation'
+import { absoluteUrl } from '../utils/siteMeta'
 
 export default function LoginPage() {
   const navigate = useNavigate()
@@ -76,8 +78,27 @@ export default function LoginPage() {
     return <AuthSpinner />
   }
 
+  const title = 'Sign in — NearbyPhysio'
+  const description = 'Sign in to your NearbyPhysio account to book home visit physiotherapy and manage appointments.'
+  const canonical = absoluteUrl('/login')
+  const ogImage = absoluteUrl('/og-default.png')
+
   return (
     <div className="relative min-h-screen bg-slate-50">
+      <Helmet>
+        <title>{title}</title>
+        <meta name="description" content={description} />
+        <link rel="canonical" href={canonical} />
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content={title} />
+        <meta property="og:description" content={description} />
+        <meta property="og:url" content={canonical} />
+        <meta property="og:image" content={ogImage} />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={title} />
+        <meta name="twitter:description" content={description} />
+        <meta name="twitter:image" content={ogImage} />
+      </Helmet>
       <div
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(13,148,136,0.12),transparent)]"
         aria-hidden

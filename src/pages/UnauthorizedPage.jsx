@@ -1,10 +1,18 @@
+import { Helmet } from 'react-helmet-async'
 import { Link } from 'react-router-dom'
 import { getDefaultDashboardPath } from '../auth/session'
+import SeoNoIndex from '../components/seo/SeoNoIndex'
+
 export default function UnauthorizedPage() {
   const home = getDefaultDashboardPath()
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50 px-4">
+    <>
+      <SeoNoIndex />
+      <Helmet>
+        <title>Access denied | NearbyPhysio</title>
+      </Helmet>
+      <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50 px-4">
       <h1 className="text-2xl font-semibold text-gray-900">Access denied</h1>
       <p className="mt-2 max-w-md text-center text-sm text-gray-500">
         You don&apos;t have permission to view this page.
@@ -19,5 +27,6 @@ export default function UnauthorizedPage() {
         Sign in as a different user
       </Link>
     </div>
+    </>
   )
 }

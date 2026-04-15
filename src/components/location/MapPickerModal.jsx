@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import mapboxgl from 'mapbox-gl'
 import toast from 'react-hot-toast'
 import Button from '../ui/Button'
+import { getCurrentCoords } from '../../utils/geolocation'
 
 /**
  * Map pin picker — same UX as profile. Nested modals should set a higher z-index on the overlay.
@@ -98,31 +99,22 @@ export default function MapPickerModal({
     }
   }, [open, token, initialLat, initialLng])
 
-  function useMyLocation() {
-    if (!navigator.geolocation) {
-      toast.error('Geolocation is not supported in this browser.')
-      return
-    }
+  async function useMyLocation() {
     if (!token || !mapRef.current || !placeMarkerRef.current) {
       toast.error('Map is still loading — try again in a moment.')
       return
     }
     setGeoLoading(true)
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const lat = Number(pos.coords.latitude)
-        const lng = Number(pos.coords.longitude)
-        placeMarkerRef.current?.(lat, lng)
-        mapRef.current?.flyTo({ center: [lng, lat], zoom: 15, duration: 1000 })
-        toast.success('Pin placed at your location — drag it to fine-tune')
-        setGeoLoading(false)
-      },
-      () => {
-        toast.error('Could not read your location.')
-        setGeoLoading(false)
-      },
-      { enableHighAccuracy: false, timeout: 12000 }
-    )
+    try {
+      const { lat, lng } = await getCurrentCoords()
+      placeMarkerRef.current?.(lat, lng)
+      mapRef.current?.flyTo({ center: [lng, lat], zoom: 15, duration: 1000 })
+      toast.success('Pin placed at your location — drag it to fine-tune')
+    } catch (err) {
+      toast.error(err?.userMessage || 'Could not read your location.')
+    } finally {
+      setGeoLoading(false)
+    }
   }
 
   if (!open) return null

@@ -42,6 +42,8 @@ function servicePillClass(serviceType) {
 export default function PhysioBookingsPage() {
   const [bookings, setBookings] = useState([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
+  const [errorCode, setErrorCode] = useState('')
   const [filters, setFilters] = useState(() => ({ ...DEFAULT_PHYSIO_FILTERS }))
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [search, setSearch] = useState('')
@@ -85,11 +87,15 @@ export default function PhysioBookingsPage() {
 
   const load = useCallback(async () => {
     setLoading(true)
+    setLoadError('')
+    setErrorCode('')
     try {
       const res = await api.get('/physio/bookings', { params: { page: 1, limit: 100 } })
       setBookings(res.data?.data || [])
-    } catch {
-      // toast.error('Failed to load bookings')
+    } catch (e) {
+      setBookings([])
+      setErrorCode(String(e?.response?.data?.code || ''))
+      setLoadError(e?.response?.data?.message || 'Failed to load bookings')
     } finally {
       setLoading(false)
     }
@@ -144,6 +150,20 @@ export default function PhysioBookingsPage() {
           {[1, 2, 3].map((i) => (
             <div key={i} className="h-[4.5rem] animate-pulse rounded-xl bg-white shadow-sm ring-1 ring-gray-100" />
           ))}
+        </div>
+      ) : loadError ? (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50/80 px-4 py-4 text-sm text-amber-900">
+          <p className="font-medium">{loadError}</p>
+          {errorCode === 'PHYSIO_PENDING' || errorCode === 'PROFILE_INCOMPLETE' ? (
+            <div className="mt-3">
+              <Link
+                to="/physio/onboarding"
+                className="inline-flex items-center rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-amber-900 ring-1 ring-amber-300 hover:bg-amber-100/40"
+              >
+                Finish profile setup
+              </Link>
+            </div>
+          ) : null}
         </div>
       ) : bookings.length === 0 ? (
         <p className="text-sm text-gray-500">No assigned bookings yet.</p>

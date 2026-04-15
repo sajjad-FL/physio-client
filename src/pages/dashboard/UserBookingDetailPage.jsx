@@ -21,9 +21,59 @@ import Button from '../../components/ui/Button'
 import ReviewSubmitModal from '../../components/reviews/ReviewSubmitModal'
 import { StarRatingDisplay } from '../../components/reviews/StarRating'
 import { bookingStatusBadge, paymentBadge } from './dashboardUtils'
+import { assetUrl } from '../../utils/assetUrl'
 
 const actionBtn =
   'cursor-pointer rounded-xl px-4 py-2.5 text-sm font-semibold shadow-sm transition-all duration-200 hover:shadow-md active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50'
+
+function PatientPhysioCard({ physio }) {
+  if (!physio || typeof physio !== 'object') return null
+
+  const avatar = assetUrl(physio.avatar)
+  const avg = Number(physio.avgRating) || 0
+  const total = Number(physio.totalReviews) || 0
+  const experience = Number.isFinite(Number(physio.experience)) ? `${Number(physio.experience)}+ yrs experience` : null
+  const distance = Number.isFinite(Number(physio.distanceKm)) ? `${Number(physio.distanceKm).toFixed(1)} km away` : null
+
+  return (
+    <div className="mt-3 rounded-2xl border border-slate-200/90 bg-white p-4 shadow-sm ring-1 ring-slate-900/5 sm:p-5">
+      <div className="flex items-start gap-3">
+        <div className="h-14 w-14 shrink-0 overflow-hidden rounded-2xl bg-slate-100 ring-1 ring-slate-200">
+          {avatar ? (
+            <img src={avatar} alt="" className="h-full w-full object-cover" loading="lazy" decoding="async" />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center text-lg font-semibold text-slate-500">
+              {(physio.name || '?').slice(0, 1).toUpperCase()}
+            </div>
+          )}
+        </div>
+        <div className="min-w-0 flex-1">
+          <h3 className="truncate text-lg font-semibold text-slate-900 sm:text-xl">{physio.name || 'Physiotherapist'}</h3>
+          {physio.specialization ? <p className="truncate text-sm text-slate-500">{physio.specialization}</p> : null}
+          <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
+            <StarRatingDisplay value={avg} size="sm" />
+            <span className="text-sm text-slate-600">
+              {total > 0 ? `${avg.toFixed(1)} · ${total} review${total === 1 ? '' : 's'}` : 'New on platform'}
+            </span>
+          </div>
+          <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-700">
+            {experience ? <span>{experience}</span> : null}
+            {distance ? <span>{distance}</span> : null}
+            {physio.phone ? <span className="font-medium text-slate-600">{physio.phone}</span> : null}
+          </div>
+          <div className="mt-2.5">
+            <Link
+              to={`/physician/${String(physio._id)}`}
+              className="text-sm font-semibold text-teal-700 hover:text-teal-900 hover:underline"
+            >
+              View profile →
+            </Link>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 export default function UserBookingDetailPage() {
   const { id } = useParams()
@@ -178,18 +228,18 @@ export default function UserBookingDetailPage() {
 
       <Card hover={false} className="border-border-subtle p-5 sm:p-6">
         <h2 className="text-sm font-semibold text-ink">Participants</h2>
-        <div className="mt-4 grid gap-6 sm:grid-cols-2">
-          <div>
+        <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+          <div className="rounded-xl border border-border-subtle/80 bg-slate-50/60 p-4">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-muted">You</p>
             <p className="mt-1 font-medium text-ink">{b.userId?.name ?? '—'}</p>
             <p className="mt-0.5 text-sm text-ink-muted">{b.userId?.phone ?? '—'}</p>
           </div>
-          <div>
+          <div className="rounded-xl border border-border-subtle/80 bg-slate-50/60 p-4">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-muted">Physiotherapist</p>
-            <p className="mt-1 font-medium text-ink">{b.physioId?.name || 'Not assigned yet'}</p>
-            {b.physioId?.phone && <p className="mt-0.5 text-sm text-ink-muted">{b.physioId.phone}</p>}
-            {b.physioId?.specialization && (
-              <p className="mt-1 text-xs text-ink-muted">{b.physioId.specialization}</p>
+            {b.physioId?._id ? (
+              <PatientPhysioCard physio={b.physioId} />
+            ) : (
+              <p className="mt-1 font-medium text-ink">Not assigned yet</p>
             )}
           </div>
         </div>
@@ -261,7 +311,7 @@ export default function UserBookingDetailPage() {
             <dd className="font-semibold tabular-nums text-ink">{paymentAmountLabel(b)}</dd>
           </div>
           <div className="flex justify-between gap-4">
-            <dt className="text-ink-muted">Escrow</dt>
+            <dt className="text-ink-muted">Payment hold</dt>
             <dd className="text-ink">{paymentStatusLabel(b.paymentStatus)}</dd>
           </div>
           <div className="flex justify-between gap-4">
@@ -280,7 +330,7 @@ export default function UserBookingDetailPage() {
           <p className="font-medium">Offline payment</p>
           <p className="mt-1 text-xs text-amber-900/90">
             {b.payment?.status === 'collected'
-              ? 'Your physiotherapist marked payment as collected. Our team will verify shortly — escrow updates once verified.'
+              ? 'Your physiotherapist marked payment as collected. Our team will verify shortly — payment status updates after verification.'
               : 'Pay your physiotherapist as agreed (cash/UPI). They will mark payment as collected, then we verify before the session can be completed.'}
           </p>
         </div>

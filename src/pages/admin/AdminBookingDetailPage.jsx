@@ -19,6 +19,7 @@ import Button from '../../components/ui/Button'
 import AdminAssignPhysioModal from '../../components/admin/AdminAssignPhysioModal'
 import RescheduleModal from '../../components/physio/RescheduleModal'
 import { resolveFileUrl } from '../../utils/serverOrigin'
+import { DAILY_SLOTS } from '../../constants/slots'
 
 const adminHeaders = () => ({
   headers: { Authorization: `Bearer ${import.meta.env.VITE_ADMIN_API_KEY || ''}` },
@@ -41,6 +42,10 @@ export default function AdminBookingDetailPage() {
   const [resolveAction, setResolveAction] = useState('reject')
   const [resolveSubmitting, setResolveSubmitting] = useState(false)
   const [rescheduleRow, setRescheduleRow] = useState(null)
+  const [addSessionOpen, setAddSessionOpen] = useState(false)
+  const [addSessionDate, setAddSessionDate] = useState('')
+  const [addSessionTime, setAddSessionTime] = useState(DAILY_SLOTS[0] || '10:00-11:00')
+  const [sessionBusy, setSessionBusy] = useState(null)
 
   const load = useCallback(async () => {
     if (!id) return
@@ -203,6 +208,46 @@ export default function AdminBookingDetailPage() {
     }
   }
 
+  async function submitAddSession(e) {
+    e.preventDefault()
+    if (!b?._id) return
+    if (!addSessionDate || !addSessionTime) {
+      toast.error('Choose date and slot')
+      return
+    }
+    setSessionBusy('add')
+    try {
+      await api.post(
+        `/admin/bookings/${b._id}/sessions`,
+        { date: addSessionDate, timeSlot: addSessionTime },
+        adminHeaders(),
+      )
+      toast.success('Session added')
+      setAddSessionOpen(false)
+      await load()
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Could not add session')
+    } finally {
+      setSessionBusy(null)
+    }
+  }
+
+  async function handleDeleteSession(row) {
+    if (!b?._id || !row?.sessionId) return
+    const ok = window.confirm(`Delete session #${row.n} (${row.date}, ${row.time})?`)
+    if (!ok) return
+    setSessionBusy(String(row.sessionId))
+    try {
+      await api.delete(`/admin/bookings/${b._id}/sessions/${row.sessionId}`, adminHeaders())
+      toast.success('Session deleted')
+      await load()
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Could not delete session')
+    } finally {
+      setSessionBusy(null)
+    }
+  }
+
   const actionBtn =
     'cursor-pointer rounded-xl px-4 py-2.5 text-sm font-semibold shadow-sm transition-all duration-200 hover:shadow-md disabled:pointer-events-none disabled:opacity-50'
 
@@ -324,6 +369,54 @@ export default function AdminBookingDetailPage() {
         </div>
       )}
 
+      {addSessionOpen && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center bg-ink/40 p-4 backdrop-blur-sm">
+          <form
+            onSubmit={submitAddSession}
+            className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl ring-1 ring-border-subtle"
+          >
+            <h3 className="text-lg font-semibold text-ink">Add session</h3>
+            <p className="mt-1 text-xs text-ink-muted">Choose a new date and time slot for this booking schedule.</p>
+            <label className="mt-4 block text-sm font-medium text-ink">Date</label>
+            <input
+              type="date"
+              value={addSessionDate}
+              onChange={(e) => setAddSessionDate(e.target.value)}
+              className="mt-1 w-full rounded-xl border border-border-subtle px-3 py-2 text-sm"
+              required
+            />
+            <label className="mt-3 block text-sm font-medium text-ink">Time slot</label>
+            <select
+              value={addSessionTime}
+              onChange={(e) => setAddSessionTime(e.target.value)}
+              className="mt-1 w-full rounded-xl border border-border-subtle px-3 py-2 text-sm"
+            >
+              {DAILY_SLOTS.map((slot) => (
+                <option key={slot} value={slot}>
+                  {slot}
+                </option>
+              ))}
+            </select>
+            <div className="mt-4 flex gap-2">
+              <button
+                type="button"
+                className="flex-1 rounded-xl border border-border-subtle py-2 text-sm font-medium"
+                onClick={() => setAddSessionOpen(false)}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={sessionBusy === 'add'}
+                className="flex-1 rounded-xl bg-emerald-600 py-2 text-sm font-semibold text-white disabled:opacity-50"
+              >
+                {sessionBusy === 'add' ? 'Adding…' : 'Add session'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
       <Card hover={false} className="border-border-subtle p-5 sm:p-6">
         <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-muted">Visit</p>
         <p className="mt-1 text-xl font-semibold text-ink">{formatBookingDateAndSlot(b.date, b.timeSlot)}</p>
@@ -378,6 +471,18 @@ export default function AdminBookingDetailPage() {
             reschedule={{
               enabled: true,
               onReschedule: (row) => setRescheduleRow(row),
+            }}
+            adminSessions={{
+              enabled: true,
+              onAdd: () => {
+                setAddSessionDate(b?.date || '')
+                setAddSessionTime(b?.timeSlot || DAILY_SLOTS[0] || '10:00-11:00')
+                setAddSessionOpen(true)
+              },
+              onDelete: handleDeleteSession,
+              canDelete: (row) => Boolean(row.sessionId),
+              deletingSessionId: sessionBusy && sessionBusy !== 'add' ? sessionBusy : null,
+              disableAdd: sessionBusy === 'add',
             }}
           />
         </div>
@@ -435,7 +540,7 @@ export default function AdminBookingDetailPage() {
             <dd className="font-medium text-ink">{paymentModeLabel(b)}</dd>
           </div>
           <div className="flex justify-between gap-4">
-            <dt className="text-ink-muted">Escrow</dt>
+            <dt className="text-ink-muted">Payment hold</dt>
             <dd className="font-medium text-ink">{paymentStatusLabel(b.paymentStatus)}</dd>
           </div>
           <div className="flex justify-between gap-4">
@@ -468,7 +573,7 @@ export default function AdminBookingDetailPage() {
               <label className="text-xs font-medium text-ink-muted">Assign physiotherapist</label>
               {canAssign && b.paymentStatus !== 'held' && (
                 <p className="text-[11px] text-amber-800/90">
-                  Payment not in escrow yet — you can still assign; the patient may need to complete checkout.
+                  Patient has not paid yet. You can still assign now, and ask the patient to complete payment.
                 </p>
               )}
               {selectedPhysioForAssign ? (

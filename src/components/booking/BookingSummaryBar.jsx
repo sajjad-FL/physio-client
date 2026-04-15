@@ -4,7 +4,7 @@ import { formatPhysioSessionFeeLabel } from '../../utils/physioSessionFee.js'
 
 /**
  * Sticky bottom booking summary + primary CTA.
- * When no `selectedPhysio`, copy assumes admin/team assignment after booking.
+ * When no `selectedPhysio`, copy explains that our team picks a physio.
  */
 export default function BookingSummaryBar({
   selectedPhysio,
@@ -29,7 +29,7 @@ export default function BookingSummaryBar({
               {teamAssigns ? (
                 <span className="font-semibold text-gray-900">
                   <span className="text-gray-500">Physio · </span>
-                  Assigned by our team
+                  Picked by our team
                 </span>
               ) : (
                 <span className="font-semibold text-gray-900">
@@ -46,7 +46,7 @@ export default function BookingSummaryBar({
             </div>
             <p className="text-xs text-gray-500">
               {serviceType === 'home'
-                ? 'Home visit — a physiotherapist will be assigned after you confirm.'
+                ? 'Home visit — our team will pick a physio after you confirm.'
                 : teamAssigns
                   ? 'Online session — fee is confirmed at payment.'
                   : 'Online consultation'}

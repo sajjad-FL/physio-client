@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { Link, Outlet, useLocation } from 'react-router-dom'
 import AppShell from '../../components/layout/AppShell'
+import SeoNoIndex from '../../components/seo/SeoNoIndex'
 
 const iconHome = (
   <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24" aria-hidden>
@@ -78,7 +79,9 @@ export default function UserDashboardLayout() {
   const topBarTitle = useMemo(() => titleForPath(pathname), [pathname])
 
   return (
-    <AppShell
+    <>
+      <SeoNoIndex />
+      <AppShell
       brand="NearbyPhysio"
       badge="Patient"
       topBarTitle={topBarTitle}
@@ -105,5 +108,6 @@ export default function UserDashboardLayout() {
     >
       <Outlet />
     </AppShell>
+    </>
   )
 }

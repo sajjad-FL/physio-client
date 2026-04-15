@@ -1,9 +1,70 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Activity, Bandage, Brain, Footprints, MessageCircleQuestion, PersonStanding } from 'lucide-react'
+import { Helmet } from 'react-helmet-async'
+import { Accessibility, Bandage, Bone, Brain, MessageCircleQuestion, PersonStanding } from 'lucide-react'
 import { ISSUE_OPTIONS } from '../constants/issues'
 import SiteHeader from '../components/layout/SiteHeader'
 import FeaturedPhysiosSection from '../components/home/FeaturedPhysiosSection'
+import { absoluteUrl, primaryServiceAreas, primaryServiceAreasSentence, siteOrigin } from '../utils/siteMeta'
+
+const HOME_TITLE = 'NearbyPhysio — Home visit physiotherapy & physio near you'
+const HOME_DESCRIPTION =
+  'Book a verified physiotherapist for a home visit. Find physio near you for back pain, knee pain, post-surgery rehab, and stroke recovery — simple booking and secure payment.'
+
+const HOME_FAQ = [
+  {
+    q: 'How do I find a physiotherapist near me?',
+    a: 'NearbyPhysio lists verified physiotherapists you can book for home visits. Create an account, share your location when you book, and we match you with an available clinician for your time slot.',
+  },
+  {
+    q: 'Is this physio at home or in a clinic?',
+    a: 'Our focus is home visit physiotherapy so you can recover where you are comfortable, without the clinic commute.',
+  },
+  {
+    q: 'Are therapists verified?',
+    a: 'Profiles marked as verified have completed our platform checks. You can read reviews on individual physiotherapist pages before you book.',
+  },
+  {
+    q: 'How does booking work?',
+    a: 'You choose a date and time slot, pay online to confirm, and our team assigns a qualified physiotherapist. You can track your booking in your dashboard.',
+  },
+  {
+    q: 'What conditions do you help with?',
+    a: 'Common examples include back pain, neck pain, knee pain, post-surgery rehabilitation, and stroke or paralysis support — plus other issues you can describe when booking.',
+  },
+]
+
+function homeStructuredData({ siteBase, ogImage, areas }) {
+  const areaServed = areas.map((name) => ({ '@type': 'AdministrativeArea', name }))
+  const faqEntity = HOME_FAQ.map(({ q, a }) => ({
+    '@type': 'Question',
+    name: q,
+    acceptedAnswer: { '@type': 'Answer', text: a },
+  }))
+  const graph = [
+    {
+      '@type': 'WebSite',
+      '@id': `${siteBase}/#website`,
+      name: 'NearbyPhysio',
+      url: `${siteBase}/`,
+    },
+    {
+      '@type': 'MedicalBusiness',
+      '@id': `${siteBase}/#organization`,
+      name: 'NearbyPhysio',
+      url: `${siteBase}/`,
+      description: HOME_DESCRIPTION,
+      image: ogImage,
+      ...(areaServed.length ? { areaServed } : {}),
+    },
+    {
+      '@type': 'FAQPage',
+      '@id': `${siteBase}/#faq`,
+      mainEntity: faqEntity,
+    },
+  ]
+  return { '@context': 'https://schema.org', '@graph': graph }
+}
 
 function serviceBlurb(title) {
   if (title === 'Post Surgery Rehab') return 'Guided recovery at home after your procedure.'
@@ -29,11 +90,11 @@ function ServiceConditionIcon({ title }) {
   const cn = 'h-[22px] w-[22px] shrink-0'
   switch (title) {
     case 'Back Pain':
-      return <Activity className={cn} strokeWidth={iconStroke} aria-hidden />
-    case 'Neck Pain':
       return <PersonStanding className={cn} strokeWidth={iconStroke} aria-hidden />
+    case 'Neck Pain':
+      return <Accessibility className={cn} strokeWidth={iconStroke} aria-hidden />
     case 'Knee Pain':
-      return <Footprints className={cn} strokeWidth={iconStroke} aria-hidden />
+      return <Bone className={cn} strokeWidth={iconStroke} aria-hidden />
     case 'Post Surgery Rehab':
       return <Bandage className={cn} strokeWidth={iconStroke} aria-hidden />
     case 'Stroke/Paralysis':
@@ -41,7 +102,7 @@ function ServiceConditionIcon({ title }) {
     case 'Other condition':
       return <MessageCircleQuestion className={cn} strokeWidth={iconStroke} aria-hidden />
     default:
-      return <Activity className={cn} strokeWidth={iconStroke} aria-hidden />
+      return <PersonStanding className={cn} strokeWidth={iconStroke} aria-hidden />
   }
 }
 
@@ -180,36 +241,59 @@ function ServicesConditionsCarousel() {
 
 const steps = [
   { title: 'Book', text: 'Share your details and what you need help with.' },
-  { title: 'Get assigned', text: 'We match you with a qualified physiotherapist.' },
+  { title: 'Get matched', text: 'We pick a qualified physiotherapist for you.' },
   { title: 'Get treatment', text: 'Receive expert therapy in the comfort of your home.' },
 ]
 
-const flowSteps = ['Choose slot', 'Confirm details', 'Pay securely']
-const flowCopy = [
-  'Pick a date that works for you.',
-  'Tell us what you need help with.',
-  'Razorpay checkout — then we assign a physio.',
-]
-
 export default function HomePage() {
+  const siteBase = (siteOrigin() || 'http://localhost:5173').replace(/\/$/, '')
+  const canonical = absoluteUrl('/')
+  const ogImage = absoluteUrl('/og-default.png')
+  const areaLine = primaryServiceAreasSentence()
+  const ldJson = JSON.stringify(
+    homeStructuredData({ siteBase, ogImage, areas: primaryServiceAreas() }),
+  )
+
   return (
     <div className="min-h-screen bg-slate-50">
+      <Helmet>
+        <title>{HOME_TITLE}</title>
+        <meta name="description" content={HOME_DESCRIPTION} />
+        <link rel="canonical" href={canonical} />
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content={HOME_TITLE} />
+        <meta property="og:description" content={HOME_DESCRIPTION} />
+        <meta property="og:url" content={canonical} />
+        <meta property="og:image" content={ogImage} />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={HOME_TITLE} />
+        <meta name="twitter:description" content={HOME_DESCRIPTION} />
+        <meta name="twitter:image" content={ogImage} />
+        <script type="application/ld+json">{ldJson}</script>
+      </Helmet>
+
       <SiteHeader />
 
       <main>
         <section className="relative overflow-hidden border-b border-slate-200 bg-mesh-hero">
           <div className="pointer-events-none absolute inset-0 bg-grid-saas opacity-40" aria-hidden />
-          <div className="relative mx-auto max-w-6xl px-4 pb-24 pt-20 sm:px-6 sm:pb-28 sm:pt-24 lg:px-8 lg:pb-32 lg:pt-28">
+          <div className="relative mx-auto max-w-6xl px-4 pb-8 pt-20 sm:px-6 sm:pb-12 sm:pt-24 lg:px-8 lg:pb-32 lg:pt-28">
             <div className="mx-auto max-w-3xl text-center">
               <p className="motion-safe:animate-enter inline-flex items-center rounded-full border border-slate-200 bg-white/90 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500 shadow-sm backdrop-blur">
                 Home visits · Verified clinicians
               </p>
               <h1 className="motion-safe:animate-enter-up animate-delay-1 mt-8 text-balance text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl sm:leading-[1.08]">
-                Find Trusted Physiotherapists Near You
+                Physiotherapist home visits — book a physio near you
               </h1>
               <p className="motion-safe:animate-enter-up animate-delay-2 mx-auto mt-6 max-w-xl text-lg leading-relaxed text-slate-500">
-                Expert care for back pain, knee pain, and recovery — without the clinic commute. Simple booking, secure
-                payment, and a therapist matched to your area.
+                NearbyPhysio connects you with licensed physiotherapists for physio at home: back pain, knee pain,
+                post-surgery rehab, and more. Simple booking, secure payment, and a therapist matched to your area.
+                {areaLine ? (
+                  <>
+                    {' '}
+                    We currently focus on patients in <span className="font-medium text-slate-600">{areaLine}</span>.
+                  </>
+                ) : null}
               </p>
               <div className="motion-safe:animate-enter-up animate-delay-3 mt-12 flex flex-col items-center justify-center">
                 <Link
@@ -219,17 +303,17 @@ export default function HomePage() {
                   Book Now
                 </Link>
               </div>
-              <p className="motion-safe:animate-enter-up animate-delay-4 mt-6">
+              {/* <p className="motion-safe:animate-enter-up animate-delay-4 mt-6">
                 <a
                   href="#how-it-works"
                   className="text-sm font-medium text-teal-700 underline-offset-4 transition hover:text-teal-800 hover:underline"
                 >
                   How it works
                 </a>
-              </p>
+              </p> */}
             </div>
 
-            <div className="motion-safe:animate-enter-up animate-delay-5 mx-auto mt-20 max-w-4xl lg:mt-24">
+            {/* <div className="motion-safe:animate-enter-up animate-delay-5 mx-auto mt-20 max-w-4xl lg:mt-24">
               <div className="surface-card rounded-2xl p-2.5 ring-1 ring-slate-900/5">
                 <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-slate-50 px-5 py-3.5 text-sm text-slate-500">
                   <span className="font-medium text-slate-900">Today&apos;s flow</span>
@@ -247,11 +331,11 @@ export default function HomePage() {
                   ))}
                 </div>
               </div>
-            </div>
+            </div> */}
           </div>
         </section>
 
-        <section id="services" className="border-b border-slate-200 bg-white py-24 lg:py-28">
+        <section id="services" className="border-b border-slate-200 bg-white py-12 lg:py-28">
           <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
             <div className="mx-auto max-w-2xl text-center">
               <h2 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">What we help with</h2>
@@ -291,6 +375,25 @@ export default function HomePage() {
 
         <FeaturedPhysiosSection />
 
+        <section id="faq" className="border-b border-slate-200 bg-white py-16 lg:py-24">
+          <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
+            <h2 className="text-center text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+              Common questions
+            </h2>
+            <p className="mx-auto mt-4 text-center text-lg text-slate-500">
+              Quick answers about finding a physio near you and booking a home visit.
+            </p>
+            <dl className="mt-12 space-y-8">
+              {HOME_FAQ.map(({ q, a }) => (
+                <div key={q} className="border-b border-slate-100 pb-8 last:border-0 last:pb-0">
+                  <dt className="text-lg font-semibold text-slate-900">{q}</dt>
+                  <dd className="mt-2 text-base leading-relaxed text-slate-600">{a}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        </section>
+
         <section id="book" className="border-t border-slate-200 bg-white py-24 lg:py-28">
           <div className="mx-auto max-w-6xl px-4 text-center sm:px-6 lg:px-8">
             <h2 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">Ready to book?</h2>
@@ -310,17 +413,30 @@ export default function HomePage() {
       </main>
 
       <footer className="border-t border-slate-800 bg-slate-900 text-white">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-8 px-4 py-14 sm:flex-row sm:px-6 lg:px-8">
+        <div className="mx-auto flex max-w-6xl flex-col gap-8 px-4 py-14 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
           <div>
             <p className="text-sm font-semibold">NearbyPhysio</p>
             <p className="mt-2 text-sm text-white/60">&copy; {new Date().getFullYear()} Home visit physiotherapy.</p>
           </div>
-          <Link
-            to="/register-physio"
-            className="text-sm font-medium text-white/90 transition-colors duration-200 hover:text-white"
-          >
-            Register as a physio →
-          </Link>
+          <nav className="flex flex-col gap-3 text-sm font-medium sm:items-end" aria-label="Footer">
+            <div className="flex flex-wrap gap-x-6 gap-y-2 text-white/90">
+              <Link to="/register" className="transition-colors hover:text-white">
+                Create patient account
+              </Link>
+              <Link to="/login" className="transition-colors hover:text-white">
+                Sign in
+              </Link>
+              <Link to="/book" className="transition-colors hover:text-white">
+                Book a physio
+              </Link>
+            </div>
+            <Link
+              to="/register-physio"
+              className="text-white/90 transition-colors duration-200 hover:text-white"
+            >
+              Register as a physiotherapist →
+            </Link>
+          </nav>
         </div>
       </footer>
     </div>

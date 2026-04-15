@@ -176,7 +176,7 @@ export default function PhysioBookingDetailPage() {
             {sessionStatusLabel(b)}
           </span>
           <span className="inline-flex rounded-full bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-800 ring-1 ring-slate-200">
-            Escrow: {paymentStatusLabel(b.paymentStatus)}
+            Payment hold: {paymentStatusLabel(b.paymentStatus)}
           </span>
           {b.payment?.status != null && (
             <span className="inline-flex rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-900 ring-1 ring-indigo-200">
@@ -270,7 +270,7 @@ export default function PhysioBookingDetailPage() {
             </dd>
           </div>
           <div className="flex justify-between gap-4">
-            <dt className="text-gray-500">Escrow</dt>
+            <dt className="text-gray-500">Payment hold</dt>
             <dd className="font-medium text-gray-900">{paymentStatusLabel(b.paymentStatus)}</dd>
           </div>
           <div className="flex justify-between gap-4">
@@ -337,7 +337,7 @@ export default function PhysioBookingDetailPage() {
             onClick={() => completeSession(b._id)}
             title={
               !canMarkComplete && b.sessionStatus !== 'completed'
-                ? 'Payment must be confirmed (online paid or offline verified by admin) and held in escrow'
+                ? 'Payment must be confirmed (online paid or offline admin-verified) and secured before completion'
                 : undefined
             }
             className={`${actionBtn} w-full bg-blue-600 text-white hover:bg-blue-700 sm:w-auto`}

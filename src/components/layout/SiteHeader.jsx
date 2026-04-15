@@ -64,9 +64,17 @@ export default function SiteHeader() {
             <a href="#how-it-works" className={linkClass}>
               How it works
             </a>
+            <a href="#faq" className={linkClass}>
+              FAQ
+            </a>
             <Link to="/book" className={linkClass}>
               Book
             </Link>
+            {!token && (
+              <Link to="/register" className={linkClass}>
+                Register
+              </Link>
+            )}
             {token && (
               <Link to={getDefaultDashboardPath()} className={linkClass}>
                 Dashboard
@@ -97,9 +105,17 @@ export default function SiteHeader() {
             <a href="#how-it-works" className={linkClass} onClick={() => setMobileOpen(false)}>
               How it works
             </a>
+            <a href="#faq" className={linkClass} onClick={() => setMobileOpen(false)}>
+              FAQ
+            </a>
             <Link to="/book" className={linkClass} onClick={() => setMobileOpen(false)}>
               Book
             </Link>
+            {!token && (
+              <Link to="/register" className={linkClass} onClick={() => setMobileOpen(false)}>
+                Register
+              </Link>
+            )}
             {token && (
               <Link to={getDefaultDashboardPath()} className={linkClass} onClick={() => setMobileOpen(false)}>
                 Dashboard

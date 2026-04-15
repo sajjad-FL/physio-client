@@ -3,6 +3,9 @@ services:
     name: physio-client
     env: static
     buildCommand: npm run build
+    envVars:
+      - key: VITE_PUBLIC_SITE_URL
+        value: https://nearbyphysio.com
     staticPublishPath: dist
     routes:
       - type: rewrite

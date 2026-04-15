@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, Outlet, useLocation } from 'react-router-dom'
+import SeoNoIndex from '../../components/seo/SeoNoIndex'
 import { api } from '../../config/api'
 import AppShell from '../../components/layout/AppShell'
 
@@ -126,7 +127,9 @@ export default function AdminLayout() {
   )
 
   return (
-    <AppShell
+    <>
+      <SeoNoIndex />
+      <AppShell
       brand="NearbyPhysio"
       badge="Admin"
       topBarTitle="Admin console"
@@ -144,5 +147,6 @@ export default function AdminLayout() {
     >
       <Outlet />
     </AppShell>
+    </>
   )
 }

@@ -25,7 +25,7 @@ export default function RazorpayPayButton({ bookingId, onPaid }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  const buttonLabel = useMemo(() => (loading ? 'Processing…' : 'Pay (escrow hold)'), [loading])
+  const buttonLabel = useMemo(() => (loading ? 'Processing…' : 'Pay securely'), [loading])
 
   async function handlePay() {
     setError('')
@@ -91,8 +91,8 @@ export default function RazorpayPayButton({ bookingId, onPaid }) {
         {buttonLabel}
       </button>
       <p className="mt-3 text-xs leading-relaxed text-ink-muted">
-        Secure Razorpay checkout. Funds are held in escrow until the session is completed and released by the
-        platform.
+        Secure Razorpay checkout. Your payment is kept safe and paid out only after session completion and platform
+        confirmation.
       </p>
     </div>
   )

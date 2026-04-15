@@ -41,7 +41,7 @@ export function formatPaidAt(b) {
 export function paymentStatusLabel(ps) {
   const m = {
     pending: 'Pending',
-    held: 'Held (escrow)',
+    held: 'Payment secured',
     released: 'Released',
     refunded: 'Refunded',
   }

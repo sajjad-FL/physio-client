@@ -123,7 +123,7 @@ export default function AdminBookingsFilterDrawer({ appliedFilters, onClose, onA
             ))}
           </Section>
 
-          <Section title="Payment (escrow)">
+          <Section title="Payment status">
             <OptionPill active={draft.paymentStatus === 'all'} onClick={() => set('paymentStatus', 'all')}>
               All
             </OptionPill>

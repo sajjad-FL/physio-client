@@ -79,7 +79,7 @@ export default function DisputesAdmin() {
     <div>
       <h1 className="text-2xl font-semibold text-ink">Dispute management</h1>
       <p className="mt-2 text-sm text-ink-muted">
-        Review open cases. Refund or release escrow when resolving in favor of a party.
+        Review open cases. Refund or release secured payment when resolving in favor of a party.
       </p>
 
       <div className="surface-card mt-8 overflow-x-auto rounded-2xl shadow-sm ring-1 ring-border-subtle/80">
@@ -210,7 +210,7 @@ export default function DisputesAdmin() {
           >
             <h2 className="text-lg font-semibold text-ink">Resolve dispute</h2>
             <p className="mt-1 text-sm text-ink-muted">
-              Choose how escrow is affected. Reject closes the case without changing payment.
+              Choose how payment should be handled. Reject closes the case without changing payment.
             </p>
             <label className="mt-4 block text-sm font-medium text-ink">Resolution message</label>
             <textarea
@@ -229,7 +229,7 @@ export default function DisputesAdmin() {
             >
               <option value="reject">Reject dispute — no payment change</option>
               <option value="refund">Refund — mark payment refunded</option>
-              <option value="release">Release — pay out from held escrow</option>
+              <option value="release">Release — pay out secured payment</option>
             </select>
             <div className="mt-6 flex justify-end gap-2">
               <button

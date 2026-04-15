@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { Helmet } from 'react-helmet-async'
 import { Link, useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { api } from '../config/api'
@@ -22,6 +23,7 @@ import { validateLiveField } from '../utils/liveFieldValidation'
 import { PHYSIO_DEGREE_OPTIONS, isPhysioDegreeOption } from '../constants/physioQualification.js'
 import { formatPhysioSessionFeeLabel } from '../utils/physioSessionFee.js'
 import { ID_PROOF_TYPE_OPTIONS } from '../constants/idProofTypes.js'
+import { absoluteUrl } from '../utils/siteMeta'
 
 const baseInputClass =
   'h-11 w-full rounded-lg border bg-white px-3 text-sm text-ink shadow-sm outline-none focus:ring-2 focus:ring-brand/20'
@@ -407,8 +409,28 @@ export default function RegisterPhysioPage() {
     }
   }
 
+  const title = 'Register as a physiotherapist — NearbyPhysio'
+  const description =
+    'Apply to join NearbyPhysio as a verified home-visit physiotherapist. Submit your qualifications and documents for admin review.'
+  const canonical = absoluteUrl('/register-physio')
+  const ogImage = absoluteUrl('/og-default.png')
+
   return (
     <div className="min-h-screen bg-gray-50">
+      <Helmet>
+        <title>{title}</title>
+        <meta name="description" content={description} />
+        <link rel="canonical" href={canonical} />
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content={title} />
+        <meta property="og:description" content={description} />
+        <meta property="og:url" content={canonical} />
+        <meta property="og:image" content={ogImage} />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={title} />
+        <meta name="twitter:description" content={description} />
+        <meta name="twitter:image" content={ogImage} />
+      </Helmet>
       <header className="border-b border-gray-200 bg-white/90 shadow-sm">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-4">
           <Link to="/" className="text-sm font-semibold text-gray-900 hover:opacity-80">

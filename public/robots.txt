@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+
+Disallow: /dashboard
+Disallow: /book
+Disallow: /physio
+Disallow: /admin
+Disallow: /profile
+Disallow: /unauthorized
+Disallow: /physio-dashboard
+
+# Production: run `VITE_PUBLIC_SITE_URL=https://your-domain npm run build` so dist/robots.txt includes Sitemap lines.

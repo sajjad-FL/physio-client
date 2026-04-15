@@ -12,6 +12,8 @@ import LocationAutocomplete from '../components/booking/LocationAutocomplete'
 import LocationPickerModal from '../components/location/LocationPickerModal'
 import { formatBookingDateAndSlot, formatBookingTimeSlot } from '../utils/date'
 import { mapboxReverseGeocode } from '../utils/mapboxGeocode'
+import { getCurrentCoords } from '../utils/geolocation'
+import SeoNoIndex from '../components/seo/SeoNoIndex'
 
 function todayISO() {
   const d = new Date()
@@ -158,28 +160,18 @@ export default function PhysioListPage() {
 
   async function requestLocation() {
     setGeoBusy(true)
-    if (!navigator.geolocation) {
-      toast.error('Geolocation is not supported in this browser.')
+    try {
+      const { lat: la, lng: ln } = await getCurrentCoords()
+      setLat(la)
+      setLng(ln)
+      const rev = await mapboxReverseGeocode(la, ln)
+      setLocation(rev || 'Current location')
+      toast.success('Location captured')
+    } catch (err) {
+      toast.error(err?.userMessage || 'Could not read your location.')
+    } finally {
       setGeoBusy(false)
-      return
     }
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const la = pos.coords.latitude
-        const ln = pos.coords.longitude
-        setLat(la)
-        setLng(ln)
-        const rev = await mapboxReverseGeocode(la, ln)
-        setLocation(rev || 'Current location')
-        setGeoBusy(false)
-        toast.success('Location captured')
-      },
-      () => {
-        toast.error('Could not read your location.')
-        setGeoBusy(false)
-      },
-      { enableHighAccuracy: false, timeout: 12000 }
-    )
   }
 
   const canSubmit = useMemo(
@@ -228,13 +220,15 @@ export default function PhysioListPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-gray-100 pb-44">
+    <>
+      <SeoNoIndex />
+      <div className="min-h-screen bg-gradient-to-b from-slate-50 to-gray-100 pb-44">
       <header className="border-b border-gray-200/80 bg-white/90 backdrop-blur-md">
         <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-4 px-4 py-6 sm:px-6">
           <div>
             <h1 className="text-2xl font-semibold tracking-tight text-gray-900">Book a session</h1>
             <p className="mt-1 text-sm text-gray-500">
-              Choose when and where — a physiotherapist is assigned by our team after you book.
+              Choose when and where — our team will pick a physiotherapist for you after booking.
             </p>
           </div>
           <Link
@@ -367,7 +361,7 @@ export default function PhysioListPage() {
                 }`}
                 onClick={() => setServiceType('online')}
               >
-                Online
+                Online Consultation
               </button>
             </div>
           </div>
@@ -418,16 +412,16 @@ export default function PhysioListPage() {
 
         <StepShell
           step={4}
-          title="Assignment"
-          subtitle="You do not pick a physiotherapist here — our team assigns the best match."
+          title="How matching works"
+          subtitle="You do not need to choose a physiotherapist — our team picks the best match."
           locked={!issueOk}
         >
           <div className="rounded-xl border border-blue-100 bg-blue-50/60 px-4 py-5 text-sm text-gray-800">
             <p className="font-medium text-gray-900">How it works</p>
             <ul className="mt-3 list-disc space-y-2 pl-5 text-gray-700">
               <li>Confirm your booking below (and pay for online sessions).</li>
-              <li>An administrator assigns a verified physiotherapist for your slot.</li>
-              <li>You&apos;ll see their name and contact in your booking once assigned.</li>
+              <li>Our admin team picks a verified physiotherapist for your slot.</li>
+              <li>You&apos;ll see their name and contact in your booking once matched.</li>
             </ul>
           </div>
         </StepShell>
@@ -469,5 +463,6 @@ export default function PhysioListPage() {
         }}
       />
     </div>
+    </>
   )
 }

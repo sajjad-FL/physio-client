@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import { mapboxReverseGeocode } from '../../utils/mapboxGeocode'
 import { patchProfileAddress } from '../../utils/patchProfileAddress'
+import { getCurrentCoords } from '../../utils/geolocation'
 import Button from '../ui/Button'
 import LocationSelectorRow from './LocationSelectorRow'
 import MapPickerModal from './MapPickerModal'
@@ -53,28 +54,18 @@ export default function LocationPickerModal({
 
   async function useDeviceLocation() {
     setGeoBusy(true)
-    if (!navigator.geolocation) {
-      toast.error('Geolocation is not supported in this browser.')
+    try {
+      const { lat: la, lng: ln } = await getCurrentCoords()
+      setLat(la)
+      setLng(ln)
+      const rev = await mapboxReverseGeocode(la, ln)
+      if (rev) setText(rev)
+      toast.success('Location captured')
+    } catch (err) {
+      toast.error(err?.userMessage || 'Could not read your location.')
+    } finally {
       setGeoBusy(false)
-      return
     }
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const la = pos.coords.latitude
-        const ln = pos.coords.longitude
-        setLat(la)
-        setLng(ln)
-        const rev = await mapboxReverseGeocode(la, ln)
-        if (rev) setText(rev)
-        setGeoBusy(false)
-        toast.success('Location captured')
-      },
-      () => {
-        toast.error('Could not read your location.')
-        setGeoBusy(false)
-      },
-      { enableHighAccuracy: false, timeout: 12000 }
-    )
   }
 
   async function applyMapCoords(coords) {

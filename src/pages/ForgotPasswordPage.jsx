@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Helmet } from 'react-helmet-async'
 import { Link, useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { api } from '../config/api'
@@ -7,6 +8,7 @@ import Button from '../components/ui/Button'
 import PasswordInput from '../components/ui/PasswordInput'
 import { validateIndianMobile } from '../utils/phoneIndia'
 import { validateLiveField } from '../utils/liveFieldValidation'
+import { absoluteUrl } from '../utils/siteMeta'
 
 export default function ForgotPasswordPage() {
   const navigate = useNavigate()
@@ -105,8 +107,27 @@ export default function ForgotPasswordPage() {
     }
   }
 
+  const title = 'Reset password — NearbyPhysio'
+  const description = 'Reset your NearbyPhysio account password using a one-time code sent to your registered phone.'
+  const canonical = absoluteUrl('/forgot-password')
+  const ogImage = absoluteUrl('/og-default.png')
+
   return (
     <div className="min-h-screen bg-slate-50">
+      <Helmet>
+        <title>{title}</title>
+        <meta name="description" content={description} />
+        <link rel="canonical" href={canonical} />
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content={title} />
+        <meta property="og:description" content={description} />
+        <meta property="og:url" content={canonical} />
+        <meta property="og:image" content={ogImage} />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={title} />
+        <meta name="twitter:description" content={description} />
+        <meta name="twitter:image" content={ogImage} />
+      </Helmet>
       <header className="border-b border-slate-200 bg-white/90 px-4 py-4 shadow-sm">
         <div className="mx-auto max-w-md">
           <Link to="/login" className="text-sm font-medium text-teal-700 hover:underline">

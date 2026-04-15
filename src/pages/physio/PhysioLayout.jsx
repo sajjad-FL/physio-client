@@ -4,6 +4,7 @@ import Button from '../../components/ui/Button'
 import { api } from '../../config/api'
 import AppShell from '../../components/layout/AppShell'
 import AuthSpinner from '../../components/AuthSpinner'
+import SeoNoIndex from '../../components/seo/SeoNoIndex'
 
 const iconCalendar = (
   <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24" aria-hidden>
@@ -169,7 +170,9 @@ export default function PhysioLayout() {
   }
 
   return (
-    <AppShell
+    <>
+      <SeoNoIndex />
+      <AppShell
       brand="NearbyPhysio"
       badge="Physio"
       topBarTitle="Workspace"
@@ -253,5 +256,6 @@ export default function PhysioLayout() {
       )}
       <Outlet />
     </AppShell>
+    </>
   )
 }

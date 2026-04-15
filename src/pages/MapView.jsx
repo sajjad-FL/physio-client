@@ -7,6 +7,7 @@ import Button from '../components/ui/Button'
 import Skeleton from '../components/ui/Skeleton'
 import EmptyState from '../components/ui/EmptyState'
 import { formatPhysioSessionFeeLabel } from '../utils/physioSessionFee.js'
+import SeoNoIndex from '../components/seo/SeoNoIndex'
 
 const ROUTE_SOURCE_ID = 'directions-route'
 const ROUTE_LAYER_ID = 'directions-route-line'
@@ -291,7 +292,9 @@ export default function MapView() {
   const etaLabel = routeInfo != null ? `${Math.round(routeInfo.durationMin)} mins` : '—'
 
   return (
-    <div className="relative min-h-screen bg-gray-50">
+    <>
+      <SeoNoIndex />
+      <div className="relative min-h-screen bg-gray-50">
       <div className="mx-auto max-w-[1600px] px-4 py-6 sm:px-6 lg:px-8">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
           <div>
@@ -461,5 +464,6 @@ export default function MapView() {
         )}
       </div>
     </div>
+    </>
   )
 }

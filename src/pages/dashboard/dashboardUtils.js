@@ -17,7 +17,7 @@ export function bookingStatusBadge(status, sessionStatus, paymentStatus) {
 export function paymentBadge(paymentStatus) {
   const map = {
     pending: { label: 'Payment pending', cls: 'bg-amber-50 text-amber-900 ring-amber-200/80' },
-    held: { label: 'Held (escrow)', cls: 'bg-sky-50 text-sky-900 ring-sky-200/80' },
+    held: { label: 'Payment secured', cls: 'bg-sky-50 text-sky-900 ring-sky-200/80' },
     released: { label: 'Released', cls: 'bg-emerald-50 text-emerald-900 ring-emerald-200/80' },
     refunded: { label: 'Refunded', cls: 'bg-rose-50 text-rose-900 ring-rose-200/80' },
   }

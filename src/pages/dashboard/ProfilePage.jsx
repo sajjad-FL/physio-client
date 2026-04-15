@@ -10,6 +10,7 @@ import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
 import MapPickerModal from '../../components/location/MapPickerModal'
 import LocationSelectorRow from '../../components/location/LocationSelectorRow'
+import SeoNoIndex from '../../components/seo/SeoNoIndex'
 
 const GENDERS = [
   { value: 'male', label: 'Male' },
@@ -272,16 +273,21 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-[40vh] items-center justify-center">
-        <div className="h-9 w-9 animate-spin rounded-full border-2 border-gray-200 border-t-blue-600" aria-hidden />
-      </div>
+      <>
+        <SeoNoIndex />
+        <div className="flex min-h-[40vh] items-center justify-center">
+          <div className="h-9 w-9 animate-spin rounded-full border-2 border-gray-200 border-t-blue-600" aria-hidden />
+        </div>
+      </>
     )
   }
 
   const nav = backLink()
 
   return (
-    <div className="mx-auto max-w-3xl px-3 py-4 sm:px-4">
+    <>
+      <SeoNoIndex />
+      <div className="mx-auto max-w-3xl px-3 py-4 sm:px-4">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <Link to={nav.to} className="text-sm font-medium text-blue-600 hover:text-blue-800">
           {nav.label}
@@ -603,5 +609,6 @@ export default function ProfilePage() {
         }}
       />
     </div>
+    </>
   )
 }

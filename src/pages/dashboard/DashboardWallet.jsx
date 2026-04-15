@@ -52,7 +52,7 @@ export default function DashboardWallet() {
     <div className="space-y-6">
       <div>
         <h1 className="text-lg font-semibold tracking-tight text-slate-900 sm:text-xl">Wallet</h1>
-        <p className="mt-1 text-sm text-slate-500">Care spend from bookings with payment in escrow or released.</p>
+        <p className="mt-1 text-sm text-slate-500">Care spend from bookings where payment is secured or completed.</p>
       </div>
 
       {loading ? (

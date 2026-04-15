@@ -6,6 +6,8 @@ import { ISSUE_OPTIONS } from '../constants/issues'
 import RazorpayPayButton from '../components/RazorpayPayButton'
 import ConsentModal from '../components/ConsentModal'
 import { formatBookingTimeSlot } from '../utils/date'
+import { getCurrentCoords } from '../utils/geolocation'
+import SeoNoIndex from '../components/seo/SeoNoIndex'
 
 function todayISO() {
   const d = new Date()
@@ -61,23 +63,16 @@ export default function BookingPage() {
     setBooking(res.data)
   }
 
-  function requestLocation() {
+  async function requestLocation() {
     setGeoStatus('Locating…')
-    if (!navigator.geolocation) {
-      setGeoStatus('Geolocation not available — enter area manually.')
-      return
+    try {
+      const { lat: la, lng: ln } = await getCurrentCoords()
+      setLat(la)
+      setLng(ln)
+      setGeoStatus('Location saved for matching.')
+    } catch (err) {
+      setGeoStatus(err?.userMessage || 'Could not read location. You can still book using area text.')
     }
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setLat(pos.coords.latitude)
-        setLng(pos.coords.longitude)
-        setGeoStatus('Location saved for matching.')
-      },
-      () => {
-        setGeoStatus('Could not read location. You can still book using area text.')
-      },
-      { enableHighAccuracy: false, timeout: 10000 }
-    )
   }
 
   async function createBookingRequest() {
@@ -112,7 +107,7 @@ export default function BookingPage() {
       const res = await api.post('/bookings', body)
 
       setBooking(res.data)
-      setToast('Booking created. Pay to hold funds in escrow.')
+      setToast('Booking created. Complete payment to secure your booking amount.')
     } catch (err) {
       setError(err.response?.data?.message || err.message || 'Booking failed')
     } finally {
@@ -141,7 +136,9 @@ export default function BookingPage() {
     'h-11 w-full rounded-lg border border-border-subtle bg-white px-4 text-ink shadow-sm outline-none transition-all duration-200 placeholder:text-ink-muted/70 focus:border-brand focus:ring-2 focus:ring-brand/20'
 
   return (
-    <div className="min-h-screen bg-canvas">
+    <>
+      <SeoNoIndex />
+      <div className="min-h-screen bg-canvas">
       <ConsentModal
         open={consentOpen}
         onClose={() => setConsentOpen(false)}
@@ -403,18 +400,18 @@ export default function BookingPage() {
                 bookingId={booking._id}
                 onPaid={async () => {
                   await refreshBookingById(booking._id)
-                  setToast('Payment held in escrow. Our team will assign a physiotherapist shortly.')
+                  setToast('Payment secured. Our team will assign a physiotherapist shortly.')
                 }}
               />
             )}
 
             {booking && booking.paymentStatus === 'held' && (
               <div className="surface-card rounded-2xl p-6 sm:p-7">
-                <h3 className="text-sm font-semibold text-ink">Payment held (escrow)</h3>
+                <h3 className="text-sm font-semibold text-ink">Payment secured</h3>
                 <p className="mt-2 text-sm leading-relaxed text-ink-muted">
                   {booking.status === 'assigned' && physioName
-                    ? 'Funds are held until your session is completed and released by the platform.'
-                    : 'Funds are held while our team assigns your physiotherapist. You will see their name here once assigned.'}
+                    ? 'Your payment is safely kept until your session is completed.'
+                    : 'Your payment is safely kept while our team picks your physiotherapist. You will see their name here soon.'}
                 </p>
                 <button
                   type="button"
@@ -438,5 +435,6 @@ export default function BookingPage() {
         </div>
       </div>
     </div>
+    </>
   )
 }
