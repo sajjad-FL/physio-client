@@ -8,6 +8,7 @@ import PhysioBookingsFilterDrawer, {
 } from '../../components/physio/PhysioBookingsFilterDrawer'
 import SessionsCalendarView from '../../components/physio/SessionsCalendarView'
 import { matchesFilters } from '../../components/physio/physioBookingHelpers'
+import { openGoogleMapsDestination } from '../../utils/googleMaps'
 import { normalizeIndianPhone } from '../../utils/phoneIndia'
 
 function listStatusLabel(b) {
@@ -175,58 +176,80 @@ export default function PhysioBookingsPage() {
         <SessionsCalendarView bookings={displayBookings} />
       ) : (
         <ul className="flex flex-col gap-2">
-          {displayBookings.map((b) => (
-            <li key={b._id}>
-              <Link
-                to={`/physio/bookings/${b._id}`}
-                aria-label={`${formatBookingDateAndSlot(b.date, b.timeSlot)}, ${b.userId?.name || 'Patient'}, ${listStatusLabel(b)}`}
-                className={[
-                  'group flex gap-3 rounded-xl border border-gray-100 bg-white py-3 pl-3 pr-3 shadow-sm ring-1 ring-gray-100/90 transition-all duration-200',
-                  'border-l-4 hover:bg-slate-50/90 hover:shadow-md hover:ring-slate-200/80',
-                  rowAccentClass(b),
-                ].join(' ')}
-              >
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-slate-100 to-slate-200/90 text-sm font-bold text-slate-600 ring-1 ring-slate-200/80">
-                  {patientInitial(b.userId?.name)}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                    <p className="text-sm font-semibold text-gray-900">{formatBookingDateAndSlot(b.date, b.timeSlot)}</p>
-                    <span
-                      className={`inline-flex rounded-md px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ring-1 ${servicePillClass(
-                        b.serviceType,
-                      )}`}
-                    >
-                      {b.serviceType === 'online' ? 'Online' : 'Home'}
-                    </span>
+          {displayBookings.map((b) => {
+            const canStart = Boolean(b.userId?.coordinates || String(b.userId?.location || '').trim())
+            return (
+              <li key={b._id}>
+                <div
+                  className={[
+                    'group flex gap-3 rounded-xl border border-gray-100 bg-white py-3 pl-3 pr-3 shadow-sm ring-1 ring-gray-100/90 transition-all duration-200',
+                    'border-l-4 hover:bg-slate-50/90 hover:shadow-md hover:ring-slate-200/80',
+                    rowAccentClass(b),
+                  ].join(' ')}
+                >
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-slate-100 to-slate-200/90 text-sm font-bold text-slate-600 ring-1 ring-slate-200/80">
+                    {patientInitial(b.userId?.name)}
                   </div>
-                  <p className="mt-0.5 truncate text-xs text-gray-600">
-                    <span className="font-medium text-gray-800">{b.userId?.name ?? '—'}</span>
-                    {b.userId?.phone ? (
-                      <>
-                        <span className="text-gray-300"> · </span>
-                        <span className="tabular-nums text-gray-500">{b.userId.phone}</span>
-                      </>
-                    ) : null}
-                  </p>
-                  <p className="mt-0.5 line-clamp-1 text-xs leading-snug text-gray-500">{b.issue}</p>
-                </div>
-                <div className="flex shrink-0 flex-col items-end justify-center gap-2 sm:flex-row sm:items-center sm:gap-3">
-                  <span
-                    className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-semibold ring-1 ${listStatusClass(b)}`}
+                  <Link
+                    to={`/physio/bookings/${b._id}`}
+                    aria-label={`${formatBookingDateAndSlot(b.date, b.timeSlot)}, ${b.userId?.name || 'Patient'}, ${listStatusLabel(b)}`}
+                    className="min-w-0 flex-1"
                   >
-                    {listStatusLabel(b)}
-                  </span>
-                  <span className="inline-flex items-center gap-0.5 text-xs font-semibold text-blue-600 transition group-hover:text-blue-700">
-                    Details
-                    <svg className="h-4 w-4 transition-transform group-hover:translate-x-0.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-                    </svg>
-                  </span>
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                      <p className="text-sm font-semibold text-gray-900">{formatBookingDateAndSlot(b.date, b.timeSlot)}</p>
+                      <span
+                        className={`inline-flex rounded-md px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ring-1 ${servicePillClass(
+                          b.serviceType,
+                        )}`}
+                      >
+                        {b.serviceType === 'online' ? 'Online' : 'Home'}
+                      </span>
+                    </div>
+                    <p className="mt-0.5 truncate text-xs text-gray-600">
+                      <span className="font-medium text-gray-800">{b.userId?.name ?? '—'}</span>
+                      {b.userId?.phone ? (
+                        <>
+                          <span className="text-gray-300"> · </span>
+                          <span className="tabular-nums text-gray-500">{b.userId.phone}</span>
+                        </>
+                      ) : null}
+                    </p>
+                    <p className="mt-0.5 line-clamp-1 text-xs leading-snug text-gray-500">{b.issue}</p>
+                  </Link>
+                  <div className="flex shrink-0 flex-col items-end justify-center gap-2 sm:flex-row sm:items-center sm:gap-3">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        openGoogleMapsDestination({
+                          coordinates: b.userId?.coordinates,
+                          address: b.userId?.location,
+                        })
+                      }
+                      disabled={!canStart}
+                      title={canStart ? 'Start navigation' : 'Address not available'}
+                      className="inline-flex items-center rounded-md border border-blue-200 bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700 transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Start
+                    </button>
+                    <span
+                      className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-semibold ring-1 ${listStatusClass(b)}`}
+                    >
+                      {listStatusLabel(b)}
+                    </span>
+                    <Link
+                      to={`/physio/bookings/${b._id}`}
+                      className="inline-flex items-center gap-0.5 text-xs font-semibold text-blue-600 transition hover:text-blue-700"
+                    >
+                      Details
+                      <svg className="h-4 w-4 transition-transform group-hover:translate-x-0.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                      </svg>
+                    </Link>
+                  </div>
                 </div>
-              </Link>
-            </li>
-          ))}
+              </li>
+            )
+          })}
         </ul>
       )}
     </div>

@@ -13,6 +13,8 @@ import {
 import toast from 'react-hot-toast'
 import RaiseDisputeModal from '../../components/dashboard/RaiseDisputeModal'
 import RazorpayPayButton from '../../components/RazorpayPayButton'
+import InstallmentsCard from '../../components/payments/InstallmentsCard'
+import PayInstallmentModal from '../../components/payments/PayInstallmentModal'
 import BookingSessionTimeline from '../../components/bookings/BookingSessionTimeline'
 import SessionNotesReadOnly from '../../components/bookings/SessionNotesReadOnly'
 import SessionProgressTracker from '../../components/bookings/SessionProgressTracker'
@@ -83,6 +85,8 @@ export default function UserBookingDetailPage() {
   const [error, setError] = useState(null)
   const [disputeOpen, setDisputeOpen] = useState(false)
   const [reviewOpen, setReviewOpen] = useState(false)
+  const [sessionReviewTarget, setSessionReviewTarget] = useState(null)
+  const [payInstallmentOpen, setPayInstallmentOpen] = useState(false)
 
   const load = useCallback(async () => {
     if (!id) return
@@ -140,7 +144,18 @@ export default function UserBookingDetailPage() {
   const pay = paymentBadge(b.paymentStatus)
   const paidLine = formatPaidAt(b)
 
-  const showPay =
+  const paymentSummary = b.paymentSummary || null
+  const paymentsList = Array.isArray(b.payments) ? b.payments : []
+  const sessionsCount = paymentSummary?.sessionsCount || (Array.isArray(b.schedule) && b.schedule.length > 0 ? b.schedule.length : 1)
+  const isOfflinePlan = b.serviceType === 'home' && b.homePlanPaymentMode === 'offline'
+  const isOnlineBooking = b.serviceType === 'online' || (b.serviceType === 'home' && b.homePlanPaymentMode === 'online')
+  const outstanding = Number(paymentSummary?.outstanding || 0)
+  const planReady = b.serviceType === 'online' || b.planStatus === 'approved'
+  const showInstallments = planReady && sessionsCount > 1 && (Number(b.totalAmount || 0) > 0 || paymentsList.length > 0)
+  const canPayInstallment = isOnlineBooking && planReady && outstanding > 0.009
+
+  const showLegacyPay =
+    !showInstallments &&
     b.paymentStatus === 'pending' &&
     (b.serviceType === 'online' || b.planStatus === 'approved') &&
     !(b.serviceType === 'home' && b.homePlanPaymentMode === 'offline')
@@ -153,6 +168,14 @@ export default function UserBookingDetailPage() {
 
   const physioPublicId = b.physioId && typeof b.physioId === 'object' ? b.physioId._id : b.physioId
   const review = b.review
+  const sessionReviews = Array.isArray(b.sessionReviews) ? b.sessionReviews : []
+  const reviewedSessionIds = new Set(sessionReviews.map((r) => r.sessionId))
+  const ratingsBySessionId = sessionReviews.reduce((acc, r) => {
+    acc[r.sessionId] = { rating: r.rating, comment: r.comment }
+    return acc
+  }, {})
+  const hasSchedulePlan = Array.isArray(b.schedule) && b.schedule.length > 0
+  const physioDisplayName = typeof b.physioId === 'object' ? b.physioId?.name : undefined
 
   return (
     <div className="space-y-6">
@@ -250,10 +273,57 @@ export default function UserBookingDetailPage() {
         <p className="mt-3 text-xs capitalize text-ink-muted">Service: {b.serviceType || 'home'}</p>
       </Card>
 
+      {showInstallments && (
+        <InstallmentsCard
+          title="Installments"
+          subtitle={
+            isOfflinePlan
+              ? 'Your physiotherapist will record each payment when you hand over cash or UPI. Your admin verifies before it counts as covered.'
+              : 'Pay any amount toward your plan. Each installment unlocks the next session for completion.'
+          }
+          summary={paymentSummary}
+          payments={paymentsList}
+          emptyMessage={
+            isOfflinePlan
+              ? 'No collections yet. Your physiotherapist records them after each cash/UPI hand-off.'
+              : 'No payments yet. Start with any amount — we recommend one session at a time.'
+          }
+        >
+          {canPayInstallment ? (
+            <Button type="button" onClick={() => setPayInstallmentOpen(true)}>
+              Pay next installment
+            </Button>
+          ) : null}
+        </InstallmentsCard>
+      )}
+
       <Card hover={false} className="border-border-subtle p-5 sm:p-6">
         <h2 className="text-sm font-semibold text-ink">Session timeline</h2>
+        {hasSchedulePlan && (
+          <p className="mt-1 text-xs text-ink-muted">
+            Rate each visit after your physiotherapist marks it completed.
+          </p>
+        )}
         <div className="mt-4">
-          <BookingSessionTimeline booking={b} />
+          <BookingSessionTimeline
+            booking={b}
+            patientActions={
+              hasSchedulePlan
+                ? {
+                    enabled: true,
+                    reviewedSessionIds,
+                    ratingsBySessionId,
+                    onRate: (row) => {
+                      if (!row?.sessionId) return
+                      setSessionReviewTarget({
+                        sessionId: String(row.sessionId),
+                        label: `Session #${row.n} · ${formatBookingDateAndSlot(row.date, row.time)}`,
+                      })
+                    },
+                  }
+                : undefined
+            }
+          />
         </div>
       </Card>
 
@@ -336,7 +406,7 @@ export default function UserBookingDetailPage() {
         </div>
       )}
 
-      {showPay && (
+      {showLegacyPay && (
         <Card hover={false} className="border-border-subtle p-5 sm:p-6">
           <h2 className="text-sm font-semibold text-ink">Pay online</h2>
           <p className="mt-1 text-xs text-ink-muted">Complete payment to confirm your booking.</p>
@@ -375,9 +445,27 @@ export default function UserBookingDetailPage() {
       <ReviewSubmitModal
         open={reviewOpen}
         bookingId={b._id}
-        physioName={typeof b.physioId === 'object' ? b.physioId?.name : undefined}
+        physioName={physioDisplayName}
         onClose={() => setReviewOpen(false)}
         onSubmitted={load}
+      />
+
+      <ReviewSubmitModal
+        open={sessionReviewTarget != null}
+        bookingId={b._id}
+        sessionId={sessionReviewTarget?.sessionId}
+        sessionLabel={sessionReviewTarget?.label}
+        physioName={physioDisplayName}
+        onClose={() => setSessionReviewTarget(null)}
+        onSubmitted={load}
+      />
+
+      <PayInstallmentModal
+        open={payInstallmentOpen}
+        booking={b}
+        summary={paymentSummary}
+        onClose={() => setPayInstallmentOpen(false)}
+        onPaid={load}
       />
     </div>
   )

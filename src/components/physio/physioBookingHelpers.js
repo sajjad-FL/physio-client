@@ -16,16 +16,31 @@ export function normalizeSessionRows(b) {
       time: s.time,
       n: i + 1,
       notes: s.notes || null,
+      status: s.status || 'scheduled',
+      completedAt: s.completedAt || null,
+      noShowReason: s.noShowReason || '',
+      /** Multi-session plan rows carry their own per-session status. */
+      perSession: true,
     }))
   }
   return [
     {
       key: `${b._id}-s-0`,
-      sessionId: b._id != null ? String(b._id) : null,
+      /**
+       * Single-session bookings don't have schedule entries, so the primary
+       * visit has no per-session id. Leave sessionId null — callers that
+       * target a specific session (per-session complete / rating) should
+       * treat this as the primary visit and omit sessionId on the wire.
+       */
+      sessionId: null,
       date: b.date,
       time: b.timeSlot,
       n: 1,
       notes: b.primarySessionNotes || null,
+      status: b.sessionStatus === 'completed' ? 'completed' : 'scheduled',
+      completedAt: null,
+      noShowReason: '',
+      perSession: false,
     },
   ]
 }

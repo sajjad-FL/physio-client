@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import Calendar from 'react-calendar'
 import 'react-calendar/dist/Calendar.css'
 import { formatBookingTimeSlot } from '../../utils/date'
+import { openGoogleMapsDestination } from '../../utils/googleMaps'
 import { buildSessionDateSet, getSessionsForYmd, ymdFromDate } from './physioBookingHelpers'
 
 function statusLabel(booking) {
@@ -15,7 +16,7 @@ function statusClass(booking) {
     : 'bg-amber-50 text-amber-900 ring-amber-200'
 }
 
-export default function SessionsCalendarView({ bookings }) {
+export default function SessionsCalendarView({ bookings, basePath = '/physio/bookings', showPhysio = false }) {
   const [selectedDate, setSelectedDate] = useState(() => {
     const t = new Date()
     t.setHours(12, 0, 0, 0)
@@ -61,27 +62,51 @@ export default function SessionsCalendarView({ bookings }) {
           </p>
         ) : (
           <ul className="mt-4 space-y-3">
-            {daySessions.map(({ booking: b, row: r }) => (
-              <li key={`${b._id}-${r.key}`}>
-                <Link
-                  to={`/physio/bookings/${b._id}`}
+            {daySessions.map(({ booking: b, row: r }) => {
+              const canStart = Boolean(b.userId?.coordinates || String(b.userId?.location || '').trim())
+              return (
+                <li
+                  key={`${b._id}-${r.key}`}
                   className="flex flex-col gap-2 rounded-xl border border-gray-100 bg-white px-4 py-3 shadow-sm transition hover:border-blue-100 hover:shadow-md sm:flex-row sm:items-center sm:justify-between"
                 >
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-gray-900">{formatBookingTimeSlot(r.time)}</p>
-                    <p className="mt-0.5 truncate text-sm text-gray-700">{b.userId?.name ?? '—'}</p>
-                  </div>
+                  <Link to={`${basePath}/${b._id}`} className="min-w-0 flex-1">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-gray-900">{formatBookingTimeSlot(r.time)}</p>
+                      <p className="mt-0.5 truncate text-sm text-gray-700">{b.userId?.name ?? '—'}</p>
+                      {showPhysio && (
+                        <p className="mt-0.5 truncate text-xs text-gray-500">
+                          Physio: {b.physioId?.name ?? 'Unassigned'}
+                        </p>
+                      )}
+                    </div>
+                  </Link>
                   <div className="flex shrink-0 flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        openGoogleMapsDestination({
+                          coordinates: b.userId?.coordinates,
+                          address: b.userId?.location,
+                        })
+                      }
+                      disabled={!canStart}
+                      title={canStart ? 'Start navigation' : 'Address not available'}
+                      className="inline-flex w-fit items-center rounded-md border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Start
+                    </button>
                     <span
                       className={`inline-flex w-fit rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ${statusClass(b)}`}
                     >
                       {statusLabel(b)}
                     </span>
-                    <span className="text-xs font-semibold text-blue-600">View details →</span>
+                    <Link to={`${basePath}/${b._id}`} className="text-xs font-semibold text-blue-600 hover:text-blue-700">
+                      View details →
+                    </Link>
                   </div>
-                </Link>
-              </li>
-            ))}
+                </li>
+              )
+            })}
           </ul>
         )}
       </div>

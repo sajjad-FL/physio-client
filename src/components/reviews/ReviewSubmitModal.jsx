@@ -5,9 +5,25 @@ import Button from '../ui/Button'
 import { StarRatingInput } from './StarRating'
 
 /**
- * @param {{ open: boolean, bookingId: string, physioName?: string, onClose: () => void, onSubmitted: () => void }} props
+ * @param {{
+ *   open: boolean,
+ *   bookingId: string,
+ *   sessionId?: string | null,
+ *   sessionLabel?: string,
+ *   physioName?: string,
+ *   onClose: () => void,
+ *   onSubmitted: () => void,
+ * }} props
  */
-export default function ReviewSubmitModal({ open, bookingId, physioName, onClose, onSubmitted }) {
+export default function ReviewSubmitModal({
+  open,
+  bookingId,
+  sessionId,
+  sessionLabel,
+  physioName,
+  onClose,
+  onSubmitted,
+}) {
   const [rating, setRating] = useState(5)
   const [comment, setComment] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -19,11 +35,9 @@ export default function ReviewSubmitModal({ open, bookingId, physioName, onClose
     if (!bookingId) return
     setSubmitting(true)
     try {
-      await api.post('/reviews', {
-        bookingId,
-        rating,
-        comment: comment.trim(),
-      })
+      const payload = { bookingId, rating, comment: comment.trim() }
+      if (sessionId) payload.sessionId = sessionId
+      await api.post('/reviews', payload)
       toast.success('Thank you for your feedback')
       setComment('')
       setRating(5)
@@ -43,7 +57,14 @@ export default function ReviewSubmitModal({ open, bookingId, physioName, onClose
         className="w-full max-w-md rounded-2xl border border-gray-100 bg-white p-6 shadow-2xl"
       >
         <h2 className="text-lg font-semibold text-gray-900">Rate your session</h2>
-        {physioName && <p className="mt-1 text-sm text-gray-500">How was your visit with {physioName}?</p>}
+        {sessionLabel ? (
+          <p className="mt-1 text-sm text-gray-600">
+            {sessionLabel}
+            {physioName ? ` · with ${physioName}` : ''}
+          </p>
+        ) : (
+          physioName && <p className="mt-1 text-sm text-gray-500">How was your visit with {physioName}?</p>
+        )}
         <label className="mt-5 block text-sm font-medium text-gray-800">Your rating</label>
         <div className="mt-2">
           <StarRatingInput value={rating} onChange={setRating} disabled={submitting} />

@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes, useParams } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import HomePage from './pages/HomePage'
+import CityLandingPage from './pages/CityLandingPage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
@@ -33,9 +34,8 @@ import PhysiosAdmin from './pages/admin/PhysiosAdmin'
 import AdminPhysioDetailPage from './pages/admin/AdminPhysioDetailPage'
 import VerificationsAdmin from './pages/admin/VerificationsAdmin'
 import DisputesAdmin from './pages/admin/DisputesAdmin'
-import AdminSettlementPage from './pages/admin/AdminSettlementPage'
 import AdminPaymentsPage from './pages/admin/AdminPaymentsPage'
-import AdminWithdrawalsPage from './pages/admin/AdminWithdrawalsPage'
+import AdminFinancePage from './pages/admin/AdminFinancePage'
 import AdminPlatformSettingsPage from './pages/admin/AdminPlatformSettingsPage'
 import RoleProtectedRoute from './components/RoleProtectedRoute'
 import LegacyPhysioDashboardRedirect from './components/LegacyPhysioDashboardRedirect'
@@ -61,6 +61,7 @@ export default function App() {
       />
       <Routes>
         <Route path="/" element={<HomePage />} />
+        <Route path="/physio-in/:city" element={<CityLandingPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
@@ -149,8 +150,9 @@ export default function App() {
           <Route path="verifications" element={<VerificationsAdmin />} />
           <Route path="disputes" element={<DisputesAdmin />} />
           <Route path="payments" element={<AdminPaymentsPage />} />
-          <Route path="withdrawals" element={<AdminWithdrawalsPage />} />
-          <Route path="settlements" element={<AdminSettlementPage />} />
+          <Route path="finance" element={<AdminFinancePage />} />
+          <Route path="withdrawals" element={<Navigate to="/admin/finance" replace />} />
+          <Route path="settlements" element={<Navigate to="/admin/finance" replace />} />
           <Route path="platform" element={<AdminPlatformSettingsPage />} />
           <Route path="*" element={<Navigate to="/admin" replace />} />
         </Route>

@@ -1,15 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
-import { Accessibility, Bandage, Bone, Brain, MessageCircleQuestion, PersonStanding } from 'lucide-react'
 import { ISSUE_OPTIONS } from '../constants/issues'
+import { SERVICE_CITIES } from '../constants/serviceCities'
 import SiteHeader from '../components/layout/SiteHeader'
 import FeaturedPhysiosSection from '../components/home/FeaturedPhysiosSection'
+import ConditionIllustration from '../components/home/ConditionIllustration'
 import { absoluteUrl, primaryServiceAreas, primaryServiceAreasSentence, siteOrigin } from '../utils/siteMeta'
 
-const HOME_TITLE = 'NearbyPhysio — Home visit physiotherapy & physio near you'
+const HOME_TITLE = 'Physio Near Me in Assam — Home Visit Physiotherapist | NearbyPhysio'
 const HOME_DESCRIPTION =
-  'Book a verified physiotherapist for a home visit. Find physio near you for back pain, knee pain, post-surgery rehab, and stroke recovery — simple booking and secure payment.'
+  'Looking for a physio near you in Assam? NearbyPhysio connects you with verified home visit physiotherapists in Guwahati, Barpeta, Bongaigaon, Bijni and Kokrajhar. Book a nearby physiotherapist for back pain, knee pain, post-surgery rehab and stroke recovery.'
 
 const HOME_FAQ = [
   {
@@ -35,7 +36,15 @@ const HOME_FAQ = [
 ]
 
 function homeStructuredData({ siteBase, ogImage, areas }) {
-  const areaServed = areas.map((name) => ({ '@type': 'AdministrativeArea', name }))
+  const cityAreas = SERVICE_CITIES.map((c) => ({
+    '@type': 'City',
+    name: c.name,
+    containedInPlace: { '@type': 'AdministrativeArea', name: c.state },
+  }))
+  const envAreas = areas
+    .filter((name) => !SERVICE_CITIES.some((c) => c.name.toLowerCase() === name.toLowerCase()))
+    .map((name) => ({ '@type': 'AdministrativeArea', name }))
+  const areaServed = [...cityAreas, ...envAreas]
   const faqEntity = HOME_FAQ.map(({ q, a }) => ({
     '@type': 'Question',
     name: q,
@@ -47,6 +56,15 @@ function homeStructuredData({ siteBase, ogImage, areas }) {
       '@id': `${siteBase}/#website`,
       name: 'NearbyPhysio',
       url: `${siteBase}/`,
+      inLanguage: 'en-IN',
+      potentialAction: {
+        '@type': 'SearchAction',
+        target: {
+          '@type': 'EntryPoint',
+          urlTemplate: `${siteBase}/book?q={search_term_string}`,
+        },
+        'query-input': 'required name=search_term_string',
+      },
     },
     {
       '@type': 'MedicalBusiness',
@@ -55,7 +73,16 @@ function homeStructuredData({ siteBase, ogImage, areas }) {
       url: `${siteBase}/`,
       description: HOME_DESCRIPTION,
       image: ogImage,
+      medicalSpecialty: 'Physiotherapy',
+      priceRange: '\u20B9\u20B9',
       ...(areaServed.length ? { areaServed } : {}),
+      availableService: [
+        { '@type': 'MedicalTherapy', name: 'Back pain physiotherapy' },
+        { '@type': 'MedicalTherapy', name: 'Knee pain physiotherapy' },
+        { '@type': 'MedicalTherapy', name: 'Neck pain physiotherapy' },
+        { '@type': 'MedicalTherapy', name: 'Post-surgery rehabilitation' },
+        { '@type': 'MedicalTherapy', name: 'Stroke and paralysis rehabilitation' },
+      ],
     },
     {
       '@type': 'FAQPage',
@@ -83,28 +110,6 @@ const services = [
 ]
 
 const serviceCardDelays = ['animate-delay-2', 'animate-delay-3', 'animate-delay-4', 'animate-delay-5']
-
-const iconStroke = 1.75
-
-function ServiceConditionIcon({ title }) {
-  const cn = 'h-[22px] w-[22px] shrink-0'
-  switch (title) {
-    case 'Back Pain':
-      return <PersonStanding className={cn} strokeWidth={iconStroke} aria-hidden />
-    case 'Neck Pain':
-      return <Accessibility className={cn} strokeWidth={iconStroke} aria-hidden />
-    case 'Knee Pain':
-      return <Bone className={cn} strokeWidth={iconStroke} aria-hidden />
-    case 'Post Surgery Rehab':
-      return <Bandage className={cn} strokeWidth={iconStroke} aria-hidden />
-    case 'Stroke/Paralysis':
-      return <Brain className={cn} strokeWidth={iconStroke} aria-hidden />
-    case 'Other condition':
-      return <MessageCircleQuestion className={cn} strokeWidth={iconStroke} aria-hidden />
-    default:
-      return <PersonStanding className={cn} strokeWidth={iconStroke} aria-hidden />
-  }
-}
 
 function ChevronLeft({ className = '' }) {
   return (
@@ -221,16 +226,21 @@ function ServicesConditionsCarousel() {
               key={s.title}
               data-service-card
               className={
-                'interactive-lift group w-[min(272px,82vw)] max-w-[300px] min-w-[232px] shrink-0 snap-start rounded-2xl border border-slate-200/90 bg-white p-5 shadow-sm ring-1 ring-slate-900/[0.025] motion-safe:animate-enter-up sm:p-6 ' +
+                'interactive-lift group flex w-[min(272px,82vw)] max-w-[300px] min-w-[232px] shrink-0 snap-start flex-col overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-sm ring-1 ring-slate-900/[0.025] motion-safe:animate-enter-up ' +
                 'hover:border-slate-300/90 hover:shadow-md hover:ring-slate-900/[0.04] ' +
                 serviceCardDelays[i % serviceCardDelays.length]
               }
             >
-              <div className="mb-3.5 flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-teal-50 to-emerald-50/80 text-teal-700 shadow-sm ring-1 ring-teal-100/70 transition-all duration-300 ease-out group-hover:from-teal-600 group-hover:to-teal-600 group-hover:text-white group-hover:ring-teal-600/40">
-                <ServiceConditionIcon title={s.title} />
+              <div className="relative aspect-[16/10] w-full overflow-hidden bg-gradient-to-br from-teal-50 to-emerald-50/80">
+                <ConditionIllustration
+                  title={s.title}
+                  className="h-full w-full transition-transform duration-300 ease-out group-hover:scale-[1.04]"
+                />
               </div>
-              <h3 className="text-[17px] font-semibold tracking-tight text-slate-900">{s.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-slate-600">{s.blurb}</p>
+              <div className="flex flex-1 flex-col p-5 sm:p-6">
+                <h3 className="text-[17px] font-semibold tracking-tight text-slate-900">{s.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-slate-600">{s.blurb}</p>
+              </div>
             </div>
           ))}
         </div>
@@ -259,12 +269,17 @@ export default function HomePage() {
       <Helmet>
         <title>{HOME_TITLE}</title>
         <meta name="description" content={HOME_DESCRIPTION} />
+        <meta name="robots" content="index, follow, max-image-preview:large" />
         <link rel="canonical" href={canonical} />
         <meta property="og:type" content="website" />
+        <meta property="og:site_name" content="NearbyPhysio" />
         <meta property="og:title" content={HOME_TITLE} />
         <meta property="og:description" content={HOME_DESCRIPTION} />
         <meta property="og:url" content={canonical} />
         <meta property="og:image" content={ogImage} />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta property="og:locale" content="en_IN" />
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={HOME_TITLE} />
         <meta name="twitter:description" content={HOME_DESCRIPTION} />
@@ -283,11 +298,12 @@ export default function HomePage() {
                 Home visits · Verified clinicians
               </p>
               <h1 className="motion-safe:animate-enter-up animate-delay-1 mt-8 text-balance text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl sm:leading-[1.08]">
-                Physiotherapist home visits — book a physio near you
+                Book a physiotherapist nearby you
               </h1>
               <p className="motion-safe:animate-enter-up animate-delay-2 mx-auto mt-6 max-w-xl text-lg leading-relaxed text-slate-500">
-                NearbyPhysio connects you with licensed physiotherapists for physio at home: back pain, knee pain,
-                post-surgery rehab, and more. Simple booking, secure payment, and a therapist matched to your area.
+                NearbyPhysio connects you with physiotherapists for physiotherapy at home. Conditions include back pain,
+                knee pain, post-surgery rehab, cerebral palsy and more. Simple booking, secure payment, and a therapist
+                matched to your area.
                 {areaLine ? (
                   <>
                     {' '}
@@ -374,6 +390,33 @@ export default function HomePage() {
         </section>
 
         <FeaturedPhysiosSection />
+
+        <section id="cities" className="border-b border-slate-200 bg-slate-50 py-16 lg:py-20">
+          <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+            <div className="mx-auto max-w-2xl text-center">
+              <h2 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+                We are available in
+              </h2>
+              <p className="mt-4 text-lg leading-relaxed text-slate-500">
+                NearbyPhysio has verified home visit physiotherapists across Lower Assam. Pick your town to see local
+                coverage and book a physio near you.
+              </p>
+            </div>
+            <ul className="mx-auto mt-10 grid max-w-4xl gap-3 sm:grid-cols-2 md:grid-cols-4">
+              {SERVICE_CITIES.map((c) => (
+                <li key={c.slug}>
+                  <Link
+                    to={`/physio-in/${c.slug}`}
+                    className="interactive-lift flex h-full items-center justify-between rounded-2xl border border-slate-200 bg-white px-5 py-4 text-sm font-semibold text-slate-800 shadow-sm transition hover:border-teal-300 hover:text-teal-700"
+                  >
+                    <span>Physio in {c.name}</span>
+                    <span aria-hidden className="text-teal-600">&rarr;</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
 
         <section id="faq" className="border-b border-slate-200 bg-white py-16 lg:py-24">
           <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">

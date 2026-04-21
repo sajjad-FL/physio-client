@@ -14,6 +14,7 @@ import toast from 'react-hot-toast'
 import BookingSessionTimeline from '../../components/bookings/BookingSessionTimeline'
 import SessionNotesReadOnly from '../../components/bookings/SessionNotesReadOnly'
 import SessionProgressTracker from '../../components/bookings/SessionProgressTracker'
+import InstallmentsCard from '../../components/payments/InstallmentsCard'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import AdminAssignPhysioModal from '../../components/admin/AdminAssignPhysioModal'
@@ -35,6 +36,7 @@ export default function AdminBookingDetailPage() {
   const [error, setError] = useState(null)
   const [rowBusy, setRowBusy] = useState(null)
   const [assignPhysioId, setAssignPhysioId] = useState('')
+  const [assignPrice, setAssignPrice] = useState('')
   const [assignModalOpen, setAssignModalOpen] = useState(false)
   const [notesModal, setNotesModal] = useState(null)
   const [resolveOpen, setResolveOpen] = useState(null)
@@ -46,6 +48,9 @@ export default function AdminBookingDetailPage() {
   const [addSessionDate, setAddSessionDate] = useState('')
   const [addSessionTime, setAddSessionTime] = useState(DAILY_SLOTS[0] || '10:00-11:00')
   const [sessionBusy, setSessionBusy] = useState(null)
+  const [paymentBusyId, setPaymentBusyId] = useState(null)
+  const [rejectPayment, setRejectPayment] = useState(null)
+  const [rejectPaymentReason, setRejectPaymentReason] = useState('')
 
   const load = useCallback(async () => {
     if (!id) return
@@ -82,6 +87,28 @@ export default function AdminBookingDetailPage() {
     [physios, assignPhysioId],
   )
 
+  /**
+   * When admin picks a physio (or the booking already has one they are
+   * revising), prefill the price-per-session input with a sensible default so
+   * the admin rarely has to type it from scratch:
+   *  1. existing booking.amountPerSession (if already set)
+   *  2. otherwise the selected physio's profile pricePerSession
+   * The admin is still free to override before hitting Assign.
+   */
+  useEffect(() => {
+    if (!selectedPhysioForAssign) return
+    if (assignPrice) return
+    const bookingPrice = booking?.amountPerSession
+    if (bookingPrice != null && Number(bookingPrice) > 0) {
+      setAssignPrice(String(bookingPrice))
+      return
+    }
+    const physioPrice = selectedPhysioForAssign.pricePerSession
+    if (physioPrice != null && Number(physioPrice) > 0) {
+      setAssignPrice(String(physioPrice))
+    }
+  }, [selectedPhysioForAssign, booking?.amountPerSession, assignPrice])
+
   /** Admin assigns physio; allow before or after patient payment (escrow may still be pending). */
   const canAssign = useMemo(() => {
     if (!b) return false
@@ -117,10 +144,20 @@ export default function AdminBookingDetailPage() {
       toast.error('Choose a physiotherapist before assigning.')
       return
     }
+    const priceNum = Number(assignPrice)
+    if (!Number.isFinite(priceNum) || priceNum <= 0) {
+      toast.error('Enter a valid price per session before assigning.')
+      return
+    }
     setRowBusy('assign')
     try {
-      await api.patch(`/bookings/${b._id}`, { physioId: assignPhysioId, status: 'assigned' }, adminHeaders())
+      await api.patch(
+        `/bookings/${b._id}`,
+        { physioId: assignPhysioId, status: 'assigned', amountPerSession: priceNum },
+        adminHeaders(),
+      )
       toast.success('Assigned')
+      setAssignPrice('')
       await load()
     } catch (err) {
       toast.error(err.response?.data?.message || 'Assign failed')
@@ -154,6 +191,41 @@ export default function AdminBookingDetailPage() {
       toast.error(err.response?.data?.message || 'Verification failed')
     } finally {
       setRowBusy(null)
+    }
+  }
+
+  async function handleVerifyInstallment(paymentId) {
+    if (!paymentId) return
+    setPaymentBusyId(String(paymentId))
+    try {
+      await api.post(`/admin/payments/${paymentId}/verify`, {}, adminHeaders())
+      toast.success('Installment verified')
+      await load()
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Verification failed')
+    } finally {
+      setPaymentBusyId(null)
+    }
+  }
+
+  async function handleRejectInstallment() {
+    if (!rejectPayment?._id) return
+    const reason = rejectPaymentReason.trim()
+    if (!reason) {
+      toast.error('Enter a reason to reject this installment')
+      return
+    }
+    setPaymentBusyId(String(rejectPayment._id))
+    try {
+      await api.post(`/admin/payments/${rejectPayment._id}/reject`, { reason }, adminHeaders())
+      toast.success('Installment rejected')
+      setRejectPayment(null)
+      setRejectPaymentReason('')
+      await load()
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Rejection failed')
+    } finally {
+      setPaymentBusyId(null)
     }
   }
 
@@ -463,6 +535,42 @@ export default function AdminBookingDetailPage() {
         <p className="mt-3 text-xs capitalize text-ink-muted">Service: {b.serviceType || 'home'}</p>
       </Card>
 
+      {(b.paymentSummary || (Array.isArray(b.payments) && b.payments.length > 0)) && (
+        <InstallmentsCard
+          title="Installments"
+          subtitle="Verify each collected offline installment so it counts toward the coverage gate."
+          summary={b.paymentSummary}
+          payments={b.payments}
+          renderRowActions={(p) => {
+            if (p.mode !== 'offline' || p.status !== 'collected') return null
+            const busy = paymentBusyId === String(p._id)
+            return (
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => handleVerifyInstallment(p._id)}
+                  className="rounded-lg border border-emerald-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-emerald-800 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {busy ? '…' : 'Verify'}
+                </button>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => {
+                    setRejectPayment(p)
+                    setRejectPaymentReason('')
+                  }}
+                  className="rounded-lg border border-rose-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-rose-800 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Reject
+                </button>
+              </div>
+            )
+          }}
+        />
+      )}
+
       <Card hover={false} className="border-border-subtle p-5 sm:p-6">
         <h2 className="text-sm font-semibold text-ink">Session timeline</h2>
         <div className="mt-4">
@@ -638,10 +746,48 @@ export default function AdminBookingDetailPage() {
                 selectedId={assignPhysioId}
                 onConfirmSelect={(id) => setAssignPhysioId(id)}
               />
+              {assignPhysioId && canAssign && (
+                <div className="rounded-xl border border-border-subtle bg-white p-3 ring-1 ring-border-subtle/60">
+                  <label
+                    htmlFor="assign-price-input"
+                    className="block text-xs font-semibold uppercase tracking-wide text-ink-muted"
+                  >
+                    Price per session (₹)
+                  </label>
+                  <div className="mt-1.5 flex items-center rounded-lg border border-slate-200 bg-white focus-within:border-teal-500 focus-within:ring-2 focus-within:ring-teal-500/20">
+                    <span className="pl-3 text-sm font-semibold text-slate-500">₹</span>
+                    <input
+                      id="assign-price-input"
+                      type="number"
+                      inputMode="numeric"
+                      min="1"
+                      step="1"
+                      value={assignPrice}
+                      onChange={(e) => setAssignPrice(e.target.value)}
+                      placeholder={
+                        selectedPhysioForAssign?.pricePerSession != null
+                          ? String(selectedPhysioForAssign.pricePerSession)
+                          : 'e.g. 500'
+                      }
+                      className="w-full min-w-0 rounded-lg bg-transparent px-2 py-2 text-sm text-slate-900 outline-none placeholder:text-slate-400"
+                    />
+                  </div>
+                  <p className="mt-1.5 text-[11px] text-ink-muted">
+                    The patient will be charged this amount
+                    {b?.sessions > 1 ? ` × ${b.sessions} session${b.sessions === 1 ? '' : 's'}` : ''}.
+                    Physio earning and platform commission are recalculated automatically.
+                  </p>
+                </div>
+              )}
             </div>
             <button
               type="button"
-              disabled={rowBusy === 'assign' || !canAssign || !assignPhysioId}
+              disabled={
+                rowBusy === 'assign' ||
+                !canAssign ||
+                !assignPhysioId ||
+                !(Number(assignPrice) > 0)
+              }
               onClick={handleAssign}
               className={`${actionBtn} bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50`}
             >
@@ -699,6 +845,49 @@ export default function AdminBookingDetailPage() {
           </div>
         </div>
       </Card>
+
+      {rejectPayment && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal>
+          <Card hover={false} className="w-full max-w-md shadow-xl">
+            <h3 className="text-lg font-semibold text-ink">Reject installment</h3>
+            <p className="mt-2 text-sm text-ink-muted">
+              This will mark the collection as rejected; the physio can record a corrected one.
+            </p>
+            <label htmlFor="reject-reason" className="mt-4 block text-sm font-medium text-ink">
+              Reason
+            </label>
+            <textarea
+              id="reject-reason"
+              rows={3}
+              value={rejectPaymentReason}
+              onChange={(e) => setRejectPaymentReason(e.target.value)}
+              maxLength={500}
+              placeholder="e.g. Amount mismatch with patient report"
+              className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm shadow-sm outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20"
+            />
+            <div className="mt-5 flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => {
+                  setRejectPayment(null)
+                  setRejectPaymentReason('')
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                disabled={paymentBusyId === String(rejectPayment._id)}
+                onClick={handleRejectInstallment}
+                className="bg-rose-600 hover:bg-rose-700"
+              >
+                {paymentBusyId === String(rejectPayment._id) ? '…' : 'Reject'}
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
     </div>
   )
 }

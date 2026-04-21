@@ -23,6 +23,8 @@ export default function AdminBookingsToolbar({
   filtersActive,
   onRefresh,
   refreshing,
+  view = 'list',
+  onViewChange,
 }) {
   return (
     <div className="flex flex-col gap-3">
@@ -64,6 +66,40 @@ export default function AdminBookingsToolbar({
               <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-teal-600 ring-2 ring-white" />
             )}
           </button>
+          {onViewChange && (
+            <div
+              className="inline-flex h-10 shrink-0 items-center rounded-xl border border-slate-200 bg-white p-1 shadow-sm ring-1 ring-slate-100/80"
+              role="tablist"
+              aria-label="View"
+            >
+              <button
+                type="button"
+                role="tab"
+                aria-selected={view === 'list'}
+                onClick={() => onViewChange('list')}
+                className={`h-8 rounded-lg px-3 text-xs font-semibold transition ${
+                  view === 'list'
+                    ? 'bg-teal-50 text-teal-800 ring-1 ring-teal-200'
+                    : 'text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                List
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={view === 'calendar'}
+                onClick={() => onViewChange('calendar')}
+                className={`h-8 rounded-lg px-3 text-xs font-semibold transition ${
+                  view === 'calendar'
+                    ? 'bg-teal-50 text-teal-800 ring-1 ring-teal-200'
+                    : 'text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                Calendar
+              </button>
+            </div>
+          )}
           <button
             type="button"
             onClick={onRefresh}

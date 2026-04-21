@@ -8,6 +8,7 @@ import AdminBookingsToolbar from '../../components/admin/AdminBookingsToolbar'
 import AdminBookingsFilterDrawer, {
   DEFAULT_ADMIN_BOOKING_FILTERS,
 } from '../../components/admin/AdminBookingsFilterDrawer'
+import SessionsCalendarView from '../../components/physio/SessionsCalendarView'
 
 function statusBadgeClass(status) {
   const map = {
@@ -47,6 +48,7 @@ export default function BookingsAdmin() {
   const [filterOpen, setFilterOpen] = useState(false)
   const [search, setSearch] = useState('')
   const [sort, setSort] = useState('latest')
+  const [view, setView] = useState('list')
   const [refreshing, setRefreshing] = useState(false)
 
   const deferredSearch = useDeferredValue(search)
@@ -152,6 +154,8 @@ export default function BookingsAdmin() {
           filtersActive={filtersActive}
           onRefresh={() => load({ showFullSpinner: false })}
           refreshing={refreshing}
+          view={view}
+          onViewChange={setView}
         />
         <p className="mt-3 text-xs text-ink-muted">
           Showing <span className="font-semibold text-ink">{displayBookings.length}</span> on this page
@@ -193,6 +197,12 @@ export default function BookingsAdmin() {
         <p className="rounded-2xl border border-dashed border-border-subtle bg-canvas/80 px-4 py-10 text-center text-sm text-ink-muted">
           No rows match your search on this page. Try another page or clear search.
         </p>
+      ) : view === 'calendar' ? (
+        <SessionsCalendarView
+          bookings={displayBookings}
+          basePath="/admin/bookings"
+          showPhysio
+        />
       ) : (
         <ul className="divide-y divide-border-subtle rounded-2xl border border-border-subtle bg-white ring-1 ring-border-subtle/60">
           {displayBookings.map((b) => {

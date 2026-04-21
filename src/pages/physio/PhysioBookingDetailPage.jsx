@@ -13,8 +13,11 @@ import RescheduleModal from '../../components/physio/RescheduleModal'
 import BookingSessionTimeline from '../../components/bookings/BookingSessionTimeline'
 import SessionNotesEditor from '../../components/bookings/SessionNotesEditor'
 import SessionProgressTracker from '../../components/bookings/SessionProgressTracker'
+import InstallmentsCard from '../../components/payments/InstallmentsCard'
+import RecordCollectionModal from '../../components/payments/RecordCollectionModal'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
+import { openGoogleMapsDestination } from '../../utils/googleMaps'
 
 const actionBtn =
   'cursor-pointer rounded-xl px-4 py-2.5 text-sm font-semibold shadow-sm transition-all duration-200 hover:shadow-md active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50'
@@ -27,7 +30,10 @@ export default function PhysioBookingDetailPage() {
   const [error, setError] = useState(null)
   const [busyId, setBusyId] = useState(null)
   const [rescheduleRow, setRescheduleRow] = useState(null)
-  const [collectModalOpen, setCollectModalOpen] = useState(false)
+  const [busySessionKey, setBusySessionKey] = useState(null)
+  const [noShowRow, setNoShowRow] = useState(null)
+  const [noShowReason, setNoShowReason] = useState('')
+  const [recordCollectionOpen, setRecordCollectionOpen] = useState(false)
 
   const load = useCallback(async () => {
     if (!id) return
@@ -58,24 +64,50 @@ export default function PhysioBookingDetailPage() {
     )
   }, [booking])
 
-  const showMarkCollected = useMemo(() => {
-    if (!booking) return false
-    return (
-      booking.serviceType === 'home' &&
-      booking.homePlanPaymentMode === 'offline' &&
-      booking.planStatus === 'approved' &&
-      booking.payment?.status === 'pending'
-    )
-  }, [booking])
+  const hasSchedulePlan = useMemo(
+    () => Array.isArray(booking?.schedule) && booking.schedule.length > 0,
+    [booking],
+  )
+
+  const paymentSummary = booking?.paymentSummary || null
+  const paymentsList = useMemo(
+    () => (Array.isArray(booking?.payments) ? booking.payments : []),
+    [booking],
+  )
+
+  const sessionsCount = paymentSummary?.sessionsCount || (hasSchedulePlan ? booking.schedule.length : 1)
+  const unlockedSessions = Number(
+    paymentSummary?.unlockedSessions ?? paymentSummary?.coveredSessions ?? 0,
+  )
+  const isOfflinePlan =
+    booking?.serviceType === 'home' && booking?.homePlanPaymentMode === 'offline'
+  const outstanding = Number(paymentSummary?.outstanding || 0)
+  const showInstallments =
+    booking?.planStatus === 'approved' ||
+    booking?.serviceType === 'online' ||
+    paymentsList.length > 0
+
+  /**
+   * Booking-level block reason. With the percentage-based unlock rule, only
+   * the extreme "nothing unlocked" case (e.g. N=1 unpaid) blocks at booking
+   * level; per-row gating handles partial coverage.
+   */
+  const paymentBlockReason = useMemo(() => {
+    if (!booking) return 'Booking not loaded'
+    if (!paymentSummary) {
+      if (booking.paymentStatus !== 'held') return 'Payment must be secured before completion'
+      return ''
+    }
+    if (unlockedSessions <= 0) {
+      return 'Collect at least one installment before completing any session.'
+    }
+    return ''
+  }, [booking, paymentSummary, unlockedSessions])
 
   const canMarkComplete = useMemo(() => {
     if (!booking || booking.sessionStatus === 'completed') return false
-    const offline = booking.serviceType === 'home' && booking.homePlanPaymentMode === 'offline'
-    if (offline) {
-      return booking.payment?.status === 'verified' && booking.paymentStatus === 'held'
-    }
-    return booking.payment?.status === 'paid' && booking.paymentStatus === 'held'
-  }, [booking])
+    return !paymentBlockReason
+  }, [booking, paymentBlockReason])
 
   const showPlanPending = useMemo(() => {
     if (!booking) return false
@@ -95,6 +127,40 @@ export default function PhysioBookingDetailPage() {
     }
   }
 
+  async function completeOneSession(row) {
+    if (!booking || !row?.sessionId) return
+    const key = String(row.sessionId)
+    setBusySessionKey(key)
+    try {
+      await api.post(`/physio/sessions/${booking._id}/${row.sessionId}/complete`)
+      toast.success(`Session #${row.n} marked complete`)
+      await load()
+    } catch (e) {
+      toast.error(e.response?.data?.message || 'Failed')
+    } finally {
+      setBusySessionKey(null)
+    }
+  }
+
+  async function submitNoShow() {
+    if (!booking || !noShowRow?.sessionId) return
+    const key = String(noShowRow.sessionId)
+    setBusySessionKey(key)
+    try {
+      await api.post(`/physio/sessions/${booking._id}/${noShowRow.sessionId}/no-show`, {
+        reason: noShowReason.trim(),
+      })
+      toast.success(`Session #${noShowRow.n} marked as no-show`)
+      setNoShowRow(null)
+      setNoShowReason('')
+      await load()
+    } catch (e) {
+      toast.error(e.response?.data?.message || 'Failed')
+    } finally {
+      setBusySessionKey(null)
+    }
+  }
+
   async function createPlan(bookingId, payload) {
     setBusyId(bookingId)
     try {
@@ -107,27 +173,6 @@ export default function PhysioBookingDetailPage() {
       setBusyId(null)
     }
   }
-
-  async function collectOfflinePayment(bookingId) {
-    setBusyId(bookingId)
-    try {
-      await api.patch(`/bookings/${bookingId}/collect-payment`)
-      toast.success('Payment marked as collected — awaiting admin verification')
-      setCollectModalOpen(false)
-      await load()
-    } catch (e) {
-      toast.error(e.response?.data?.message || 'Could not update payment')
-    } finally {
-      setBusyId(null)
-    }
-  }
-
-  const collectAmountLabel =
-    booking?.totalAmount != null
-      ? new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(
-          Number(booking.totalAmount),
-        )
-      : 'the agreed amount'
 
   if (loading) {
     return (
@@ -151,6 +196,7 @@ export default function PhysioBookingDetailPage() {
 
   const b = booking
   const busy = busyId === b._id
+  const canStartNavigation = Boolean(b.userId?.coordinates || String(b.userId?.location || '').trim())
 
   return (
     <div className="space-y-6">
@@ -195,6 +241,20 @@ export default function PhysioBookingDetailPage() {
             <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Patient</p>
             <p className="mt-1 font-medium text-gray-900">{b.userId?.name ?? '—'}</p>
             <p className="mt-0.5 text-sm text-gray-600">{b.userId?.phone ?? '—'}</p>
+            <button
+              type="button"
+              onClick={() =>
+                openGoogleMapsDestination({
+                  coordinates: b.userId?.coordinates,
+                  address: b.userId?.location,
+                })
+              }
+              disabled={!canStartNavigation}
+              title={canStartNavigation ? 'Start navigation' : 'Address not available'}
+              className="mt-2 inline-flex items-center rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Start
+            </button>
           </div>
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">You</p>
@@ -211,14 +271,92 @@ export default function PhysioBookingDetailPage() {
         </div>
       </Card>
 
+      {showInstallments && (
+        <InstallmentsCard
+          title={isOfflinePlan ? 'Collections' : 'Installments'}
+          subtitle={
+            isOfflinePlan
+              ? 'Record each cash/UPI hand-off. Admin verifies before it unlocks a session.'
+              : 'Patient pays online per installment. Each verified payment unlocks the next session.'
+          }
+          summary={paymentSummary}
+          payments={paymentsList}
+          emptyMessage={
+            isOfflinePlan
+              ? 'No collections recorded yet. Record the first one after the patient pays you.'
+              : 'No online installments yet.'
+          }
+        >
+          {isOfflinePlan && outstanding > 0.009 && b.planStatus === 'approved' ? (
+            <Button type="button" onClick={() => setRecordCollectionOpen(true)}>
+              Record collection
+            </Button>
+          ) : null}
+        </InstallmentsCard>
+      )}
+
       <Card hover={false} className="p-5 sm:p-6">
         <h2 className="text-sm font-semibold text-gray-900">Session timeline</h2>
+        <p className="mt-1 text-xs text-gray-500">
+          Mark each session complete after you finish the visit. No-show is for sessions the patient
+          missed.
+        </p>
+        {paymentSummary && unlockedSessions < sessionsCount && (
+          <div className="mt-3 rounded-lg border border-blue-100 bg-blue-50/70 px-3 py-2 text-xs text-blue-950">
+            {unlockedSessions === 0
+              ? `Collect at least one installment to unlock session #1.`
+              : `You can mark up to session #${unlockedSessions} of ${sessionsCount}. Collect the next installment to open more.`}
+          </div>
+        )}
         <div className="mt-4">
           <BookingSessionTimeline
             booking={b}
             reschedule={{
               enabled: true,
               onReschedule: (row) => setRescheduleRow(row),
+            }}
+            physioActions={{
+              enabled: true,
+              /**
+               * Keep actions visible for all rows; rowBlockedReason enforces
+               * coverage gate per session number so already-covered sessions
+               * remain actionable (e.g. 2/5 paid allows #1 and #2).
+               */
+              canAct: true,
+              blockedReason: paymentBlockReason,
+              busySessionId: busySessionKey,
+              rowBlockedReason: (row) => {
+                if (!paymentSummary) return ''
+                const ordinal = row?.perSession ? Number(row.n || 0) : 1
+                if (ordinal <= 0) return ''
+                if (ordinal > unlockedSessions) {
+                  return unlockedSessions === 0
+                    ? `Session #${ordinal} is locked. Collect at least one installment to open it.`
+                    : `Session #${ordinal} is locked. Currently unlocked: up to #${unlockedSessions} of ${sessionsCount}. Collect the next installment to open more.`
+                }
+                return ''
+              },
+              onComplete: (row) => {
+                if (paymentBlockReason) {
+                  toast.error(paymentBlockReason)
+                  return
+                }
+                if (row.perSession) {
+                  completeOneSession(row)
+                } else {
+                  completeSession(b._id)
+                }
+              },
+              onNoShow: (row) => {
+                if (paymentBlockReason) {
+                  toast.error(paymentBlockReason)
+                  return
+                }
+                if (row.perSession) {
+                  setNoShowReason('')
+                  setNoShowRow(row)
+                }
+              },
             }}
           />
         </div>
@@ -290,27 +428,6 @@ export default function PhysioBookingDetailPage() {
             <p className="mt-0.5 text-xs">{b.offlinePaymentRejectReason}</p>
           </div>
         )}
-        {showMarkCollected && (
-          <div className="mt-4 border-t border-amber-100 pt-4">
-            <p className="text-sm font-medium text-amber-950">Collect cash / UPI from the patient, then confirm below.</p>
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => setCollectModalOpen(true)}
-              className={`mt-3 ${actionBtn} bg-amber-600 text-white hover:bg-amber-700`}
-            >
-              Mark as cash collected
-            </button>
-          </div>
-        )}
-        {b.serviceType === 'home' &&
-          b.homePlanPaymentMode === 'offline' &&
-          b.payment?.status === 'collected' &&
-          !b.offlinePaymentVerified && (
-            <div className="mt-4 rounded-lg border border-sky-200 bg-sky-50/90 px-3 py-2 text-sm text-sky-950">
-              Collected — waiting for admin to verify payment before you can complete the session.
-            </div>
-          )}
       </Card>
 
       {showPlanPending && (
@@ -328,24 +445,24 @@ export default function PhysioBookingDetailPage() {
         </Card>
       )}
 
-      <Card hover={false} className="p-5 sm:p-6">
-        <h2 className="mb-4 text-sm font-semibold text-gray-900">Actions</h2>
-        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-3">
-          <button
-            type="button"
-            disabled={busy || b.sessionStatus === 'completed' || !canMarkComplete}
-            onClick={() => completeSession(b._id)}
-            title={
-              !canMarkComplete && b.sessionStatus !== 'completed'
-                ? 'Payment must be confirmed (online paid or offline admin-verified) and secured before completion'
-                : undefined
-            }
-            className={`${actionBtn} w-full bg-blue-600 text-white hover:bg-blue-700 sm:w-auto`}
-          >
-            {b.sessionStatus === 'completed' ? 'Completed' : 'Mark complete'}
-          </button>
-        </div>
-      </Card>
+      {!hasSchedulePlan && (
+        <Card hover={false} className="p-5 sm:p-6">
+          <h2 className="mb-4 text-sm font-semibold text-gray-900">Actions</h2>
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-3">
+            <button
+              type="button"
+              disabled={busy || b.sessionStatus === 'completed' || !canMarkComplete}
+              onClick={() => completeSession(b._id)}
+              title={
+                !canMarkComplete && b.sessionStatus !== 'completed' ? paymentBlockReason : undefined
+              }
+              className={`${actionBtn} w-full bg-blue-600 text-white hover:bg-blue-700 sm:w-auto`}
+            >
+              {b.sessionStatus === 'completed' ? 'Completed' : 'Mark complete'}
+            </button>
+          </div>
+        </Card>
+      )}
 
       {rescheduleRow != null && (
         <RescheduleModal
@@ -358,25 +475,56 @@ export default function PhysioBookingDetailPage() {
         />
       )}
 
-      {collectModalOpen && b && (
+      {noShowRow && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal>
-          <Card hover={false} className="max-w-md shadow-xl">
-            <h3 className="text-lg font-semibold text-gray-900">Confirm collection</h3>
-            <p className="mt-3 text-sm text-gray-700">
-              Have you received <span className="font-semibold text-gray-900">{collectAmountLabel}</span> from the
-              patient?
+          <Card hover={false} className="w-full max-w-md shadow-xl">
+            <h3 className="text-lg font-semibold text-gray-900">Mark session as no-show</h3>
+            <p className="mt-2 text-sm text-gray-700">
+              Session #{noShowRow.n} · {formatBookingDateAndSlot(noShowRow.date, noShowRow.time)}
             </p>
-            <div className="mt-6 flex justify-end gap-2">
-              <Button type="button" variant="ghost" onClick={() => setCollectModalOpen(false)}>
+            <label htmlFor="no-show-reason" className="mt-4 block text-sm font-medium text-gray-800">
+              Reason (optional)
+            </label>
+            <textarea
+              id="no-show-reason"
+              rows={3}
+              value={noShowReason}
+              onChange={(e) => setNoShowReason(e.target.value)}
+              maxLength={500}
+              placeholder="e.g. Patient was not at home; could not reach by phone."
+              className="mt-1.5 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm text-gray-900 shadow-sm outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20"
+            />
+            <div className="mt-5 flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => {
+                  setNoShowRow(null)
+                  setNoShowReason('')
+                }}
+              >
                 Cancel
               </Button>
-              <Button type="button" disabled={busy} onClick={() => collectOfflinePayment(b._id)}>
-                {busy ? 'Saving…' : 'Yes, confirm'}
+              <Button
+                type="button"
+                disabled={busySessionKey != null}
+                onClick={submitNoShow}
+                className="bg-rose-600 hover:bg-rose-700"
+              >
+                {busySessionKey != null ? 'Saving…' : 'Mark no-show'}
               </Button>
             </div>
           </Card>
         </div>
       )}
+
+      <RecordCollectionModal
+        open={recordCollectionOpen}
+        booking={b}
+        summary={paymentSummary}
+        onClose={() => setRecordCollectionOpen(false)}
+        onRecorded={load}
+      />
     </div>
   )
 }

@@ -3,6 +3,7 @@ import path from 'node:path'
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
+import { SERVICE_CITIES } from './src/constants/serviceCities.js'
 
 /**
  * Writes dist/robots.txt and dist/sitemap.xml after build.
@@ -51,11 +52,19 @@ Sitemap: ${base}/sitemap.xml
       fs.writeFileSync(path.join(distDir, 'robots.txt'), robotsBody + robotsExtra, 'utf8')
 
       const staticPaths = ['/', '/login', '/register', '/forgot-password', '/register-physio']
-      const urlBlocks = staticPaths.map((p) => {
-        const loc = p === '/' ? `${base}/` : `${base}${p}`
-        const priority = p === '/' ? '1.0' : '0.7'
-        return `  <url>\n    <loc>${loc}</loc>\n    <changefreq>weekly</changefreq>\n    <priority>${priority}</priority>\n  </url>`
-      })
+      const cityPaths = SERVICE_CITIES.map((c) => `/physio-in/${c.slug}`)
+
+      const buildUrlBlock = (loc, priority, changefreq) =>
+        `  <url>\n    <loc>${loc}</loc>\n    <changefreq>${changefreq}</changefreq>\n    <priority>${priority}</priority>\n  </url>`
+
+      const urlBlocks = [
+        ...staticPaths.map((p) => {
+          const loc = p === '/' ? `${base}/` : `${base}${p}`
+          const priority = p === '/' ? '1.0' : '0.7'
+          return buildUrlBlock(loc, priority, 'weekly')
+        }),
+        ...cityPaths.map((p) => buildUrlBlock(`${base}${p}`, '0.8', 'monthly')),
+      ]
       const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${urlBlocks.join('\n')}

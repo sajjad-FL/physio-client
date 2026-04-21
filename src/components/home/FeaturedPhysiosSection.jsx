@@ -4,10 +4,19 @@ import { api } from '../../config/api'
 import { assetUrl } from '../../utils/assetUrl'
 import Skeleton from '../ui/Skeleton'
 import { StarRatingDisplay } from '../reviews/StarRating'
+import { SERVICE_CITIES, findCityBySlug } from '../../constants/serviceCities'
+import { getCurrentCoords, getGeolocationUnavailableReason } from '../../utils/geolocation'
 
-/** Demo anchor for “featured” list when user has not shared location (bookable physios near a major hub). */
-const DEMO_LAT = 12.9716
-const DEMO_LNG = 77.5946
+/**
+ * Default anchor when the visitor has not shared location — we use our primary
+ * service city (Guwahati) so the "featured nearby" list actually matches the
+ * region the homepage markets. Coords are sourced from the shared
+ * SERVICE_CITIES config so there is a single source of truth.
+ */
+const DEFAULT_ANCHOR_CITY = findCityBySlug('guwahati') || SERVICE_CITIES[0]
+const DEFAULT_LAT = DEFAULT_ANCHOR_CITY?.lat ?? 26.1445
+const DEFAULT_LNG = DEFAULT_ANCHOR_CITY?.lng ?? 91.7362
+const DEFAULT_LABEL = DEFAULT_ANCHOR_CITY?.name || 'Guwahati'
 
 function FeaturedCard({ p }) {
   const avg = Number(p.avgRating) || 0
@@ -56,20 +65,55 @@ export default function FeaturedPhysiosSection() {
   const [list, setList] = useState([])
   const [loading, setLoading] = useState(true)
   const [failed, setFailed] = useState(false)
+  const [anchorLabel, setAnchorLabel] = useState(DEFAULT_LABEL)
 
   useEffect(() => {
     let cancelled = false
-    api
-      .get('/physios/nearby', { params: { lat: DEMO_LAT, lng: DEMO_LNG, limit: 3 } })
-      .then((res) => {
-        if (!cancelled) setList(Array.isArray(res.data?.physios) ? res.data.physios : [])
-      })
-      .catch(() => {
+
+    async function fetchNearby(lat, lng) {
+      try {
+        const res = await api.get('/physios/nearby', { params: { lat, lng, limit: 3 } })
+        if (cancelled) return
+        setList(Array.isArray(res.data?.physios) ? res.data.physios : [])
+        setFailed(false)
+      } catch {
         if (!cancelled) setFailed(true)
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false)
-      })
+      }
+    }
+
+    /**
+     * Upgrade the anchor to the visitor's real coordinates only when the
+     * browser has already granted geolocation — we must not spam the homepage
+     * with a permission prompt. Silently fall back to the default city anchor
+     * otherwise.
+     */
+    async function maybeUseVisitorCoords() {
+      if (getGeolocationUnavailableReason()) return null
+      try {
+        const perm = await navigator.permissions?.query?.({ name: 'geolocation' })
+        if (!perm || perm.state !== 'granted') return null
+      } catch {
+        return null
+      }
+      try {
+        const coords = await getCurrentCoords()
+        if (!Number.isFinite(coords?.lat) || !Number.isFinite(coords?.lng)) return null
+        return coords
+      } catch {
+        return null
+      }
+    }
+
+    ;(async () => {
+      await fetchNearby(DEFAULT_LAT, DEFAULT_LNG)
+      if (!cancelled) setLoading(false)
+
+      const visitor = await maybeUseVisitorCoords()
+      if (cancelled || !visitor) return
+      setAnchorLabel('your location')
+      await fetchNearby(visitor.lat, visitor.lng)
+    })()
+
     return () => {
       cancelled = true
     }
@@ -133,11 +177,11 @@ export default function FeaturedPhysiosSection() {
 
         {!loading && list.length > 0 && (
           <p className="mt-10 text-center text-sm text-slate-500">
-            Showing sample listings near a demo hub.{' '}
+            Showing physiotherapists near {anchorLabel}.{' '}
             <Link to="/login" className="font-semibold text-teal-700 hover:underline">
               Sign in
             </Link>{' '}
-            to see physios matched to your address.
+            to see physios matched to your exact address.
           </p>
         )}
       </div>

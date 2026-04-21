@@ -17,6 +17,22 @@ function toYMD(d) {
   return `${y}-${m}-${day}`
 }
 
+/**
+ * Parse a YYYY-MM-DD booking date into a local midnight Date, but only return
+ * it if it's today or in the future — past primary sessions shouldn't pre-fill
+ * the calendar as a plan session.
+ */
+function parseBookingPrimaryDate(ymd) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(ymd || '').trim())
+  if (!m) return null
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
+  if (Number.isNaN(d.getTime())) return null
+  d.setHours(0, 0, 0, 0)
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  return d.getTime() >= today.getTime() ? d : null
+}
+
 function formatSummaryDay(d) {
   return new Date(d).toLocaleDateString('en-IN', {
     day: 'numeric',
@@ -42,18 +58,27 @@ export default function HomePlanForm({ booking, busy, onSubmit }) {
   const feeLo = Number(physio?.pricePerSession)
   const feeHi = physio?.pricePerSessionMax != null ? Number(physio.pricePerSessionMax) : NaN
   const hasFeeRange = Number.isFinite(feeLo) && Number.isFinite(feeHi) && feeHi > feeLo
+  const defaultPrimaryDate = useMemo(
+    () => parseBookingPrimaryDate(booking?.date),
+    [booking?.date],
+  )
 
   const [sessions, setSessions] = useState(1)
   const [amountPerSession, setAmountPerSession] = useState(defaultAmount)
   const [discount, setDiscount] = useState(0)
   const [sessionTime, setSessionTime] = useState(defaultSlot)
   const [paymentMode, setPaymentMode] = useState('online')
-  const [selectedDates, setSelectedDates] = useState([])
+  const [selectedDates, setSelectedDates] = useState(() =>
+    defaultPrimaryDate ? [defaultPrimaryDate] : [],
+  )
+
+  const defaultPrimaryDateKey = defaultPrimaryDate ? defaultPrimaryDate.getTime() : null
 
   useEffect(() => {
     setAmountPerSession(defaultAmount)
     setSessionTime(defaultSlot)
-  }, [booking._id, defaultAmount, defaultSlot])
+    setSelectedDates(defaultPrimaryDate ? [defaultPrimaryDate] : [])
+  }, [booking._id, defaultAmount, defaultSlot, defaultPrimaryDate, defaultPrimaryDateKey])
 
   useEffect(() => {
     setSelectedDates((prev) => {

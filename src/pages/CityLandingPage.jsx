@@ -1,0 +1,306 @@
+import { useMemo } from 'react'
+import { Link, Navigate, useParams } from 'react-router-dom'
+import { Helmet } from 'react-helmet-async'
+import SiteHeader from '../components/layout/SiteHeader'
+import { SERVICE_CITIES, findCityBySlug } from '../constants/serviceCities'
+import { absoluteUrl, siteOrigin } from '../utils/siteMeta'
+
+const TREATMENTS = [
+  { title: 'Back pain', blurb: 'Lower-back pain, sciatica, disc issues and posture-related pain.' },
+  { title: 'Knee pain', blurb: 'Arthritis, ligament strain, post-replacement rehab and meniscus recovery.' },
+  { title: 'Neck and shoulder pain', blurb: 'Cervical spondylosis, frozen shoulder, and desk-job stiffness.' },
+  { title: 'Post-surgery rehab', blurb: 'Guided recovery after orthopedic, spinal or cardiac surgery.' },
+  { title: 'Stroke and paralysis', blurb: 'Mobility, strength and daily-life rehabilitation at home.' },
+  { title: 'Sports injuries', blurb: 'Ligament sprains, muscle tears and return-to-sport programs.' },
+]
+
+function buildFaq(city) {
+  return [
+    {
+      q: `How do I book a physio near me in ${city.name}?`,
+      a: `Open NearbyPhysio, pick your slot and share your address in ${city.name}. We match you with a verified physiotherapist who does home visits in your locality and confirm the appointment after payment.`,
+    },
+    {
+      q: `Do you cover all areas of ${city.name}?`,
+      a: `We actively serve most major neighborhoods including ${city.neighborhoods.slice(0, 5).join(', ')}${city.neighborhoods.length > 5 ? ' and more' : ''}. When you book, share your exact address and we will assign the nearest available physiotherapist.`,
+    },
+    {
+      q: `How much does a home visit physio cost in ${city.name}?`,
+      a: `Fees vary by physiotherapist, experience level, and session length. You see the per-session price before you confirm the booking — no hidden charges and secure online payment.`,
+    },
+    {
+      q: `Are the physiotherapists in ${city.name} verified?`,
+      a: `Yes. Every clinician marked as verified has completed our platform checks, including qualification and ID verification. You can read reviews on each physiotherapist's public profile before you book.`,
+    },
+    {
+      q: `Can I get physio at home the same day in ${city.name}?`,
+      a: `Same-day or next-day home visits are often available depending on slot availability in your area. Check open slots in your preferred ${city.name} neighborhood after logging in.`,
+    },
+  ]
+}
+
+function cityStructuredData({ city, canonical, ogImage, faq }) {
+  return {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'MedicalBusiness',
+        '@id': `${canonical}#organization`,
+        name: `NearbyPhysio — Home Visit Physiotherapy in ${city.name}`,
+        url: canonical,
+        image: ogImage,
+        description: `Book verified home visit physiotherapists in ${city.name}, ${city.state}. Physio at home for back pain, knee pain, post-surgery rehab and more.`,
+        medicalSpecialty: 'Physiotherapy',
+        priceRange: '₹₹',
+        areaServed: {
+          '@type': 'City',
+          name: city.name,
+          containedInPlace: { '@type': 'AdministrativeArea', name: city.state },
+          ...(typeof city.lat === 'number' && typeof city.lng === 'number'
+            ? {
+                geo: {
+                  '@type': 'GeoCoordinates',
+                  latitude: city.lat,
+                  longitude: city.lng,
+                },
+              }
+            : {}),
+        },
+        availableService: [
+          { '@type': 'MedicalTherapy', name: `Back pain physiotherapy in ${city.name}` },
+          { '@type': 'MedicalTherapy', name: `Knee pain physiotherapy in ${city.name}` },
+          { '@type': 'MedicalTherapy', name: `Post-surgery rehabilitation in ${city.name}` },
+          { '@type': 'MedicalTherapy', name: `Stroke and paralysis rehabilitation in ${city.name}` },
+        ],
+      },
+      {
+        '@type': 'BreadcrumbList',
+        '@id': `${canonical}#breadcrumbs`,
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: 'Home', item: `${siteOrigin() || 'https://nearbyphysio.com'}/` },
+          { '@type': 'ListItem', position: 2, name: `Physiotherapist in ${city.name}`, item: canonical },
+        ],
+      },
+      {
+        '@type': 'FAQPage',
+        '@id': `${canonical}#faq`,
+        mainEntity: faq.map(({ q, a }) => ({
+          '@type': 'Question',
+          name: q,
+          acceptedAnswer: { '@type': 'Answer', text: a },
+        })),
+      },
+    ],
+  }
+}
+
+export default function CityLandingPage() {
+  const { city: slug } = useParams()
+  const city = useMemo(() => findCityBySlug(slug), [slug])
+
+  if (!city) {
+    return <Navigate to="/" replace />
+  }
+
+  const canonical = absoluteUrl(`/physio-in/${city.slug}`)
+  const ogImage = absoluteUrl('/og-default.png')
+  const title = `Physiotherapist in ${city.name} — Home Visit Physio Near You | NearbyPhysio`
+  const description = `Looking for a physio near you in ${city.name}? Book a verified home visit physiotherapist for back pain, knee pain, post-surgery rehab and stroke recovery — same-day slots available in ${city.neighborhoods.slice(0, 3).join(', ')} and more.`
+  const faq = buildFaq(city)
+  const ldJson = JSON.stringify(cityStructuredData({ city, canonical, ogImage, faq }))
+  const otherCities = SERVICE_CITIES.filter((c) => c.slug !== city.slug)
+
+  return (
+    <div className="min-h-screen bg-slate-50">
+      <Helmet>
+        <title>{title}</title>
+        <meta name="description" content={description} />
+        <link rel="canonical" href={canonical} />
+        <meta name="robots" content="index, follow, max-image-preview:large" />
+        <meta property="og:type" content="website" />
+        <meta property="og:site_name" content="NearbyPhysio" />
+        <meta property="og:title" content={title} />
+        <meta property="og:description" content={description} />
+        <meta property="og:url" content={canonical} />
+        <meta property="og:image" content={ogImage} />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta property="og:locale" content="en_IN" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={title} />
+        <meta name="twitter:description" content={description} />
+        <meta name="twitter:image" content={ogImage} />
+        <script type="application/ld+json">{ldJson}</script>
+      </Helmet>
+
+      <SiteHeader />
+
+      <main>
+        <section className="relative overflow-hidden border-b border-slate-200 bg-mesh-hero">
+          <div className="pointer-events-none absolute inset-0 bg-grid-saas opacity-40" aria-hidden />
+          <div className="relative mx-auto max-w-6xl px-4 pb-12 pt-16 sm:px-6 sm:pt-20 lg:px-8 lg:pb-20 lg:pt-24">
+            <nav aria-label="Breadcrumb" className="mb-6 text-xs font-medium text-slate-500">
+              <ol className="flex flex-wrap items-center gap-1.5">
+                <li>
+                  <Link to="/" className="hover:text-slate-700">Home</Link>
+                </li>
+                <li aria-hidden>/</li>
+                <li className="text-slate-700">Physio in {city.name}</li>
+              </ol>
+            </nav>
+            <div className="max-w-3xl">
+              <p className="inline-flex items-center rounded-full border border-slate-200 bg-white/90 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500 shadow-sm backdrop-blur">
+                Home visits in {city.name}
+              </p>
+              <h1 className="mt-6 text-balance text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl sm:leading-[1.08]">
+                Physiotherapist in {city.name} — home visit physio near you
+              </h1>
+              <p className="mt-6 max-w-2xl text-lg leading-relaxed text-slate-500">
+                {city.tagline} NearbyPhysio matches you with a licensed, verified physio who does home visits in {city.name}, {city.state}, for back pain, knee pain, post-surgery rehab, stroke recovery and more.
+              </p>
+              <div className="mt-10 flex flex-wrap gap-3">
+                <Link
+                  to="/book"
+                  className="interactive-press inline-flex h-12 items-center justify-center rounded-xl bg-teal-600 px-8 text-[15px] font-semibold text-white shadow-lg shadow-teal-600/25 transition-colors duration-200 hover:bg-teal-700"
+                >
+                  Book a home visit physio
+                </Link>
+                <Link
+                  to="/register"
+                  className="inline-flex h-12 items-center justify-center rounded-xl border border-slate-200 bg-white px-6 text-[15px] font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:text-slate-900"
+                >
+                  Create a free account
+                </Link>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="border-b border-slate-200 bg-white py-16 lg:py-20">
+          <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+            <div className="max-w-2xl">
+              <h2 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+                Home visit physiotherapy in {city.name}
+              </h2>
+              <p className="mt-4 text-lg leading-relaxed text-slate-500">
+                Whether you are recovering from surgery, managing chronic back pain, or supporting an elder at home, a
+                qualified physiotherapist can come to your door in {city.name}. Skip the commute, avoid clinic queues,
+                and get focused one-on-one care at a time that works for you.
+              </p>
+            </div>
+            <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {TREATMENTS.map((t) => (
+                <div
+                  key={t.title}
+                  className="rounded-2xl border border-slate-200/90 bg-white p-6 shadow-sm ring-1 ring-slate-900/[0.025]"
+                >
+                  <h3 className="text-[17px] font-semibold tracking-tight text-slate-900">{t.title} in {city.name}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-slate-600">{t.blurb}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="border-b border-slate-200 bg-slate-50 py-16 lg:py-20">
+          <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+            <h2 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+              Neighborhoods we cover in {city.name}
+            </h2>
+            <p className="mt-4 max-w-2xl text-lg leading-relaxed text-slate-500">
+              Our home visit physiotherapists operate across {city.name}. Share your address when you book and we
+              assign the closest available clinician.
+            </p>
+            <ul className="mt-8 flex flex-wrap gap-2.5">
+              {city.neighborhoods.map((n) => (
+                <li
+                  key={n}
+                  className="rounded-full border border-slate-200 bg-white px-4 py-1.5 text-sm font-medium text-slate-700 shadow-sm"
+                >
+                  Physio in {n}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+
+        <section className="border-b border-slate-200 bg-white py-16 lg:py-24">
+          <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
+            <h2 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+              Frequently asked questions — physio in {city.name}
+            </h2>
+            <dl className="mt-10 space-y-8">
+              {faq.map(({ q, a }) => (
+                <div key={q} className="border-b border-slate-100 pb-8 last:border-0 last:pb-0">
+                  <dt className="text-lg font-semibold text-slate-900">{q}</dt>
+                  <dd className="mt-2 text-base leading-relaxed text-slate-600">{a}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        </section>
+
+        <section className="border-b border-slate-200 bg-slate-50 py-14">
+          <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+            <h2 className="text-2xl font-bold tracking-tight text-slate-900">Home visit physio in other cities</h2>
+            <p className="mt-3 max-w-2xl text-base leading-relaxed text-slate-500">
+              NearbyPhysio connects patients with verified physiotherapists across India&apos;s major metros.
+            </p>
+            <ul className="mt-6 flex flex-wrap gap-2.5">
+              {otherCities.map((c) => (
+                <li key={c.slug}>
+                  <Link
+                    to={`/physio-in/${c.slug}`}
+                    className="inline-flex items-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:border-teal-300 hover:text-teal-700"
+                  >
+                    Physio in {c.name}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+
+        <section className="bg-white py-20 lg:py-24">
+          <div className="mx-auto max-w-6xl px-4 text-center sm:px-6 lg:px-8">
+            <h2 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+              Book a physiotherapist at home in {city.name}
+            </h2>
+            <p className="mx-auto mt-4 max-w-lg text-lg leading-relaxed text-slate-500">
+              Pick a slot, share your {city.name} address, and pay online to confirm. Your verified physio will arrive
+              at your door.
+            </p>
+            <div className="mt-10">
+              <Link
+                to="/book"
+                className="interactive-press inline-flex h-12 items-center justify-center rounded-xl bg-teal-600 px-10 text-[15px] font-semibold text-white shadow-lg shadow-teal-600/25 transition-colors duration-200 hover:bg-teal-700"
+              >
+                Book now
+              </Link>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer className="border-t border-slate-800 bg-slate-900 text-white">
+        <div className="mx-auto flex max-w-6xl flex-col gap-8 px-4 py-14 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
+          <div>
+            <p className="text-sm font-semibold">NearbyPhysio</p>
+            <p className="mt-2 text-sm text-white/60">&copy; {new Date().getFullYear()} Home visit physiotherapy in {city.name}.</p>
+          </div>
+          <nav className="flex flex-col gap-3 text-sm font-medium sm:items-end" aria-label="Footer">
+            <div className="flex flex-wrap gap-x-6 gap-y-2 text-white/90">
+              <Link to="/" className="transition-colors hover:text-white">Home</Link>
+              <Link to="/register" className="transition-colors hover:text-white">Create account</Link>
+              <Link to="/login" className="transition-colors hover:text-white">Sign in</Link>
+              <Link to="/book" className="transition-colors hover:text-white">Book a physio</Link>
+            </div>
+            <Link to="/register-physio" className="text-white/90 transition-colors duration-200 hover:text-white">
+              Register as a physiotherapist →
+            </Link>
+          </nav>
+        </div>
+      </footer>
+    </div>
+  )
+}

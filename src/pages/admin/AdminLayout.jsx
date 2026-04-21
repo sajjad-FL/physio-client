@@ -27,15 +27,6 @@ const iconVerify = (
     <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z" />
   </svg>
 )
-const iconSettlement = (
-  <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24" aria-hidden>
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75a.75.75 0 01-.75.75h-.75m-1.5-3.75H3.75m0 0h-.375c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"
-    />
-  </svg>
-)
 const iconDispute = (
   <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24" aria-hidden>
     <path
@@ -90,8 +81,7 @@ const baseNavItems = [
   { to: '/profile', label: 'My profile', icon: iconProfile },
   { to: '/admin', label: 'Bookings', end: true, icon: iconBookings, countKey: 'bookings' },
   { to: '/admin/payments', label: 'Payments', icon: iconCash, countKey: 'payments' },
-  { to: '/admin/withdrawals', label: 'Withdrawals', icon: iconWithdraw, countKey: 'withdrawals' },
-  { to: '/admin/settlements', label: 'Settlements', icon: iconSettlement, countKey: 'settlements' },
+  { to: '/admin/finance', label: 'Finance', icon: iconWithdraw, countKey: 'finance' },
   { to: '/admin/physios', label: 'Physiotherapists', icon: iconUsers, countKey: 'physios' },
   { to: '/admin/verifications', label: 'Verifications', icon: iconVerify, countKey: 'verifications' },
   { to: '/admin/disputes', label: 'Disputes', icon: iconDispute, countKey: 'disputes' },
