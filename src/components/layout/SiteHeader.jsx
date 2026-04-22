@@ -67,6 +67,12 @@ export default function SiteHeader() {
             <a href="#faq" className={linkClass}>
               FAQ
             </a>
+            <a href="#cities" className={linkClass}>
+              Cities
+            </a>
+            <Link to="/near-me-physio" className={linkClass}>
+              Near me
+            </Link>
             <Link to="/book" className={linkClass}>
               Book
             </Link>
@@ -108,6 +114,12 @@ export default function SiteHeader() {
             <a href="#faq" className={linkClass} onClick={() => setMobileOpen(false)}>
               FAQ
             </a>
+            <a href="#cities" className={linkClass} onClick={() => setMobileOpen(false)}>
+              Cities
+            </a>
+            <Link to="/near-me-physio" className={linkClass} onClick={() => setMobileOpen(false)}>
+              Near me
+            </Link>
             <Link to="/book" className={linkClass} onClick={() => setMobileOpen(false)}>
               Book
             </Link>

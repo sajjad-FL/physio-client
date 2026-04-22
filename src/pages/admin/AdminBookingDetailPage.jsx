@@ -20,11 +20,14 @@ import Button from '../../components/ui/Button'
 import AdminAssignPhysioModal from '../../components/admin/AdminAssignPhysioModal'
 import RescheduleModal from '../../components/physio/RescheduleModal'
 import { resolveFileUrl } from '../../utils/serverOrigin'
+import { distanceKm, parseLatLng } from '../../utils/geoDistance'
 import { DAILY_SLOTS } from '../../constants/slots'
 
 const adminHeaders = () => ({
   headers: { Authorization: `Bearer ${import.meta.env.VITE_ADMIN_API_KEY || ''}` },
 })
+const DISTANCE_SURCHARGE_BASE_KM = 5
+const DISTANCE_SURCHARGE_PER_KM = 5
 
 export default function AdminBookingDetailPage() {
   const { id } = useParams()
@@ -86,6 +89,24 @@ export default function AdminBookingDetailPage() {
     () => physios.find((p) => String(p._id) === String(assignPhysioId)),
     [physios, assignPhysioId],
   )
+  const selectedPhysioDistanceKm = useMemo(() => {
+    if (!selectedPhysioForAssign || !b?.userId?.coordinates) return null
+    const patient = parseLatLng(b.userId.coordinates)
+    const physio = parseLatLng(selectedPhysioForAssign.coordinates)
+    if (!patient || !physio) return null
+    return distanceKm(patient.lat, patient.lng, physio.lat, physio.lng)
+  }, [selectedPhysioForAssign, b?.userId?.coordinates])
+  const assignPreview = useMemo(() => {
+    const price = Number(assignPrice)
+    if (!Number.isFinite(price) || price <= 0) return null
+    const sessions = Math.max(1, Number(b?.sessions) || 1)
+    const subtotal = price * sessions
+    const floored = selectedPhysioDistanceKm == null ? null : Math.floor(selectedPhysioDistanceKm)
+    const extraKm = floored == null ? 0 : Math.max(0, floored - DISTANCE_SURCHARGE_BASE_KM)
+    const surcharge = extraKm * DISTANCE_SURCHARGE_PER_KM
+    const total = subtotal + surcharge
+    return { sessions, subtotal, extraKm, surcharge, total }
+  }, [assignPrice, selectedPhysioDistanceKm, b?.sessions])
 
   /**
    * When admin picks a physio (or the booking already has one they are
@@ -637,6 +658,23 @@ export default function AdminBookingDetailPage() {
             <dt className="text-[11px] font-semibold uppercase tracking-wide text-ink-muted">Total</dt>
             <dd className="mt-0.5 font-semibold text-ink">{b.totalAmount != null ? `₹${b.totalAmount}` : '—'}</dd>
           </div>
+          <div>
+            <dt className="text-[11px] font-semibold uppercase tracking-wide text-ink-muted">Distance at assign</dt>
+            <dd className="mt-0.5 font-medium text-ink">
+              {b.distanceKmAtAssign != null
+                ? `${Number(b.distanceKmAtAssign) < 10 ? Number(b.distanceKmAtAssign).toFixed(1) : Math.round(Number(b.distanceKmAtAssign))} km`
+                : '—'}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-[11px] font-semibold uppercase tracking-wide text-ink-muted">Distance surcharge</dt>
+            <dd className="mt-0.5 font-medium text-ink">
+              ₹{Number(b.distanceSurchargeAmount || 0).toFixed(2)}
+              {Number(b.distanceExtraKm || 0) > 0 && Number(b.distanceSurchargePerKm || 0) > 0
+                ? ` (${Number(b.distanceExtraKm)} km × ₹${Number(b.distanceSurchargePerKm)}/km)`
+                : ''}
+            </dd>
+          </div>
         </dl>
       </Card>
 
@@ -777,6 +815,23 @@ export default function AdminBookingDetailPage() {
                     {b?.sessions > 1 ? ` × ${b.sessions} session${b.sessions === 1 ? '' : 's'}` : ''}.
                     Physio earning and platform commission are recalculated automatically.
                   </p>
+                  {assignPreview && (
+                    <div className="mt-2 rounded-lg bg-slate-50 px-3 py-2 text-[11px] text-slate-700 ring-1 ring-slate-200">
+                      <p>Base total: ₹{assignPreview.subtotal.toFixed(2)}</p>
+                      <p className="mt-0.5">
+                        Distance surcharge (₹{DISTANCE_SURCHARGE_PER_KM}/km beyond {DISTANCE_SURCHARGE_BASE_KM} km, floor):
+                        {' '}
+                        ₹{assignPreview.surcharge.toFixed(2)}
+                        {selectedPhysioDistanceKm != null && (
+                          <span className="text-slate-500">
+                            {' '}
+                            ({selectedPhysioDistanceKm < 10 ? selectedPhysioDistanceKm.toFixed(1) : Math.round(selectedPhysioDistanceKm)} km, extra {assignPreview.extraKm} km)
+                          </span>
+                        )}
+                      </p>
+                      <p className="mt-0.5 font-semibold text-slate-900">Estimated final total: ₹{assignPreview.total.toFixed(2)}</p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

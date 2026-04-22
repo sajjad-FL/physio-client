@@ -2,6 +2,7 @@ import { BrowserRouter, Navigate, Route, Routes, useParams } from 'react-router-
 import { Toaster } from 'react-hot-toast'
 import HomePage from './pages/HomePage'
 import CityLandingPage from './pages/CityLandingPage'
+import NearMeHubPage from './pages/NearMeHubPage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
@@ -62,6 +63,9 @@ export default function App() {
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/physio-in/:city" element={<CityLandingPage />} />
+        <Route path="/near-me-physio" element={<NearMeHubPage />} />
+        <Route path="/near-me-physio/:city" element={<NearMeHubPage />} />
+        <Route path="/near-me-physio/:city/:locality" element={<NearMeHubPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />

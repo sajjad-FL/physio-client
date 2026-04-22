@@ -51,8 +51,9 @@ Sitemap: ${base}/sitemap.xml
 
       fs.writeFileSync(path.join(distDir, 'robots.txt'), robotsBody + robotsExtra, 'utf8')
 
-      const staticPaths = ['/', '/login', '/register', '/forgot-password', '/register-physio']
+      const staticPaths = ['/', '/login', '/register', '/forgot-password', '/register-physio', '/near-me-physio']
       const cityPaths = SERVICE_CITIES.map((c) => `/physio-in/${c.slug}`)
+      const nearMeCityPaths = SERVICE_CITIES.map((c) => `/near-me-physio/${c.slug}`)
 
       const buildUrlBlock = (loc, priority, changefreq) =>
         `  <url>\n    <loc>${loc}</loc>\n    <changefreq>${changefreq}</changefreq>\n    <priority>${priority}</priority>\n  </url>`
@@ -64,6 +65,7 @@ Sitemap: ${base}/sitemap.xml
           return buildUrlBlock(loc, priority, 'weekly')
         }),
         ...cityPaths.map((p) => buildUrlBlock(`${base}${p}`, '0.8', 'monthly')),
+        ...nearMeCityPaths.map((p) => buildUrlBlock(`${base}${p}`, '0.75', 'monthly')),
       ]
       const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">

@@ -8,9 +8,9 @@ import FeaturedPhysiosSection from '../components/home/FeaturedPhysiosSection'
 import ConditionIllustration from '../components/home/ConditionIllustration'
 import { absoluteUrl, primaryServiceAreas, primaryServiceAreasSentence, siteOrigin } from '../utils/siteMeta'
 
-const HOME_TITLE = 'Physio Near Me in Assam — Home Visit Physiotherapist | NearbyPhysio'
+const HOME_TITLE = 'Physio Near Me in Assam | Home Visit Physiotherapy — NearbyPhysio'
 const HOME_DESCRIPTION =
-  'Looking for a physio near you in Assam? NearbyPhysio connects you with verified home visit physiotherapists in Guwahati, Barpeta, Bongaigaon, Bijni and Kokrajhar. Book a nearby physiotherapist for back pain, knee pain, post-surgery rehab and stroke recovery.'
+  'Looking for a physio near you in Assam? NearbyPhysio connects patients with verified home visit physiotherapists in Guwahati, Barpeta, Bongaigaon, Bijni, and Kokrajhar for back pain, knee pain, post-surgery rehab, and stroke recovery.'
 
 const HOME_FAQ = [
   {
@@ -75,6 +75,11 @@ function homeStructuredData({ siteBase, ogImage, areas }) {
       image: ogImage,
       medicalSpecialty: 'Physiotherapy',
       priceRange: '\u20B9\u20B9',
+      address: {
+        '@type': 'PostalAddress',
+        addressRegion: 'Assam',
+        addressCountry: 'IN',
+      },
       ...(areaServed.length ? { areaServed } : {}),
       availableService: [
         { '@type': 'MedicalTherapy', name: 'Back pain physiotherapy' },
@@ -298,12 +303,12 @@ export default function HomePage() {
                 Home visits · Verified clinicians
               </p>
               <h1 className="motion-safe:animate-enter-up animate-delay-1 mt-8 text-balance text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl sm:leading-[1.08]">
-                Book a physiotherapist nearby you
+                Book a trusted home visit physio near you
               </h1>
               <p className="motion-safe:animate-enter-up animate-delay-2 mx-auto mt-6 max-w-xl text-lg leading-relaxed text-slate-500">
-                NearbyPhysio connects you with physiotherapists for physiotherapy at home. Conditions include back pain,
-                knee pain, post-surgery rehab, cerebral palsy and more. Simple booking, secure payment, and a therapist
-                matched to your area.
+                NearbyPhysio helps you book home physiotherapy for back pain, knee pain, post-surgery rehab, stroke
+                recovery, and other mobility concerns. Get simple booking, secure payment, and a therapist matched to
+                your locality.
                 {areaLine ? (
                   <>
                     {' '}
@@ -415,6 +420,23 @@ export default function HomePage() {
                 </li>
               ))}
             </ul>
+            <div className="mx-auto mt-8 max-w-4xl rounded-2xl border border-slate-200 bg-white px-5 py-4 text-left shadow-sm">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Popular local searches</p>
+              <p className="mt-2 text-sm leading-relaxed text-slate-600">
+                People often search for terms like
+                <Link to="/physio-in/bongaigaon" className="mx-1 font-semibold text-teal-700 hover:text-teal-800">
+                  physio in Bongaigaon
+                </Link>
+                and
+                <Link to="/physio-in/kokrajhar" className="mx-1 font-semibold text-teal-700 hover:text-teal-800">
+                  physiotherapist in Kokrajhar, Assam
+                </Link>
+                . Open city pages to view coverage and book a nearby physiotherapist.
+              </p>
+              <Link to="/near-me-physio" className="mt-3 inline-block text-sm font-semibold text-teal-700 hover:text-teal-800">
+                Explore near-me locality hub →
+              </Link>
+            </div>
           </div>
         </section>
 

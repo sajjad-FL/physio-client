@@ -22,7 +22,7 @@ function buildFaq(city) {
     },
     {
       q: `Do you cover all areas of ${city.name}?`,
-      a: `We actively serve most major neighborhoods including ${city.neighborhoods.slice(0, 5).join(', ')}${city.neighborhoods.length > 5 ? ' and more' : ''}. When you book, share your exact address and we will assign the nearest available physiotherapist.`,
+      a: `We actively serve most major neighborhoods including ${city.neighborhoods.slice(0, 5).join(', ')}${city.neighborhoods.length > 5 ? ' and more' : ''}. If you are searching for a physiotherapist in ${city.name}, ${city.state}, share your exact address and we assign the nearest available clinician.`,
     },
     {
       q: `How much does a home visit physio cost in ${city.name}?`,
@@ -40,6 +40,7 @@ function buildFaq(city) {
 }
 
 function cityStructuredData({ city, canonical, ogImage, faq }) {
+  const siteBase = (siteOrigin() || 'https://nearbyphysio.com').replace(/\/$/, '')
   return {
     '@context': 'https://schema.org',
     '@graph': [
@@ -52,6 +53,13 @@ function cityStructuredData({ city, canonical, ogImage, faq }) {
         description: `Book verified home visit physiotherapists in ${city.name}, ${city.state}. Physio at home for back pain, knee pain, post-surgery rehab and more.`,
         medicalSpecialty: 'Physiotherapy',
         priceRange: '₹₹',
+        address: {
+          '@type': 'PostalAddress',
+          addressLocality: city.name,
+          addressRegion: city.state,
+          addressCountry: 'IN',
+        },
+        knowsAbout: ['Physiotherapy', 'Rehabilitation', 'Mobility care', 'Home visit physiotherapy'],
         areaServed: {
           '@type': 'City',
           name: city.name,
@@ -77,7 +85,7 @@ function cityStructuredData({ city, canonical, ogImage, faq }) {
         '@type': 'BreadcrumbList',
         '@id': `${canonical}#breadcrumbs`,
         itemListElement: [
-          { '@type': 'ListItem', position: 1, name: 'Home', item: `${siteOrigin() || 'https://nearbyphysio.com'}/` },
+          { '@type': 'ListItem', position: 1, name: 'Home', item: `${siteBase}/` },
           { '@type': 'ListItem', position: 2, name: `Physiotherapist in ${city.name}`, item: canonical },
         ],
       },
@@ -104,11 +112,21 @@ export default function CityLandingPage() {
 
   const canonical = absoluteUrl(`/physio-in/${city.slug}`)
   const ogImage = absoluteUrl('/og-default.png')
-  const title = `Physiotherapist in ${city.name} — Home Visit Physio Near You | NearbyPhysio`
-  const description = `Looking for a physio near you in ${city.name}? Book a verified home visit physiotherapist for back pain, knee pain, post-surgery rehab and stroke recovery — same-day slots available in ${city.neighborhoods.slice(0, 3).join(', ')} and more.`
+  const title = `Physio in ${city.name}, ${city.state} — Home Visit Physiotherapist | NearbyPhysio`
+  const description = `Looking for a physiotherapist in ${city.name}, ${city.state}? NearbyPhysio helps you book a verified home visit physio near you for back pain, knee pain, post-surgery rehab and stroke recovery — including ${city.neighborhoods.slice(0, 3).join(', ')} and nearby areas.`
   const faq = buildFaq(city)
   const ldJson = JSON.stringify(cityStructuredData({ city, canonical, ogImage, faq }))
   const otherCities = SERVICE_CITIES.filter((c) => c.slug !== city.slug)
+  const seoHighlights = Array.isArray(city.seoHighlights) ? city.seoHighlights : []
+  const cityIntro = city.seoIntro || `NearbyPhysio provides local home physiotherapy coverage across ${city.name} and nearby areas.`
+  const localityLinks = city.neighborhoods.slice(0, 8).map((name) => ({
+    name,
+    slug: String(name)
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, ''),
+  }))
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -158,6 +176,7 @@ export default function CityLandingPage() {
               <p className="mt-6 max-w-2xl text-lg leading-relaxed text-slate-500">
                 {city.tagline} NearbyPhysio matches you with a licensed, verified physio who does home visits in {city.name}, {city.state}, for back pain, knee pain, post-surgery rehab, stroke recovery and more.
               </p>
+              <p className="mt-3 max-w-2xl text-base leading-relaxed text-slate-600">{cityIntro}</p>
               <div className="mt-10 flex flex-wrap gap-3">
                 <Link
                   to="/book"
@@ -172,6 +191,18 @@ export default function CityLandingPage() {
                   Create a free account
                 </Link>
               </div>
+              {seoHighlights.length ? (
+                <ul className="mt-6 flex flex-wrap gap-2" aria-label="Popular local searches">
+                  {seoHighlights.map((term) => (
+                    <li
+                      key={term}
+                      className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-600"
+                    >
+                      {term}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
             </div>
           </div>
         </section>
@@ -221,6 +252,33 @@ export default function CityLandingPage() {
                 </li>
               ))}
             </ul>
+            <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <h3 className="text-lg font-semibold text-slate-900">
+                Locality searches in {city.name}
+              </h3>
+              <p className="mt-2 text-sm leading-relaxed text-slate-600">
+                If you are searching terms like &quot;physio near me&quot; for a specific area, use these locality
+                links:
+              </p>
+              <ul className="mt-4 flex flex-wrap gap-2.5">
+                {localityLinks.map((entry) => (
+                  <li key={entry.slug}>
+                    <Link
+                      to={`/near-me-physio/${city.slug}/${entry.slug}`}
+                      className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-teal-300 hover:text-teal-700"
+                    >
+                      Physio near {entry.name}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+              <Link
+                to={`/near-me-physio/${city.slug}`}
+                className="mt-4 inline-block text-sm font-semibold text-teal-700 hover:text-teal-800"
+              >
+                View full near-me guide for {city.name} →
+              </Link>
+            </div>
           </div>
         </section>
 
@@ -244,7 +302,7 @@ export default function CityLandingPage() {
           <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
             <h2 className="text-2xl font-bold tracking-tight text-slate-900">Home visit physio in other cities</h2>
             <p className="mt-3 max-w-2xl text-base leading-relaxed text-slate-500">
-              NearbyPhysio connects patients with verified physiotherapists across India&apos;s major metros.
+              NearbyPhysio connects patients with verified physiotherapists across Assam service cities.
             </p>
             <ul className="mt-6 flex flex-wrap gap-2.5">
               {otherCities.map((c) => (

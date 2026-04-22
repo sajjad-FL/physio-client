@@ -48,9 +48,9 @@ function stripStaticSeoTags(html) {
   return out
 }
 
-async function loadServiceCitySlugs() {
+async function loadServiceCities() {
   const mod = await import(url.pathToFileURL(path.join(clientRoot, 'src/constants/serviceCities.js')).href)
-  return mod.CITY_SLUGS || (mod.SERVICE_CITIES || []).map((c) => c.slug)
+  return mod.SERVICE_CITIES || []
 }
 
 const MIME = {
@@ -134,8 +134,21 @@ async function main() {
     process.exit(0)
   }
 
-  const citySlugs = await loadServiceCitySlugs()
+  const cities = await loadServiceCities()
+  const citySlugs = cities.map((c) => c.slug)
   const cityRoutes = citySlugs.map((slug) => `/physio-in/${slug}`)
+  const nearMeCityRoutes = citySlugs.map((slug) => `/near-me-physio/${slug}`)
+  const nearMeLocalityRoutes = cities.flatMap((city) =>
+    (city.neighborhoods || [])
+      .slice(0, 3)
+      .map((name) =>
+        `/near-me-physio/${city.slug}/${String(name)
+          .trim()
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, '')}`,
+      ),
+  )
 
   const routes = Array.from(
     new Set([
@@ -144,7 +157,10 @@ async function main() {
       '/register',
       '/forgot-password',
       '/register-physio',
+      '/near-me-physio',
       ...cityRoutes,
+      ...nearMeCityRoutes,
+      ...nearMeLocalityRoutes,
     ]),
   )
 

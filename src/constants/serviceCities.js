@@ -32,6 +32,13 @@ export const SERVICE_CITIES = [
       'Uzanbazar',
       'Maligaon',
     ],
+    seoHighlights: [
+      'physio in Guwahati',
+      'physiotherapist in Guwahati Assam',
+      'home physiotherapy near me in Guwahati',
+    ],
+    seoIntro:
+      'From central Guwahati to newer residential pockets, patients use NearbyPhysio to book trusted home visit physiotherapists without clinic travel.',
   },
   {
     slug: 'barpeta',
@@ -52,6 +59,13 @@ export const SERVICE_CITIES = [
       'Sarupeta',
       'Bhawanipur',
     ],
+    seoHighlights: [
+      'physio in Barpeta',
+      'physiotherapist in Barpeta Assam',
+      'home visit physio in Barpeta Road',
+    ],
+    seoIntro:
+      'NearbyPhysio supports families across Barpeta district with scheduled home sessions for pain relief, post-surgery recovery, and mobility care.',
   },
   {
     slug: 'bongaigaon',
@@ -62,6 +76,13 @@ export const SERVICE_CITIES = [
     lng: 90.5565,
     tagline:
       'Book a physiotherapist at home in New Bongaigaon, Chapaguri Road, Barpara, Abhayapuri, Boitamari and more.',
+    seoHighlights: [
+      'physio in Bongaigaon',
+      'physiotherapist in Bongaigaon Assam',
+      'home visit physiotherapy in New Bongaigaon',
+    ],
+    seoIntro:
+      'For residents in Bongaigaon town and surrounding localities, NearbyPhysio makes it easier to book qualified physiotherapists for home-based rehabilitation.',
     neighborhoods: [
       'New Bongaigaon',
       'Chapaguri Road',
@@ -71,6 +92,8 @@ export const SERVICE_CITIES = [
       'Dangtol',
       'North Bongaigaon',
       'Jogighopa',
+      'Bagribari',
+      'Srijangram',
     ],
   },
   {
@@ -92,6 +115,13 @@ export const SERVICE_CITIES = [
       'Sidli',
       'NH-31',
     ],
+    seoHighlights: [
+      'physio in Bijni',
+      'physiotherapist in Bijni Assam',
+      'home visit physiotherapy near Bijni town',
+    ],
+    seoIntro:
+      'Patients in Bijni and nearby Chirang areas can schedule at-home physiotherapy for orthopedic rehab, neurology support, and elderly mobility care.',
   },
   {
     slug: 'kokrajhar',
@@ -102,6 +132,13 @@ export const SERVICE_CITIES = [
     lng: 90.2711,
     tagline:
       'Verified home visit physios serving Kokrajhar town, Gossaigaon, Dotma, Salakati, Fakiragram and other Kokrajhar localities.',
+    seoHighlights: [
+      'physio in Kokrajhar',
+      'physiotherapist in Kokrajhar Assam',
+      'home physiotherapy near me in Kokrajhar district',
+    ],
+    seoIntro:
+      'Across Kokrajhar and nearby neighborhoods, NearbyPhysio helps patients access verified home physiotherapy with convenient booking and clear pricing.',
     neighborhoods: [
       'Kokrajhar Town',
       'Gossaigaon',
@@ -111,6 +148,8 @@ export const SERVICE_CITIES = [
       'Serfanguri',
       'Titaguri',
       'Kachugaon',
+      'Bhowraguri',
+      'Balajan',
     ],
   },
 ]
