@@ -14,10 +14,13 @@ export default function BookingSummaryBar({
   canSubmit,
   loading,
   onConfirm,
+  /** Shown under the summary line (e.g. Razorpay test-mode pay instructions). */
+  onlinePaymentHint,
 }) {
   const priceLabel =
     selectedPhysio && selectedPhysio._id ? formatPhysioSessionFeeLabel(selectedPhysio) : null
-  const teamAssigns = !selectedPhysio?._id
+  const teamAssigns = serviceType === 'home' || !selectedPhysio?._id
+  const onlineNeedsPhysio = serviceType === 'online' && !selectedPhysio?._id
 
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2">
@@ -26,7 +29,12 @@ export default function BookingSummaryBar({
           <div className="min-w-0 flex-1 space-y-1">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Booking summary</p>
             <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 text-sm text-gray-800">
-              {teamAssigns ? (
+              {onlineNeedsPhysio ? (
+                <span className="font-semibold text-amber-800">
+                  <span className="text-gray-500">Physio · </span>
+                  Not selected — choose in step 4
+                </span>
+              ) : teamAssigns ? (
                 <span className="font-semibold text-gray-900">
                   <span className="text-gray-500">Physio · </span>
                   Picked by our team
@@ -47,10 +55,15 @@ export default function BookingSummaryBar({
             <p className="text-xs text-gray-500">
               {serviceType === 'home'
                 ? 'Home visit — our team will pick a physio after you confirm.'
-                : teamAssigns
-                  ? 'Online session — fee is confirmed at payment.'
-                  : 'Online consultation'}
+                : onlineNeedsPhysio
+                  ? 'Select a physiotherapist above before you can confirm.'
+                  : teamAssigns
+                    ? 'Online session — fee is confirmed at payment.'
+                    : 'Online consultation'}
             </p>
+            {serviceType === 'online' && onlinePaymentHint ? (
+              <p className="text-[11px] leading-snug text-gray-500">{onlinePaymentHint}</p>
+            ) : null}
           </div>
           <Button
             type="button"

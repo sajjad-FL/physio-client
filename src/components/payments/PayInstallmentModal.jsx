@@ -3,6 +3,7 @@ import toast from 'react-hot-toast'
 import Modal from '../ui/Modal'
 import Button from '../ui/Button'
 import { api } from '../../config/api'
+import { buildRazorpayPrefill } from '../../utils/razorpayPrefill'
 
 let razorpayScriptPromise = null
 
@@ -28,7 +29,8 @@ function roundMoney2(n) {
 
 /**
  * Patient pay-next-installment modal. Default amount is
- * `summary.amountPerSession`; upper bound is `summary.outstanding`.
+ * `summary.amountPerSession` (one session line, including per-visit distance on home plans);
+ * upper bound is `summary.outstanding`.
  */
 export default function PayInstallmentModal({ open, booking, summary, onClose, onPaid }) {
   const outstanding = roundMoney2(Number(summary?.outstanding || 0))
@@ -72,12 +74,26 @@ export default function PayInstallmentModal({ open, booking, summary, onClose, o
       const { paymentId, orderId, amount: orderAmount, currency, keyId } = created.data || {}
 
       await loadRazorpayCheckout()
+
+      let prefill = {}
+      try {
+        const pr = await api.get('/profile')
+        prefill = buildRazorpayPrefill({
+          name: pr.data?.name,
+          phone: pr.data?.phone,
+          email: pr.data?.email,
+        })
+      } catch {
+        prefill = {}
+      }
+
       const options = {
         key: keyId,
         amount: orderAmount,
         currency,
-        name: 'NearbyPhysio',
+        name: 'PhysioKhom',
         order_id: orderId,
+        prefill,
         handler: async function (response) {
           try {
             await api.post('/payment/installments/verify', {

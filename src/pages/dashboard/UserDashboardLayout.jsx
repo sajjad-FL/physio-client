@@ -82,7 +82,7 @@ export default function UserDashboardLayout() {
     <>
       <SeoNoIndex />
       <AppShell
-      brand="NearbyPhysio"
+      brand="PhysioKhom"
       badge="Patient"
       topBarTitle={topBarTitle}
       topBarSubtitle=""

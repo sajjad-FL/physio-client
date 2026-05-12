@@ -1,6 +1,6 @@
-# NearbyPhysio — Client
+# PhysioKhom — Client
 
-Vite + React 19 SPA for nearbyphysio.com.
+Vite + React 19 SPA for physiokhom.com.
 
 ## Scripts
 
@@ -29,28 +29,28 @@ Vite + React 19 SPA for nearbyphysio.com.
 
 Set these in your host (Render, Netlify, Vercel, etc.) for production builds:
 
-- `VITE_PUBLIC_SITE_URL=https://nearbyphysio.com` (required — the SEO plugin throws if this is `localhost` in production)
-- `VITE_API_URL=https://api.nearbyphysio.com/api`
-- `VITE_API_PUBLIC_ORIGIN=https://api.nearbyphysio.com` (optional — adds a second `Sitemap:` line to `robots.txt` pointing at the physio profile sitemap)
+- `VITE_PUBLIC_SITE_URL=https://physiokhom.com` (required — the SEO plugin throws if this is `localhost` in production)
+- `VITE_API_URL=https://api.physiokhom.com/api`
+- `VITE_API_PUBLIC_ORIGIN=https://api.physiokhom.com` (optional — adds a second `Sitemap:` line to `robots.txt` pointing at the physio profile sitemap)
 
 ### Off-page SEO checklist (you must do this manually)
 
 No amount of code will make you rank for competitive queries like "physio near me" or "nearby physio" without these off-page signals. Expect 4–12 weeks for initial ranking movement.
 
-- [ ] **Google Search Console** — verify `https://nearbyphysio.com`, submit `https://nearbyphysio.com/sitemap.xml`, request indexing of `/` and each `/physio-in/*` city page, monitor the Coverage and Performance reports.
+- [ ] **Google Search Console** — verify `https://physiokhom.com`, submit `https://physiokhom.com/sitemap.xml`, request indexing of `/` and each `/physio-in/*` city page, monitor the Coverage and Performance reports.
 - [ ] **Bing Webmaster Tools** — same as GSC. Bing reaches ~10% of Indian desktop searches plus ChatGPT/Copilot search.
-- [ ] **Google Business Profile** — create/verify a listing for NearbyPhysio. This is what actually surfaces in the "map pack" for local "near me" queries. Add photos, services, hours, and encourage early reviews.
+- [ ] **Google Business Profile** — create/verify a listing for PhysioKhom. This is what actually surfaces in the "map pack" for local "near me" queries. Add photos, services, hours, and encourage early reviews.
 - [ ] **Directory listings / backlinks** — submit to Justdial, Sulekha, Practo (partner program), Lybrate, and Indian healthcare/wellness directories. Each inbound link helps.
 - [ ] **City-specific Google Business Profiles** — when you open operations in new cities, add a GBP per city for local map-pack coverage.
 - [ ] **Content cadence** — publish 2–3 blog posts per month (e.g. "Exercises for sciatica at home", "Physiotherapy after knee replacement", "Home physio vs clinic physio in India"). Add a `/blog` route when ready.
 - [ ] **Physiotherapist profiles** — encourage patients to leave reviews on physio profile pages; each profile URL is already in `/api/seo/physio-sitemap.xml`.
-- [ ] **Social presence** — set up Instagram, Facebook, LinkedIn with consistent branding and a link back to nearbyphysio.com. Social signals indirectly help by driving referral traffic and brand searches.
+- [ ] **Social presence** — set up Instagram, Facebook, LinkedIn with consistent branding and a link back to physiokhom.com. Social signals indirectly help by driving referral traffic and brand searches.
 - [ ] **Page Speed / Core Web Vitals** — run [PageSpeed Insights](https://pagespeed.web.dev/) on `/` and the city pages after deploy; aim for LCP < 2.5s on mobile.
 
 ### Verification after deploy
 
-1. `curl -s https://nearbyphysio.com/ | grep -i 'og:title\|application/ld\+json'` — confirm OG + JSON-LD are in the HTML without JS execution.
-2. `curl -s https://nearbyphysio.com/physio-in/guwahati/ | grep '<h1'` — confirm city page is prerendered.
-3. `curl -s https://nearbyphysio.com/sitemap.xml` — confirm 10 URLs.
-4. Paste `https://nearbyphysio.com/` into the [Rich Results Test](https://search.google.com/test/rich-results) — should detect `MedicalBusiness`, `WebSite`, and `FAQPage`.
+1. `curl -s https://physiokhom.com/ | grep -i 'og:title\|application/ld\+json'` — confirm OG + JSON-LD are in the HTML without JS execution.
+2. `curl -s https://physiokhom.com/physio-in/guwahati/ | grep '<h1'` — confirm city page is prerendered.
+3. `curl -s https://physiokhom.com/sitemap.xml` — confirm 10 URLs.
+4. Paste `https://physiokhom.com/` into the [Rich Results Test](https://search.google.com/test/rich-results) — should detect `MedicalBusiness`, `WebSite`, and `FAQPage`.
 5. Paste a city URL into the [Facebook Sharing Debugger](https://developers.facebook.com/tools/debug/) to confirm the 1200×630 OG image renders.

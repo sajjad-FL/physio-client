@@ -20,7 +20,6 @@ export default function PhysiosAdmin() {
   const [editSpec, setEditSpec] = useState('')
   const [editExp, setEditExp] = useState('')
   const [editPrice, setEditPrice] = useState('')
-  const [editPriceMax, setEditPriceMax] = useState('')
   const [editAvail, setEditAvail] = useState(true)
 
   const [name, setName] = useState('')
@@ -182,9 +181,6 @@ export default function PhysiosAdmin() {
     setEditSpec(physio.specialization || '')
     setEditExp(String(physio.experience ?? 0))
     setEditPrice(String(physio.pricePerSession ?? 0))
-    const lo = Number(physio.pricePerSession)
-    const hi = physio.pricePerSessionMax != null ? Number(physio.pricePerSessionMax) : NaN
-    setEditPriceMax(Number.isFinite(hi) && Number.isFinite(lo) && hi > lo ? String(hi) : '')
     setEditAvail(Boolean(physio.isAvailable ?? physio.availability))
     setEditOpen(true)
   }
@@ -205,25 +201,13 @@ export default function PhysiosAdmin() {
     }
     const expNum = Number(editExp)
     const priceNum = Number(editPrice)
-    const maxStr = String(editPriceMax ?? '').trim()
-    const priceMaxNum = maxStr === '' ? null : Number(maxStr)
     if (!Number.isFinite(expNum) || expNum < 0) {
       toastValidationErrors({}, 'Experience must be a valid non-negative number')
       return
     }
     if (!Number.isFinite(priceNum) || priceNum < 0) {
-      toastValidationErrors({}, 'Minimum fee must be a valid non-negative number')
+      toastValidationErrors({}, 'Fee per session must be a valid non-negative number')
       return
-    }
-    if (priceMaxNum != null) {
-      if (!Number.isFinite(priceMaxNum) || priceMaxNum < 0) {
-        toastValidationErrors({}, 'Maximum fee must be a valid non-negative number or empty')
-        return
-      }
-      if (priceMaxNum > 0 && priceMaxNum < priceNum) {
-        toastValidationErrors({}, 'Maximum fee must be greater than or equal to minimum')
-        return
-      }
     }
     setError('')
     setRowBusy((b) => ({ ...b, [editTarget._id]: 'edit' }))
@@ -233,8 +217,6 @@ export default function PhysiosAdmin() {
         specialization: editSpec.trim(),
         experience: Number(editExp),
         pricePerSession: Number(editPrice),
-        pricePerSessionMax:
-          priceMaxNum != null && Number.isFinite(priceMaxNum) && priceMaxNum > priceNum ? priceMaxNum : null,
         isAvailable: editAvail,
       })
       toast.success('Physiotherapist updated')
@@ -324,16 +306,15 @@ export default function PhysiosAdmin() {
               <input className={inputClass} value={editSpec} onChange={(e) => setEditSpec(e.target.value)} required />
               <div className="grid grid-cols-2 gap-3">
                 <input type="number" min="0" className={inputClass} value={editExp} onChange={(e) => setEditExp(e.target.value)} />
-                <input type="number" min="0" className={inputClass} value={editPrice} onChange={(e) => setEditPrice(e.target.value)} placeholder="Min fee (₹)" />
+                <input
+                  type="number"
+                  min="0"
+                  className={inputClass}
+                  value={editPrice}
+                  onChange={(e) => setEditPrice(e.target.value)}
+                  placeholder="Fee per session (₹)"
+                />
               </div>
-              <input
-                type="number"
-                min="0"
-                className={inputClass}
-                value={editPriceMax}
-                onChange={(e) => setEditPriceMax(e.target.value)}
-                placeholder="Max fee (₹), optional"
-              />
               <label className="flex items-center gap-2 text-sm text-ink-muted">
                 <input type="checkbox" checked={editAvail} onChange={(e) => setEditAvail(e.target.checked)} />
                 Available for new bookings

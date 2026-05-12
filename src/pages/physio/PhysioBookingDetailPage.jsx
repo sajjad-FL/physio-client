@@ -4,6 +4,8 @@ import { api } from '../../config/api'
 import { formatBookingDateAndSlot } from '../../utils/date'
 import {
   marketplacePaymentStatusLabel,
+  paymentAmountLabel,
+  paymentModeLabel,
   paymentStatusLabel,
   sessionStatusLabel,
 } from '../../utils/bookingDisplay'
@@ -383,6 +385,10 @@ export default function PhysioBookingDetailPage() {
               {b.amountPerSession != null ? `₹${b.amountPerSession}` : '—'}
             </dd>
           </div>
+          <div>
+            <dt className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Plan status</dt>
+            <dd className="mt-0.5 capitalize text-gray-900">{b.planStatus || '—'}</dd>
+          </div>
           {b.discountPercent != null && (
             <div>
               <dt className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Discount</dt>
@@ -391,8 +397,23 @@ export default function PhysioBookingDetailPage() {
           )}
           <div>
             <dt className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Total</dt>
-            <dd className="mt-0.5 font-semibold text-gray-900">
-              {b.totalAmount != null ? `₹${b.totalAmount}` : '—'}
+            <dd className="mt-0.5 font-semibold text-gray-900">{paymentAmountLabel(b)}</dd>
+          </div>
+          <div>
+            <dt className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Distance at assign</dt>
+            <dd className="mt-0.5 font-medium text-gray-900">
+              {b.distanceKmAtAssign != null
+                ? `${Number(b.distanceKmAtAssign) < 10 ? Number(b.distanceKmAtAssign).toFixed(1) : Math.round(Number(b.distanceKmAtAssign))} km`
+                : '—'}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Distance surcharge</dt>
+            <dd className="mt-0.5 font-medium text-gray-900">
+              ₹{Number(b.distanceSurchargeAmount || 0).toFixed(2)}
+              {Number(b.distanceExtraKm || 0) > 0 && Number(b.distanceSurchargePerKm || 0) > 0
+                ? ` (${Number(b.distanceExtraKm)} km × ₹${Number(b.distanceSurchargePerKm)}/km)`
+                : ''}
             </dd>
           </div>
         </dl>
@@ -403,9 +424,7 @@ export default function PhysioBookingDetailPage() {
         <dl className="mt-4 space-y-3 text-sm">
           <div className="flex justify-between gap-4">
             <dt className="text-gray-500">Mode</dt>
-            <dd className="font-medium text-gray-900">
-              {b.serviceType === 'home' && b.homePlanPaymentMode ? b.homePlanPaymentMode : b.serviceType === 'home' ? '—' : 'Online'}
-            </dd>
+            <dd className="font-medium text-gray-900">{paymentModeLabel(b)}</dd>
           </div>
           <div className="flex justify-between gap-4">
             <dt className="text-gray-500">Payment hold</dt>
@@ -417,9 +436,7 @@ export default function PhysioBookingDetailPage() {
           </div>
           <div className="flex justify-between gap-4">
             <dt className="text-gray-500">Amount</dt>
-            <dd className="font-semibold text-gray-900">
-              {b.totalAmount != null ? `₹${b.totalAmount}` : '—'}
-            </dd>
+            <dd className="font-semibold text-gray-900">{paymentAmountLabel(b)}</dd>
           </div>
         </dl>
         {b.offlinePaymentRejectReason && b.payment?.status === 'pending' && (

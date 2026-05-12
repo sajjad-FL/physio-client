@@ -25,7 +25,7 @@ function seoDistFilesPlugin({ siteUrl, mode, apiPublicOrigin }) {
         (base.includes('localhost') || base.includes('127.0.0.1'))
       ) {
         throw new Error(
-          'seo-dist-files: Set VITE_PUBLIC_SITE_URL to your public HTTPS origin for production builds (e.g. https://nearbyphysio.com). See client/.env.production or your host build environment.',
+          'seo-dist-files: Set VITE_PUBLIC_SITE_URL to your public HTTPS origin for production builds (e.g. https://physiokhom.com). See client/.env.production or your host build environment.',
         )
       }
 

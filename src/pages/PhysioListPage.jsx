@@ -6,11 +6,13 @@ import { ISSUE_OPTIONS, ISSUE_OTHER_VALUE } from '../constants/issues'
 import Button from '../components/ui/Button'
 import Card from '../components/ui/Card'
 import Input from '../components/ui/Input'
-import RazorpayPayButton from '../components/RazorpayPayButton'
 import BookingSummaryBar from '../components/booking/BookingSummaryBar'
 import LocationAutocomplete from '../components/booking/LocationAutocomplete'
+import PhysioCard from '../components/booking/PhysioCard'
 import LocationPickerModal from '../components/location/LocationPickerModal'
-import { formatBookingDateAndSlot, formatBookingTimeSlot } from '../utils/date'
+import { formatBookingTimeSlot } from '../utils/date'
+import { loadRazorpayCheckout } from '../utils/loadRazorpayCheckout'
+import { buildRazorpayPrefill } from '../utils/razorpayPrefill'
 import { mapboxReverseGeocode } from '../utils/mapboxGeocode'
 import { getCurrentCoords } from '../utils/geolocation'
 import SeoNoIndex from '../components/seo/SeoNoIndex'
@@ -57,6 +59,8 @@ export default function PhysioListPage() {
   const routerLocation = useLocation()
 
   const [profileName, setProfileName] = useState('')
+  const [profilePhone, setProfilePhone] = useState('')
+  const [profileEmail, setProfileEmail] = useState('')
   const [profileLoading, setProfileLoading] = useState(true)
 
   const [location, setLocation] = useState('')
@@ -81,8 +85,10 @@ export default function PhysioListPage() {
   }, [issue, issueOther])
 
   const [slots, setSlots] = useState([])
-  /** Set after successful online booking (home bookings redirect away). */
-  const [booking, setBooking] = useState(null)
+  const [availablePhysios, setAvailablePhysios] = useState([])
+  const [selectedPhysioId, setSelectedPhysioId] = useState('')
+  const [physioPickerOpen, setPhysioPickerOpen] = useState(false)
+  const [physioLoading, setPhysioLoading] = useState(false)
 
   const [loadingBooking, setLoadingBooking] = useState(false)
 
@@ -95,6 +101,8 @@ export default function PhysioListPage() {
         if (c) return
         const d = res.data
         setProfileName((d?.name || '').trim())
+        setProfilePhone(String(d?.phone ?? '').trim())
+        setProfileEmail(String(d?.email ?? '').trim())
         const addr = d?.address
         if (addr?.text?.trim() && Number.isFinite(addr.lat) && Number.isFinite(addr.lng)) {
           setLocation(addr.text.trim())
@@ -103,7 +111,11 @@ export default function PhysioListPage() {
         }
       })
       .catch(() => {
-        if (!c) setProfileName('')
+        if (!c) {
+          setProfileName('')
+          setProfilePhone('')
+          setProfileEmail('')
+        }
       })
       .finally(() => {
         if (!c) setProfileLoading(false)
@@ -175,9 +187,63 @@ export default function PhysioListPage() {
   }
 
   const canSubmit = useMemo(
-    () => Boolean(profileName && location.trim() && resolvedIssue && date && timeSlot && issueOk),
-    [profileName, location, resolvedIssue, date, timeSlot, issueOk],
+    () =>
+      Boolean(
+        profileName &&
+          location.trim() &&
+          resolvedIssue &&
+          date &&
+          timeSlot &&
+          issueOk &&
+          (serviceType === 'home' || selectedPhysioId),
+      ),
+    [profileName, location, resolvedIssue, date, timeSlot, issueOk, serviceType, selectedPhysioId],
   )
+
+  const selectedPhysio = useMemo(
+    () => availablePhysios.find((p) => String(p._id) === String(selectedPhysioId)) || null,
+    [availablePhysios, selectedPhysioId],
+  )
+
+  useEffect(() => {
+    if (serviceType !== 'online') return
+    if (lat == null || lng == null) return
+    let cancelled = false
+    async function loadNearby() {
+      setPhysioLoading(true)
+      try {
+        const res = await api.get('/physios/nearby', {
+          params: { lat, lng, limit: 12 },
+        })
+        if (cancelled) return
+        const list = res.data?.physios || []
+        setAvailablePhysios(list)
+        if (list.length === 0) {
+          setSelectedPhysioId('')
+          return
+        }
+        // Require explicit user choice — do not auto-pick the first physio.
+        if (!list.some((p) => String(p._id) === String(selectedPhysioId))) {
+          setSelectedPhysioId('')
+        }
+      } catch {
+        if (cancelled) return
+        setAvailablePhysios([])
+        setSelectedPhysioId('')
+      } finally {
+        if (!cancelled) setPhysioLoading(false)
+      }
+    }
+    loadNearby()
+    return () => {
+      cancelled = true
+    }
+  }, [serviceType, lat, lng])
+
+  useEffect(() => {
+    if (serviceType !== 'home') return
+    setSelectedPhysioId('')
+  }, [serviceType])
 
   async function createBooking() {
     if (!canSubmit) return
@@ -195,28 +261,103 @@ export default function PhysioListPage() {
         body.lat = lat
         body.lng = lng
       }
-      const res = await (serviceType === 'home'
-        ? api.post('/bookings/request-home', body)
-        : api.post('/bookings', { ...body, serviceType: 'online' }))
 
       if (serviceType === 'home') {
+        const homeRes = await api.post('/bookings/request-home', body)
         toast.success('Home request received. Our team will assign a physiotherapist and your physio will propose a plan.')
-        navigate('/dashboard', { replace: true })
-      } else {
-        setBooking(res.data)
-        toast.success('Booking created. Complete payment to confirm — we will assign your physiotherapist.')
+        const homeId = homeRes.data?._id
+        if (homeId) {
+          navigate(`/dashboard/bookings/${homeId}`, { replace: true })
+        } else {
+          navigate('/dashboard/bookings', { replace: true })
+        }
+        return
       }
+
+      const startRes = await api.post('/bookings/online-checkout/start', {
+        ...body,
+        physioId: selectedPhysioId,
+      })
+      const { checkoutSessionId, orderId, amount, currency, keyId, prefill: prefillFromServer } =
+        startRes.data || {}
+      if (!checkoutSessionId || !orderId || !keyId) {
+        toast.error('Could not start payment. Please try again.')
+        return
+      }
+
+      await loadRazorpayCheckout()
+
+      const orderIdStr = String(orderId)
+      const amountPaise = Number(amount)
+      if (!Number.isFinite(amountPaise) || amountPaise <= 0) {
+        toast.error('Invalid payment amount from server. Check DEFAULT_BOOKING_AMOUNT_RUPEES / Razorpay config.')
+        return
+      }
+
+      await new Promise((resolve) => {
+        const options = {
+          key: String(keyId),
+          amount: amountPaise,
+          currency: currency || 'INR',
+          name: 'PhysioKhom',
+          description: 'Online consultation',
+          order_id: orderIdStr,
+          modal: {
+            ondismiss: () => {
+              setLoadingBooking(false)
+              resolve()
+            },
+          },
+          handler: async function (response) {
+            try {
+              const oid = response?.razorpay_order_id
+              const pid = response?.razorpay_payment_id
+              const sig = response?.razorpay_signature
+              if (!oid || !pid || !sig) {
+                toast.error(
+                  'Checkout did not return payment details. Use Razorpay test mode success (e.g. card 4111 1111 1111 1111) and ensure Key ID is rzp_test_ with matching test secret.',
+                )
+                setLoadingBooking(false)
+                resolve()
+                return
+              }
+              const done = await api.post('/bookings/online-checkout/complete', {
+                checkoutSessionId: String(checkoutSessionId),
+                razorpay_order_id: oid,
+                razorpay_payment_id: pid,
+                razorpay_signature: sig,
+              })
+              const id = done.data?._id
+              toast.success('Payment successful. Your consultation is confirmed.')
+              setLoadingBooking(false)
+              if (id) navigate(`/dashboard/bookings/${id}`, { replace: true })
+              resolve()
+            } catch (e) {
+              setLoadingBooking(false)
+              toast.error(e.response?.data?.message || e.message || 'Could not confirm payment')
+              resolve()
+            }
+          },
+          theme: { color: '#635bff' },
+          prefill: buildRazorpayPrefill(
+            prefillFromServer && (prefillFromServer.phone || prefillFromServer.name || prefillFromServer.email)
+              ? prefillFromServer
+              : { name: profileName, phone: profilePhone, email: profileEmail },
+          ),
+        }
+        const rzp = new window.Razorpay(options)
+        rzp.on('payment.failed', () => {
+          setLoadingBooking(false)
+          toast.error('Payment was not completed')
+          resolve()
+        })
+        rzp.open()
+      })
     } catch (e) {
-      toast.error(e.response?.data?.message || 'Could not create booking')
+      toast.error(e.response?.data?.message || e.message || 'Could not create booking')
     } finally {
       setLoadingBooking(false)
     }
-  }
-
-  async function refreshBooking() {
-    if (!booking?._id) return
-    const res = await api.get(`/bookings/${booking._id}`)
-    setBooking(res.data)
   }
 
   return (
@@ -412,44 +553,63 @@ export default function PhysioListPage() {
 
         <StepShell
           step={4}
-          title="How matching works"
-          subtitle="You do not need to choose a physiotherapist — our team picks the best match."
+          title={serviceType === 'online' ? 'Choose your physiotherapist' : 'How matching works'}
+          subtitle={
+            serviceType === 'online'
+              ? 'For online consultation, pick a registered physiotherapist before confirming.'
+              : 'You do not need to choose a physiotherapist — our team picks the best match.'
+          }
           locked={!issueOk}
         >
-          <div className="rounded-xl border border-blue-100 bg-blue-50/60 px-4 py-5 text-sm text-gray-800">
-            <p className="font-medium text-gray-900">How it works</p>
-            <ul className="mt-3 list-disc space-y-2 pl-5 text-gray-700">
-              <li>Confirm your booking below (and pay for online sessions).</li>
-              <li>Our admin team picks a verified physiotherapist for your slot.</li>
-              <li>You&apos;ll see their name and contact in your booking once matched.</li>
-            </ul>
-          </div>
+          {serviceType === 'online' ? (
+            <div className="space-y-3">
+              <button
+                type="button"
+                onClick={() => setPhysioPickerOpen(true)}
+                className="w-full rounded-xl border border-dashed border-blue-300 bg-blue-50 px-4 py-4 text-left transition hover:border-blue-400 hover:bg-blue-100/50"
+              >
+                <p className="text-sm font-semibold text-blue-900">
+                  {selectedPhysio ? selectedPhysio.name : 'Select registered physiotherapist'}
+                </p>
+                <p className="mt-1 text-xs text-blue-700">
+                  {selectedPhysio
+                    ? `${selectedPhysio.specialization || 'Physiotherapy'}${selectedPhysio.location ? ` · ${selectedPhysio.location}` : ''}`
+                    : 'Open list and choose who you want to consult with.'}
+                </p>
+              </button>
+              {!selectedPhysio && (
+                <p className="text-xs font-medium text-amber-700">
+                  Please select a physiotherapist for online consultation.
+                </p>
+              )}
+            </div>
+          ) : (
+            <div className="rounded-xl border border-blue-100 bg-blue-50/60 px-4 py-5 text-sm text-gray-800">
+              <p className="font-medium text-gray-900">How it works</p>
+              <ul className="mt-3 list-disc space-y-2 pl-5 text-gray-700">
+                <li>Confirm your booking below (and pay for online sessions).</li>
+                <li>Our admin team picks a verified physiotherapist for your slot.</li>
+                <li>You&apos;ll see their name and contact in your booking once matched.</li>
+              </ul>
+            </div>
+          )}
         </StepShell>
 
-        {booking && booking.serviceType === 'online' && (
-          <Card hover={false} className="border-blue-100 bg-blue-50/50">
-            <h3 className="font-semibold text-gray-900">Booking created</h3>
-            <p className="mt-2 text-sm text-gray-600">
-              Online consultation · {formatBookingDateAndSlot(booking.date, booking.timeSlot)}
-            </p>
-            <p className="mt-1 text-sm text-gray-600">Payment: {booking.paymentStatus}</p>
-            {booking.paymentStatus === 'pending' && (
-              <div className="mt-4">
-                <RazorpayPayButton bookingId={booking._id} onPaid={refreshBooking} />
-              </div>
-            )}
-          </Card>
-        )}
       </div>
 
       <BookingSummaryBar
-        selectedPhysio={null}
+        selectedPhysio={serviceType === 'online' ? selectedPhysio : null}
         date={date}
         timeSlot={timeSlot}
         serviceType={serviceType}
         canSubmit={canSubmit && !profileLoading}
         loading={loadingBooking}
         onConfirm={createBooking}
+        onlinePaymentHint={
+          serviceType === 'online' && import.meta.env.DEV
+            ? 'Razorpay test mode: open Cards and use 4111 1111 1111 1111 (any CVV, future expiry). UPI QR needs Razorpay’s test UPI steps — see their Standard Checkout test integration guide.'
+            : undefined
+        }
       />
 
       <LocationPickerModal
@@ -462,6 +622,70 @@ export default function PhysioListPage() {
           setLng(nextLng)
         }}
       />
+
+      {physioPickerOpen && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4">
+          <button
+            type="button"
+            className="absolute inset-0"
+            aria-label="Close"
+            onClick={() => setPhysioPickerOpen(false)}
+          />
+          <div className="relative max-h-[90vh] w-full max-w-4xl overflow-hidden rounded-t-2xl bg-white shadow-2xl sm:rounded-2xl">
+            <div className="border-b border-gray-200 px-4 py-4 sm:px-6">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="text-base font-semibold text-gray-900">Select physiotherapist</h3>
+                  <p className="mt-1 text-sm text-gray-500">Choose a registered physio for online consultation.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setPhysioPickerOpen(false)}
+                  className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-800"
+                  aria-label="Close"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+            <div className="max-h-[62vh] overflow-y-auto px-4 py-4 sm:px-6">
+              {physioLoading ? (
+                <p className="py-8 text-center text-sm text-gray-500">Loading physiotherapists…</p>
+              ) : availablePhysios.length === 0 ? (
+                <p className="py-8 text-center text-sm text-gray-500">
+                  No registered physiotherapists found for your location. Try changing location.
+                </p>
+              ) : (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {availablePhysios.map((p) => (
+                    <PhysioCard
+                      key={p._id}
+                      physio={p}
+                      selected={String(selectedPhysioId) === String(p._id)}
+                      onSelect={() => setSelectedPhysioId(String(p._id))}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="border-t border-gray-200 bg-gray-50 px-4 py-3 sm:px-6">
+              <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <Button type="button" variant="outline" onClick={() => setPhysioPickerOpen(false)} className="rounded-xl">
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  disabled={!selectedPhysioId}
+                  onClick={() => setPhysioPickerOpen(false)}
+                  className="rounded-xl"
+                >
+                  Use selected physiotherapist
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
     </>
   )

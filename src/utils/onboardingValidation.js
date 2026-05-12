@@ -116,28 +116,15 @@ export function validatePracticeSection(practice) {
     practice?.feeMin !== undefined && practice?.feeMin !== null && String(practice.feeMin).trim() !== ''
       ? String(practice.feeMin).trim()
       : String(practice?.fees ?? '').trim()
-  const maxStr =
-    practice?.feeMax !== undefined && practice?.feeMax !== null ? String(practice.feeMax).trim() : ''
 
   if (!minStr) {
-    errors.feeMin = 'Minimum fee per session is required'
+    errors.feeMin = 'Fee per session is required'
   } else {
     const min = Number(minStr)
     if (!Number.isFinite(min) || min <= 0) {
-      errors.feeMin = 'Enter a valid minimum fee greater than zero (₹)'
+      errors.feeMin = 'Enter a valid fee greater than zero (₹)'
     } else if (min > MAX_FEE) {
       errors.feeMin = 'Fee seems unreasonably high — please check'
-    }
-    if (maxStr !== '') {
-      const min = Number(minStr)
-      const max = Number(maxStr)
-      if (!Number.isFinite(max) || max <= 0) {
-        errors.feeMax = 'Enter a valid maximum fee (₹)'
-      } else if (max > MAX_FEE) {
-        errors.feeMax = 'Fee seems unreasonably high — please check'
-      } else if (Number.isFinite(min) && max < min) {
-        errors.feeMax = 'Maximum must be greater than or equal to minimum'
-      }
     }
   }
 
@@ -152,7 +139,7 @@ function hasUrl(s) {
  * @param {{
  *   name: string, email: string, location: string, dob?: string, gender?: string, address?: string,
  *   degree: string, university: string, year: string, registrationNumber: string,
- *   experience: string, specialization: string, serviceType: string, areas: string, feeMin: string, feeMax?: string,
+ *   experience: string, specialization: string, serviceType: string, areas: string, feeMin: string,
  *   docCertificate: string, docIdProof: string, docRegistration: string, docSelfie: string,
  *   idProofType?: string,
  *   docSignedNda?: string, requireSignedNda?: boolean
@@ -188,7 +175,6 @@ export function validateSubmitForm(values) {
       serviceType: values.serviceType,
       areas: values.areas,
       feeMin: values.feeMin !== undefined ? values.feeMin : values.fees,
-      feeMax: values.feeMax !== undefined ? values.feeMax : '',
     }).errors
   )
 

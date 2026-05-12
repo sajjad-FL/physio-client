@@ -8,14 +8,14 @@ import FeaturedPhysiosSection from '../components/home/FeaturedPhysiosSection'
 import ConditionIllustration from '../components/home/ConditionIllustration'
 import { absoluteUrl, primaryServiceAreas, primaryServiceAreasSentence, siteOrigin } from '../utils/siteMeta'
 
-const HOME_TITLE = 'Physio Near Me in Assam | Home Visit Physiotherapy — NearbyPhysio'
+const HOME_TITLE = 'Physio Near Me in Assam | Home Visit Physiotherapy — PhysioKhom'
 const HOME_DESCRIPTION =
-  'Looking for a physio near you in Assam? NearbyPhysio connects patients with verified home visit physiotherapists in Guwahati, Barpeta, Bongaigaon, Bijni, and Kokrajhar for back pain, knee pain, post-surgery rehab, and stroke recovery.'
+  'Looking for a physio near you in Assam? PhysioKhom connects patients with verified home visit physiotherapists in Guwahati, Barpeta, Bongaigaon, Bijni, and Kokrajhar for back pain, knee pain, post-surgery rehab, and stroke recovery.'
 
 const HOME_FAQ = [
   {
     q: 'How do I find a physiotherapist near me?',
-    a: 'NearbyPhysio lists verified physiotherapists you can book for home visits. Create an account, share your location when you book, and we match you with an available clinician for your time slot.',
+    a: 'PhysioKhom lists verified physiotherapists you can book for home visits. Create an account, share your location when you book, and we match you with an available clinician for your time slot.',
   },
   {
     q: 'Is this physio at home or in a clinic?',
@@ -54,7 +54,7 @@ function homeStructuredData({ siteBase, ogImage, areas }) {
     {
       '@type': 'WebSite',
       '@id': `${siteBase}/#website`,
-      name: 'NearbyPhysio',
+      name: 'PhysioKhom',
       url: `${siteBase}/`,
       inLanguage: 'en-IN',
       potentialAction: {
@@ -69,7 +69,7 @@ function homeStructuredData({ siteBase, ogImage, areas }) {
     {
       '@type': 'MedicalBusiness',
       '@id': `${siteBase}/#organization`,
-      name: 'NearbyPhysio',
+      name: 'PhysioKhom',
       url: `${siteBase}/`,
       description: HOME_DESCRIPTION,
       image: ogImage,
@@ -277,7 +277,7 @@ export default function HomePage() {
         <meta name="robots" content="index, follow, max-image-preview:large" />
         <link rel="canonical" href={canonical} />
         <meta property="og:type" content="website" />
-        <meta property="og:site_name" content="NearbyPhysio" />
+        <meta property="og:site_name" content="PhysioKhom" />
         <meta property="og:title" content={HOME_TITLE} />
         <meta property="og:description" content={HOME_DESCRIPTION} />
         <meta property="og:url" content={canonical} />
@@ -306,7 +306,7 @@ export default function HomePage() {
                 Book a trusted home visit physio near you
               </h1>
               <p className="motion-safe:animate-enter-up animate-delay-2 mx-auto mt-6 max-w-xl text-lg leading-relaxed text-slate-500">
-                NearbyPhysio helps you book home physiotherapy for back pain, knee pain, post-surgery rehab, stroke
+                PhysioKhom helps you book home physiotherapy for back pain, knee pain, post-surgery rehab, stroke
                 recovery, and other mobility concerns. Get simple booking, secure payment, and a therapist matched to
                 your locality.
                 {areaLine ? (
@@ -403,7 +403,7 @@ export default function HomePage() {
                 We are available in
               </h2>
               <p className="mt-4 text-lg leading-relaxed text-slate-500">
-                NearbyPhysio has verified home visit physiotherapists across Lower Assam. Pick your town to see local
+                PhysioKhom has verified home visit physiotherapists across Lower Assam. Pick your town to see local
                 coverage and book a physio near you.
               </p>
             </div>
@@ -480,7 +480,7 @@ export default function HomePage() {
       <footer className="border-t border-slate-800 bg-slate-900 text-white">
         <div className="mx-auto flex max-w-6xl flex-col gap-8 px-4 py-14 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
           <div>
-            <p className="text-sm font-semibold">NearbyPhysio</p>
+            <p className="text-sm font-semibold">PhysioKhom</p>
             <p className="mt-2 text-sm text-white/60">&copy; {new Date().getFullYear()} Home visit physiotherapy.</p>
           </div>
           <nav className="flex flex-col gap-3 text-sm font-medium sm:items-end" aria-label="Footer">

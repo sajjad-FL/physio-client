@@ -90,11 +90,11 @@ export default function PublicPhysicianPage() {
     const p = physio
     const loc = (p.location && String(p.location).trim()) || ''
     const title = loc
-      ? `${p.name} — ${p.specialization || 'Physiotherapist'} in ${loc} | NearbyPhysio`
-      : `${p.name} — ${p.specialization || 'Physiotherapist'} | NearbyPhysio`
+      ? `${p.name} — ${p.specialization || 'Physiotherapist'} in ${loc} | PhysioKhom`
+      : `${p.name} — ${p.specialization || 'Physiotherapist'} | PhysioKhom`
     const description = loc
-      ? `Book ${p.name}, ${p.specialization || 'physiotherapist'}, for home visits near ${loc}. Verified profile on NearbyPhysio.`
-      : `Book ${p.name}, ${p.specialization || 'physiotherapist'}, for home visits on NearbyPhysio. Verified profile.`
+      ? `Book ${p.name}, ${p.specialization || 'physiotherapist'}, for home visits near ${loc}. Verified profile on PhysioKhom.`
+      : `Book ${p.name}, ${p.specialization || 'physiotherapist'}, for home visits on PhysioKhom. Verified profile.`
     return (
       <Helmet>
         <title>{title}</title>
@@ -117,8 +117,8 @@ export default function PublicPhysicianPage() {
     return (
       <>
         <Helmet>
-          <title>Physiotherapist profile | NearbyPhysio</title>
-          <meta name="description" content="Loading a verified physiotherapist profile on NearbyPhysio." />
+          <title>Physiotherapist profile | PhysioKhom</title>
+          <meta name="description" content="Loading a verified physiotherapist profile on PhysioKhom." />
           <link rel="canonical" href={profileUrl} />
         </Helmet>
         <div className="mx-auto max-w-3xl space-y-6 px-4 py-16 sm:px-6">
@@ -133,7 +133,7 @@ export default function PublicPhysicianPage() {
     return (
       <>
         <Helmet>
-          <title>Profile not found | NearbyPhysio</title>
+          <title>Profile not found | PhysioKhom</title>
           <meta name="description" content="This physiotherapist profile could not be loaded." />
           <meta name="robots" content="noindex" />
         </Helmet>

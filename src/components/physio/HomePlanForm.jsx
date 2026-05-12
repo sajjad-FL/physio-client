@@ -4,6 +4,7 @@ import { formatBookingTimeSlot } from '../../utils/date'
 import Button from '../ui/Button'
 import DragSelectCalendar from './DragSelectCalendar'
 import { formatPhysioSessionFeeLabel } from '../../utils/physioSessionFee.js'
+import { paymentAmountLabel } from '../../utils/bookingDisplay.js'
 
 function round2(n) {
   return Math.round((Number(n) + Number.EPSILON) * 100) / 100
@@ -56,8 +57,7 @@ export default function HomePlanForm({ booking, busy, onSubmit }) {
   const defaultAmount = booking?.physioId?.pricePerSession != null ? String(booking.physioId.pricePerSession) : ''
   const physio = booking?.physioId
   const feeLo = Number(physio?.pricePerSession)
-  const feeHi = physio?.pricePerSessionMax != null ? Number(physio.pricePerSessionMax) : NaN
-  const hasFeeRange = Number.isFinite(feeLo) && Number.isFinite(feeHi) && feeHi > feeLo
+  const fixedFee = Number.isFinite(feeLo) && feeLo > 0
   const defaultPrimaryDate = useMemo(
     () => parseBookingPrimaryDate(booking?.date),
     [booking?.date],
@@ -88,28 +88,47 @@ export default function HomePlanForm({ booking, busy, onSubmit }) {
     })
   }, [sessions])
 
+  const perVisitTravel = useMemo(
+    () => round2(Math.max(0, Number(booking?.distanceSurchargeAmount) || 0)),
+    [booking?._id, booking?.distanceSurchargeAmount],
+  )
+
   const totals = useMemo(() => {
     const n = Number(amountPerSession)
     const s = Number(sessions) || 0
     const d = Math.min(15, Math.max(0, Number(discount) || 0))
     if (!Number.isFinite(n) || n <= 0 || s < 1) {
-      return { subtotal: 0, discountAmount: 0, final: 0, discountPct: d }
+      return {
+        subtotal: 0,
+        discountAmount: 0,
+        linePerSession: 0,
+        discountPct: d,
+        patientPays: 0,
+      }
     }
-    const subtotal = s * n
+    const linePerSession = round2(n + perVisitTravel)
+    const subtotal = round2(s * linePerSession)
     const discountAmount = round2(subtotal * (d / 100))
-    const final = round2(subtotal - discountAmount)
-    return { subtotal, discountAmount, final, discountPct: d }
-  }, [amountPerSession, sessions, discount])
+    const patientPays = round2(subtotal - discountAmount)
+    return { subtotal, discountAmount, linePerSession, discountPct: d, patientPays }
+  }, [amountPerSession, sessions, discount, perVisitTravel])
+
+  const showAssignmentPricing = Boolean(
+    booking &&
+      (booking.totalAmount != null ||
+        booking.distanceKmAtAssign != null ||
+        Number(booking.distanceSurchargeAmount) > 0),
+  )
 
   const dateMismatch = selectedDates.length !== Number(sessions)
   const amt = Number(amountPerSession)
-  const feeInRange = !hasFeeRange || (Number.isFinite(amt) && amt >= feeLo && amt <= feeHi)
+  const feeOk = !fixedFee || amt === feeLo
   const canSubmit =
     Number(sessions) >= 1 &&
     Number(amountPerSession) > 0 &&
-    feeInRange &&
+    feeOk &&
     !dateMismatch &&
-    totals.final > 0 &&
+    totals.patientPays > 0 &&
     !busy
 
   function handleSubmit(e) {
@@ -152,23 +171,37 @@ export default function HomePlanForm({ booking, busy, onSubmit }) {
               </div>
               <div>
                 <label className={fieldLabel}>Amount per session (₹)</label>
-                {physio && hasFeeRange ? (
+                {physio && fixedFee ? (
                   <p className="mb-2 text-xs text-gray-600">
-                    Agreed fee band: {formatPhysioSessionFeeLabel(physio)}/session — enter an amount in this range.
+                    Fixed session rate: {formatPhysioSessionFeeLabel(physio)}
+                    {perVisitTravel > 0 ? (
+                      <span className="mt-1 block text-gray-700">
+                        Assignment distance surcharge (₹{perVisitTravel.toFixed(2)} per home visit) is included in
+                        amount per session and multiplied by the number of sessions.
+                      </span>
+                    ) : (
+                      <span className="mt-1 block text-gray-600">Shown amount is what the patient pays per session.</span>
+                    )}
+                  </p>
+                ) : perVisitTravel > 0 ? (
+                  <p className="mb-2 text-xs text-gray-600">
+                    Assignment distance surcharge ₹{perVisitTravel.toFixed(2)} per home visit is added to each
+                    session in the total below.
                   </p>
                 ) : null}
                 <input
                   type="number"
-                  min={hasFeeRange ? feeLo : 1}
-                  max={hasFeeRange ? feeHi : undefined}
+                  min={fixedFee ? feeLo : 1}
+                  max={fixedFee ? round2(feeLo + perVisitTravel) : undefined}
                   step={1}
-                  value={amountPerSession}
+                  value={fixedFee ? String(round2(feeLo + perVisitTravel)) : amountPerSession}
                   onChange={(e) => setAmountPerSession(e.target.value)}
-                  placeholder={hasFeeRange ? `${feeLo}–${feeHi}` : 'e.g. 800'}
-                  className={fieldInput}
+                  placeholder={fixedFee ? String(feeLo) : 'e.g. 800'}
+                  readOnly={fixedFee}
+                  className={`${fieldInput}${fixedFee ? ' cursor-not-allowed bg-gray-50 text-gray-700' : ''}`}
                 />
-                {hasFeeRange && Number.isFinite(amt) && !feeInRange ? (
-                  <p className="mt-1 text-xs text-red-600">Enter an amount between ₹{feeLo} and ₹{feeHi}.</p>
+                {fixedFee && Number.isFinite(amt) && !feeOk ? (
+                  <p className="mt-1 text-xs text-red-600">Per-session amount must match your fixed rate of ₹{feeLo}.</p>
                 ) : null}
               </div>
             </div>
@@ -274,12 +307,47 @@ export default function HomePlanForm({ booking, busy, onSubmit }) {
         </div>
       </div>
 
+      {showAssignmentPricing && (
+        <div className="rounded-2xl border border-amber-200/90 bg-amber-50/60 px-5 py-4 text-sm text-amber-950 shadow-sm ring-1 ring-amber-100/80">
+          <p className="text-xs font-bold uppercase tracking-wide text-amber-900/90">Current booking (after assignment)</p>
+          <p className="mt-1 text-xs text-amber-900/75">
+            What the patient owes for this booking at assignment (often one visit). The blue total is your proposed plan:
+            each scheduled home visit uses the same distance surcharge as at assignment.
+          </p>
+          <dl className="mt-3 space-y-2 text-xs sm:text-sm">
+            <div className="flex justify-between gap-4">
+              <dt className="text-amber-900/80">Distance at assign</dt>
+              <dd className="font-medium tabular-nums text-amber-950">
+                {booking.distanceKmAtAssign != null
+                  ? `${Number(booking.distanceKmAtAssign) < 10 ? Number(booking.distanceKmAtAssign).toFixed(1) : Math.round(Number(booking.distanceKmAtAssign))} km`
+                  : '—'}
+              </dd>
+            </div>
+            <div className="flex justify-between gap-4">
+              <dt className="text-amber-900/80">Distance surcharge (per home visit)</dt>
+              <dd className="font-medium tabular-nums text-amber-950">
+                ₹{Number(booking.distanceSurchargeAmount || 0).toFixed(2)}
+                {Number(booking.distanceExtraKm || 0) > 0 && Number(booking.distanceSurchargePerKm || 0) > 0
+                  ? ` (${Number(booking.distanceExtraKm)} km × ₹${Number(booking.distanceSurchargePerKm)}/km)`
+                  : ''}
+              </dd>
+            </div>
+            <div className="flex justify-between gap-4 border-t border-amber-200/80 pt-2 font-semibold text-amber-950">
+              <dt>Total on booking</dt>
+              <dd className="tabular-nums">{paymentAmountLabel(booking)}</dd>
+            </div>
+          </dl>
+        </div>
+      )}
+
       <div className="relative overflow-hidden rounded-2xl border-2 border-blue-200/80 bg-gradient-to-br from-blue-50/95 via-white to-amber-50/40 p-6 shadow-lg shadow-blue-900/5 ring-1 ring-blue-100/60">
         <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-500 via-blue-400 to-amber-400/80" aria-hidden />
         <p className="text-xs font-bold uppercase tracking-wide text-blue-900/90">Total for patient</p>
         <dl className="relative mt-4 space-y-3 text-sm">
           <div className="flex justify-between gap-4 text-gray-600">
-            <dt>Subtotal ({sessions} × ₹{amountPerSession || '—'})</dt>
+            <dt>
+              Subtotal ({sessions} × ₹{totals.linePerSession > 0 ? totals.linePerSession.toFixed(2) : amountPerSession || '—'})
+            </dt>
             <dd className="tabular-nums font-medium">₹{totals.subtotal.toFixed(2)}</dd>
           </div>
           <div className="flex justify-between gap-4 text-gray-600">
@@ -288,7 +356,7 @@ export default function HomePlanForm({ booking, busy, onSubmit }) {
           </div>
           <div className="flex justify-between gap-4 border-t border-blue-200/70 pt-4 text-xl font-bold text-gray-900">
             <dt>Patient pays</dt>
-            <dd className="tabular-nums text-blue-700">₹{totals.final.toFixed(2)}</dd>
+            <dd className="tabular-nums text-blue-700">₹{totals.patientPays.toFixed(2)}</dd>
           </div>
         </dl>
       </div>

@@ -173,7 +173,7 @@ export default function PhysioLayout() {
     <>
       <SeoNoIndex />
       <AppShell
-      brand="NearbyPhysio"
+      brand="PhysioKhom"
       badge="Physio"
       topBarTitle="Workspace"
       topBarSubtitle="Sessions, availability, and notes"

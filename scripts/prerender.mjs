@@ -190,7 +190,7 @@ async function main() {
     })
     const page = await browser.newPage()
     await page.setViewport({ width: 1280, height: 900 })
-    await page.setUserAgent('NearbyPhysioPrerender/1.0 (+static-build)')
+    await page.setUserAgent('PhysioKhomPrerender/1.0 (+static-build)')
 
     for (const route of routes) {
       const outFile = routeToOutputPath(route)

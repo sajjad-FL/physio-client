@@ -86,7 +86,6 @@ export default function RegisterPhysioPage() {
   const [serviceType, setServiceType] = useState('both')
   const [areas, setAreas] = useState('')
   const [feeMin, setFeeMin] = useState('')
-  const [feeMax, setFeeMax] = useState('')
 
   const [fCertificate, setFCertificate] = useState(null)
   const [fIdProof, setFIdProof] = useState(null)
@@ -293,7 +292,6 @@ export default function RegisterPhysioPage() {
           serviceType,
           areas,
           feeMin,
-          feeMax,
         })
         if (Object.keys(errors).length) {
           setFieldErrors(errors)
@@ -373,7 +371,6 @@ export default function RegisterPhysioPage() {
       fd.append('serviceType', serviceType)
       fd.append('areas', areas)
       fd.append('feeMin', String(feeMin))
-      fd.append('feeMax', String(feeMax))
 
       if (avatarFile) fd.append('avatar', avatarFile)
       fd.append('certificate', fCertificate)
@@ -409,9 +406,9 @@ export default function RegisterPhysioPage() {
     }
   }
 
-  const title = 'Register as a physiotherapist — NearbyPhysio'
+  const title = 'Register as a physiotherapist — PhysioKhom'
   const description =
-    'Apply to join NearbyPhysio as a verified home-visit physiotherapist. Submit your qualifications and documents for admin review.'
+    'Apply to join PhysioKhom as a verified home-visit physiotherapist. Submit your qualifications and documents for admin review.'
   const canonical = absoluteUrl('/register-physio')
   const ogImage = absoluteUrl('/og-default.png')
 
@@ -434,7 +431,7 @@ export default function RegisterPhysioPage() {
       <header className="border-b border-gray-200 bg-white/90 shadow-sm">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-4">
           <Link to="/" className="text-sm font-semibold text-gray-900 hover:opacity-80">
-            ← NearbyPhysio
+            ← PhysioKhom
           </Link>
           <Link to="/login" className="text-sm text-blue-600 hover:underline">
             Sign in
@@ -820,52 +817,23 @@ export default function RegisterPhysioPage() {
                 {fieldErrors.areas ? <p className="mt-1 text-xs text-red-600">{fieldErrors.areas}</p> : null}
               </div>
               <div className="sm:col-span-2">
-                <p className="mb-1 text-xs font-medium text-ink-muted">Fee per session (₹)</p>
-                <p className="mb-2 text-xs text-ink-muted">
-                  Enter minimum and optionally a higher maximum (e.g. 500 and 700 for ₹500–700).
-                </p>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <label className="mb-1 block text-xs font-medium text-ink-muted" htmlFor="reg-fee-min">
-                      Minimum
-                    </label>
-                    <input
-                      id="reg-fee-min"
-                      className={inputClass('feeMin')}
-                      type="number"
-                      min="0"
-                      value={feeMin}
-                      onChange={(e) => {
-                        const v = e.target.value
-                        setFeeMin(v)
-                        patchField('feeMin', v)
-                        setFieldErrors((prev) => ({
-                          ...prev,
-                          feeMax: validateLiveField('feeMax', feeMax, { feeMinStr: v }),
-                        }))
-                      }}
-                    />
-                    {fieldErrors.feeMin ? <p className="mt-1 text-xs text-red-600">{fieldErrors.feeMin}</p> : null}
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-xs font-medium text-ink-muted" htmlFor="reg-fee-max">
-                      Maximum (optional)
-                    </label>
-                    <input
-                      id="reg-fee-max"
-                      className={inputClass('feeMax')}
-                      type="number"
-                      min="0"
-                      value={feeMax}
-                      onChange={(e) => {
-                        const v = e.target.value
-                        setFeeMax(v)
-                        patchField('feeMax', v, { feeMinStr: feeMin })
-                      }}
-                    />
-                    {fieldErrors.feeMax ? <p className="mt-1 text-xs text-red-600">{fieldErrors.feeMax}</p> : null}
-                  </div>
-                </div>
+                <label className="mb-1 block text-xs font-medium text-ink-muted" htmlFor="reg-fee-min">
+                  Fee per session (₹)
+                </label>
+                <p className="mb-2 text-xs text-ink-muted">One fixed amount you charge per session.</p>
+                <input
+                  id="reg-fee-min"
+                  className={inputClass('feeMin')}
+                  type="number"
+                  min="0"
+                  value={feeMin}
+                  onChange={(e) => {
+                    const v = e.target.value
+                    setFeeMin(v)
+                    patchField('feeMin', v)
+                  }}
+                />
+                {fieldErrors.feeMin ? <p className="mt-1 text-xs text-red-600">{fieldErrors.feeMin}</p> : null}
               </div>
             </div>
           </section>
@@ -989,7 +957,7 @@ export default function RegisterPhysioPage() {
               <h3 className="text-sm font-semibold text-ink">Qualification declaration</h3>
               <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-ink-muted">
                 {ndaPolicy.declarationText ||
-                  'I confirm that all qualifications and documents I submit to NearbyPhysio are accurate. Misrepresentation may result in removal from the platform and legal consequences.'}
+                  'I confirm that all qualifications and documents I submit to PhysioKhom are accurate. Misrepresentation may result in removal from the platform and legal consequences.'}
               </p>
               <label className="mt-4 flex cursor-pointer items-start gap-3 text-sm text-ink">
                 <input
@@ -1038,12 +1006,7 @@ export default function RegisterPhysioPage() {
               <div className="flex justify-between gap-4 border-b border-border-subtle py-2">
                 <dt className="text-ink-muted">Fee / session</dt>
                 <dd className="text-right font-medium text-ink">
-                  {feeMin === ''
-                    ? '—'
-                    : formatPhysioSessionFeeLabel({
-                        pricePerSession: Number(feeMin),
-                        pricePerSessionMax: feeMax === '' ? null : Number(feeMax),
-                      })}
+                  {feeMin === '' ? '—' : formatPhysioSessionFeeLabel({ pricePerSession: Number(feeMin) })}
                 </dd>
               </div>
               <div className="flex justify-between gap-4 border-b border-border-subtle py-2">

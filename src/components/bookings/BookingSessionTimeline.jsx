@@ -35,13 +35,14 @@ function statusLabel(status) {
  *     busySessionId?: string | null,
  *     canAct?: boolean,
  *     blockedReason?: string,
- *     rowBlockedReason?: (row) => string | '',
+ *     rowBlockedReason?: (row: object) => string,
  *   },
  *   patientActions?: {
  *     enabled: boolean,
  *     reviewedSessionIds?: Set<string>,
  *     ratingsBySessionId?: Record<string, { rating: number, comment?: string }>,
  *     onRate: (row) => void,
+ *     rowBlockedReason?: (row: object) => string,
  *   },
  * }} props
  */
@@ -125,6 +126,11 @@ export default function BookingSessionTimeline({
             typeof physioActions?.rowBlockedReason === 'function'
               ? physioActions.rowBlockedReason(r) || ''
               : ''
+          const patientLockReason =
+            typeof patientActions?.rowBlockedReason === 'function'
+              ? patientActions.rowBlockedReason(r) || ''
+              : ''
+          const lockBadgeReason = perRowReason || patientLockReason
           const blockedReason = !isTodayOrPast
             ? 'You can mark this session once its scheduled day arrives'
             : perRowReason
@@ -160,9 +166,9 @@ export default function BookingSessionTimeline({
                     {!rowDone && !rowNoShow && r.date === tday && (
                       <span className="ml-2 text-xs font-semibold text-blue-800">Today</span>
                     )}
-                    {!rowDone && !rowNoShow && perRowReason && (
+                    {!rowDone && !rowNoShow && lockBadgeReason && (
                       <span
-                        title={perRowReason}
+                        title={lockBadgeReason}
                         className="ml-2 inline-flex items-center gap-1 rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-700 ring-1 ring-slate-200"
                       >
                         <svg className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden>

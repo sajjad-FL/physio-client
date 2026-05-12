@@ -147,6 +147,9 @@ export default function UserBookingDetailPage() {
   const paymentSummary = b.paymentSummary || null
   const paymentsList = Array.isArray(b.payments) ? b.payments : []
   const sessionsCount = paymentSummary?.sessionsCount || (Array.isArray(b.schedule) && b.schedule.length > 0 ? b.schedule.length : 1)
+  const unlockedSessions = Number(
+    paymentSummary?.unlockedSessions ?? paymentSummary?.coveredSessions ?? 0,
+  )
   const isOfflinePlan = b.serviceType === 'home' && b.homePlanPaymentMode === 'offline'
   const isOnlineBooking = b.serviceType === 'online' || (b.serviceType === 'home' && b.homePlanPaymentMode === 'online')
   const outstanding = Number(paymentSummary?.outstanding || 0)
@@ -176,6 +179,34 @@ export default function UserBookingDetailPage() {
   }, {})
   const hasSchedulePlan = Array.isArray(b.schedule) && b.schedule.length > 0
   const physioDisplayName = typeof b.physioId === 'object' ? b.physioId?.name : undefined
+
+  const patientTimelineActions = hasSchedulePlan
+    ? {
+        enabled: true,
+        reviewedSessionIds,
+        ratingsBySessionId,
+        onRate: (row) => {
+          if (!row?.sessionId) return
+          setSessionReviewTarget({
+            sessionId: String(row.sessionId),
+            label: `Session #${row.n} · ${formatBookingDateAndSlot(row.date, row.time)}`,
+          })
+        },
+        rowBlockedReason: (row) => {
+          if (!paymentSummary || sessionsCount < 2) return ''
+          const ordinal = row?.perSession ? Number(row.n || 0) : 1
+          if (ordinal <= 0 || ordinal <= unlockedSessions) return ''
+          if (isOfflinePlan) {
+            return unlockedSessions === 0
+              ? `Session #${ordinal} is locked until a payment is recorded and verified.`
+              : `Session #${ordinal} is locked. Sessions through #${unlockedSessions} of ${sessionsCount} are covered — more unlock after the next verified payment.`
+          }
+          return unlockedSessions === 0
+            ? `Session #${ordinal} is locked. Pay at least one installment to open it.`
+            : `Session #${ordinal} is locked. Pay the next installment to unlock sessions after #${unlockedSessions}.`
+        },
+      }
+    : undefined
 
   return (
     <div className="space-y-6">
@@ -304,26 +335,48 @@ export default function UserBookingDetailPage() {
             Rate each visit after your physiotherapist marks it completed.
           </p>
         )}
+        {paymentSummary && hasSchedulePlan && sessionsCount > 1 && unlockedSessions < sessionsCount && (
+          <div className="mt-3 rounded-lg border border-blue-100 bg-blue-50/70 px-3 py-2 text-xs text-blue-950">
+            {isOfflinePlan ? (
+              unlockedSessions === 0 ? (
+                <>
+                  <strong className="font-semibold">Sessions stay locked</strong> until your physiotherapist records a
+                  payment and admin verifies it. Complete the first payment to open session #1 for completion.
+                </>
+              ) : (
+                <>
+                  Payments (after verification) cover up to session #{unlockedSessions} of {sessionsCount}.{' '}
+                  <strong className="font-semibold">Pay or verify the next installment</strong> so later sessions can be
+                  completed.
+                </>
+              )
+            ) : unlockedSessions === 0 ? (
+              <>
+                <strong className="font-semibold">Pay at least one installment</strong> to unlock session #1 so your
+                physiotherapist can mark that visit complete.
+              </>
+            ) : (
+              <>
+                Installments cover up to session #{unlockedSessions} of {sessionsCount}.{' '}
+                <strong className="font-semibold">Pay the next installment</strong> to unlock further sessions.
+                {canPayInstallment ? (
+                  <>
+                    {' '}
+                    <button
+                      type="button"
+                      className="font-semibold text-blue-800 underline decoration-blue-400/80 underline-offset-2 hover:text-blue-950"
+                      onClick={() => setPayInstallmentOpen(true)}
+                    >
+                      Pay now
+                    </button>
+                  </>
+                ) : null}
+              </>
+            )}
+          </div>
+        )}
         <div className="mt-4">
-          <BookingSessionTimeline
-            booking={b}
-            patientActions={
-              hasSchedulePlan
-                ? {
-                    enabled: true,
-                    reviewedSessionIds,
-                    ratingsBySessionId,
-                    onRate: (row) => {
-                      if (!row?.sessionId) return
-                      setSessionReviewTarget({
-                        sessionId: String(row.sessionId),
-                        label: `Session #${row.n} · ${formatBookingDateAndSlot(row.date, row.time)}`,
-                      })
-                    },
-                  }
-                : undefined
-            }
-          />
+          <BookingSessionTimeline booking={b} patientActions={patientTimelineActions} />
         </div>
       </Card>
 

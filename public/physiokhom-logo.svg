@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 220" role="img" aria-labelledby="title desc">
+  <title id="title">PhysioKhom logo</title>
+  <desc id="desc">Minimal logo with healing motion icon and PhysioKhom wordmark</desc>
+
+  <defs>
+    <style>
+      .pk-teal { fill: #0d9488; }
+      .pk-slate { fill: #0f172a; }
+      .pk-mint { fill: #99f6e4; }
+      .pk-word { font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif; font-weight: 700; letter-spacing: 0.2px; }
+    </style>
+  </defs>
+
+  <!-- Icon container -->
+  <g transform="translate(26 30)">
+    <!-- Rounded badge -->
+    <rect x="0" y="0" width="156" height="156" rx="36" class="pk-teal"/>
+
+    <!-- Motion / person mark -->
+    <circle cx="78" cy="44" r="13" class="pk-mint"/>
+    <path d="M41 113c10-23 28-35 52-35 23 0 39 10 50 29" fill="none" stroke="#ffffff" stroke-width="12" stroke-linecap="round"/>
+    <path d="M51 74c14 10 29 13 47 13 15 0 29-3 43-11" fill="none" stroke="#ffffff" stroke-width="9" stroke-linecap="round"/>
+
+    <!-- Subtle healing cross accent -->
+    <rect x="112" y="30" width="24" height="8" rx="4" fill="#ffffff"/>
+    <rect x="120" y="22" width="8" height="24" rx="4" fill="#ffffff"/>
+  </g>
+
+  <!-- Wordmark -->
+  <g transform="translate(218 126)">
+    <text x="0" y="0" font-size="64" class="pk-word pk-slate">Physio</text>
+    <text x="220" y="0" font-size="64" class="pk-word pk-teal">Khom</text>
+    <text x="2" y="38" font-size="20" fill="#475569" font-family="Inter, Segoe UI, Roboto, Arial, sans-serif" letter-spacing="2.8">
+      HOME PHYSIOTHERAPY
+    </text>
+  </g>
+</svg>

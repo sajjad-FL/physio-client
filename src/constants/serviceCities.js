@@ -1,5 +1,5 @@
 /**
- * Assam districts / towns where NearbyPhysio markets home visit physiotherapy.
+ * Assam districts / towns where PhysioKhom markets home visit physiotherapy.
  *
  * Used by:
  *  - City landing pages at /physio-in/<slug>
@@ -38,7 +38,7 @@ export const SERVICE_CITIES = [
       'home physiotherapy near me in Guwahati',
     ],
     seoIntro:
-      'From central Guwahati to newer residential pockets, patients use NearbyPhysio to book trusted home visit physiotherapists without clinic travel.',
+      'From central Guwahati to newer residential pockets, patients use PhysioKhom to book trusted home visit physiotherapists without clinic travel.',
   },
   {
     slug: 'barpeta',
@@ -65,7 +65,7 @@ export const SERVICE_CITIES = [
       'home visit physio in Barpeta Road',
     ],
     seoIntro:
-      'NearbyPhysio supports families across Barpeta district with scheduled home sessions for pain relief, post-surgery recovery, and mobility care.',
+      'PhysioKhom supports families across Barpeta district with scheduled home sessions for pain relief, post-surgery recovery, and mobility care.',
   },
   {
     slug: 'bongaigaon',
@@ -82,7 +82,7 @@ export const SERVICE_CITIES = [
       'home visit physiotherapy in New Bongaigaon',
     ],
     seoIntro:
-      'For residents in Bongaigaon town and surrounding localities, NearbyPhysio makes it easier to book qualified physiotherapists for home-based rehabilitation.',
+      'For residents in Bongaigaon town and surrounding localities, PhysioKhom makes it easier to book qualified physiotherapists for home-based rehabilitation.',
     neighborhoods: [
       'New Bongaigaon',
       'Chapaguri Road',
@@ -138,7 +138,7 @@ export const SERVICE_CITIES = [
       'home physiotherapy near me in Kokrajhar district',
     ],
     seoIntro:
-      'Across Kokrajhar and nearby neighborhoods, NearbyPhysio helps patients access verified home physiotherapy with convenient booking and clear pricing.',
+      'Across Kokrajhar and nearby neighborhoods, PhysioKhom helps patients access verified home physiotherapy with convenient booking and clear pricing.',
     neighborhoods: [
       'Kokrajhar Town',
       'Gossaigaon',

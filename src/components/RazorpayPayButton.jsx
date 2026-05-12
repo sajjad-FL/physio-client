@@ -1,25 +1,7 @@
 import { useMemo, useState } from 'react'
 import { api } from '../config/api'
-
-let razorpayScriptPromise = null
-
-function loadRazorpayCheckout() {
-  if (typeof window === 'undefined') return Promise.reject(new Error('Window not available'))
-  if (window.Razorpay) return Promise.resolve()
-
-  if (!razorpayScriptPromise) {
-    razorpayScriptPromise = new Promise((resolve, reject) => {
-      const script = document.createElement('script')
-      script.src = 'https://checkout.razorpay.com/v1/checkout.js'
-      script.async = true
-      script.onload = () => resolve()
-      script.onerror = () => reject(new Error('Failed to load Razorpay checkout script'))
-      document.body.appendChild(script)
-    })
-  }
-
-  return razorpayScriptPromise
-}
+import { loadRazorpayCheckout } from '../utils/loadRazorpayCheckout'
+import { buildRazorpayPrefill } from '../utils/razorpayPrefill'
 
 export default function RazorpayPayButton({ bookingId, onPaid }) {
   const [loading, setLoading] = useState(false)
@@ -37,11 +19,23 @@ export default function RazorpayPayButton({ bookingId, onPaid }) {
 
       await loadRazorpayCheckout()
 
+      let prefill = {}
+      try {
+        const pr = await api.get('/profile')
+        prefill = buildRazorpayPrefill({
+          name: pr.data?.name,
+          phone: pr.data?.phone,
+          email: pr.data?.email,
+        })
+      } catch {
+        prefill = {}
+      }
+
       const options = {
         key: keyId,
         amount,
         currency,
-        name: 'NearbyPhysio',
+        name: 'PhysioKhom',
         order_id: orderId,
         handler: async function (response) {
           try {
@@ -57,10 +51,7 @@ export default function RazorpayPayButton({ bookingId, onPaid }) {
             setError(e.response?.data?.message || e.message || 'Payment verification failed')
           }
         },
-        prefill: {
-          // Customer phone is optional; we already have it in the token-backed user record.
-          // Leave empty to keep this MVP minimal.
-        },
+        prefill,
         theme: {
           color: '#635bff',
         },

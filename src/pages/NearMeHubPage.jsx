@@ -35,11 +35,11 @@ function buildFaq(city, localities) {
     return [
       {
         q: 'How can I find a physiotherapist near me in Assam?',
-        a: 'Open NearbyPhysio near-me pages, choose your city, and continue to the matching city page to book a verified home visit physiotherapist.',
+        a: 'Open PhysioKhom near-me pages, choose your city, and continue to the matching city page to book a verified home visit physiotherapist.',
       },
       {
         q: 'Do you provide home physiotherapy in multiple Assam cities?',
-        a: 'Yes. NearbyPhysio currently serves key cities and nearby localities across Assam through city-specific pages and booking flows.',
+        a: 'Yes. PhysioKhom currently serves key cities and nearby localities across Assam through city-specific pages and booking flows.',
       },
       {
         q: 'What conditions can I book home physiotherapy for?',
@@ -52,7 +52,7 @@ function buildFaq(city, localities) {
   return [
     {
       q: `How do I book a physio near me in ${city.name}?`,
-      a: `Open the ${city.name} near-me guide, select your locality, and proceed to booking. NearbyPhysio matches you with a verified home visit physiotherapist.`,
+      a: `Open the ${city.name} near-me guide, select your locality, and proceed to booking. PhysioKhom matches you with a verified home visit physiotherapist.`,
     },
     {
       q: `Which localities in ${city.name} are covered?`,
@@ -68,7 +68,7 @@ function buildFaq(city, localities) {
 }
 
 function buildStructuredData({ city, canonical, faq, citySlug }) {
-  const siteBase = (siteOrigin() || 'https://nearbyphysio.com').replace(/\/$/, '')
+  const siteBase = (siteOrigin() || 'https://physiokhom.com').replace(/\/$/, '')
   const pageName = city ? `Physio Near Me in ${city.name}` : 'Physio Near Me in Assam'
   const cityItem = city ? `${siteBase}/near-me-physio/${citySlug}` : canonical
 
@@ -120,10 +120,10 @@ export default function NearMeHubPage() {
   const canonical = absoluteUrl(canonicalPath)
   const ogImage = absoluteUrl('/og-default.png')
   const title = city
-    ? `Physio Near Me in ${city.name} | NearbyPhysio`
-    : 'Physio Near Me in Assam | NearbyPhysio Locality Hub'
+    ? `Physio Near Me in ${city.name} | PhysioKhom`
+    : 'Physio Near Me in Assam | PhysioKhom Locality Hub'
   const description = city
-    ? `Find a home visit physiotherapist near you in ${city.name}, ${city.state}. NearbyPhysio covers local areas like ${localities.slice(0, 3).join(', ')} with verified clinicians.`
+    ? `Find a home visit physiotherapist near you in ${city.name}, ${city.state}. PhysioKhom covers local areas like ${localities.slice(0, 3).join(', ')} with verified clinicians.`
     : 'Explore city and locality pages to find a verified home visit physiotherapist near you in Assam.'
   const faq = buildFaq(city, localities)
   const ldJson = JSON.stringify(buildStructuredData({ city, canonical, faq, citySlug }))

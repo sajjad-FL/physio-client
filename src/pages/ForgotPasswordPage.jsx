@@ -107,8 +107,8 @@ export default function ForgotPasswordPage() {
     }
   }
 
-  const title = 'Reset password — NearbyPhysio'
-  const description = 'Reset your NearbyPhysio account password using a one-time code sent to your registered phone.'
+  const title = 'Reset password — PhysioKhom'
+  const description = 'Reset your PhysioKhom account password using a one-time code sent to your registered phone.'
   const canonical = absoluteUrl('/forgot-password')
   const ogImage = absoluteUrl('/og-default.png')
 

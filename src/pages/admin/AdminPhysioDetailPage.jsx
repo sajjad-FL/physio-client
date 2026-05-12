@@ -100,6 +100,12 @@ export default function AdminPhysioDetailPage() {
   const q = p.qualification || {}
   const du = p.documentUrls || {}
 
+  const verificationStatusLower = String(v.status || p.verificationStatus || '').toLowerCase()
+  const platformAlreadyVerified =
+    p.verificationStatus === 'approved' ||
+    p.isVerified === true ||
+    verificationStatusLower === 'verified'
+
   return (
     <div className="space-y-8">
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -115,32 +121,41 @@ export default function AdminPhysioDetailPage() {
             <span className="text-xs text-ink-muted">Status: {v.status || p.verificationStatus}</span>
           </div>
         </div>
-        <div className="flex flex-col gap-2 rounded-xl border border-border-subtle bg-white p-4 shadow-sm sm:min-w-[280px]">
-          <p className="text-xs text-ink-muted">Approve marks the physiotherapist as verified on the platform.</p>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => verify('verified')}
-            className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
-          >
-            Approve (verified)
-          </button>
-          <textarea
-            className="min-h-[72px] rounded-lg border border-border-subtle px-2 py-1.5 text-sm"
-            placeholder="Rejection reason (required to reject)"
-            value={rejectReason}
-            onChange={(e) => setRejectReason(e.target.value)}
-            disabled={busy}
-          />
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => verify('rejected')}
-            className="rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700 disabled:opacity-50"
-          >
-            Reject
-          </button>
-        </div>
+        {!platformAlreadyVerified ? (
+          <div className="flex flex-col gap-2 rounded-xl border border-border-subtle bg-white p-4 shadow-sm sm:min-w-[280px]">
+            <p className="text-xs text-ink-muted">Approve marks the physiotherapist as verified on the platform.</p>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => verify('verified')}
+              className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
+            >
+              Approve (verified)
+            </button>
+            <textarea
+              className="min-h-[72px] rounded-lg border border-border-subtle px-2 py-1.5 text-sm"
+              placeholder="Rejection reason (required to reject)"
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              disabled={busy}
+            />
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => verify('rejected')}
+              className="rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700 disabled:opacity-50"
+            >
+              Reject
+            </button>
+          </div>
+        ) : (
+          <div className="rounded-xl border border-emerald-200/80 bg-emerald-50/60 px-4 py-3 text-sm text-emerald-950 sm:min-w-[280px]">
+            <p className="font-medium">Verification complete</p>
+            <p className="mt-1 text-xs text-emerald-900/90">
+              This physiotherapist is already approved on the platform — no further approve/reject step is needed here.
+            </p>
+          </div>
+        )}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
