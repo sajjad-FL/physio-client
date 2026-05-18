@@ -58,11 +58,11 @@ export default function SiteHeader() {
           </button>
 
           <nav className="hidden items-center gap-0.5 md:flex" aria-label="Primary">
-            <a href="#services" className={linkClass}>
-              Services
-            </a>
             <a href="#how-it-works" className={linkClass}>
               How it works
+            </a>
+            <a href="#services" className={linkClass}>
+              Services
             </a>
             <a href="#faq" className={linkClass}>
               FAQ
@@ -73,14 +73,6 @@ export default function SiteHeader() {
             <Link to="/near-me-physio" className={linkClass}>
               Near me
             </Link>
-            <Link to="/book" className={linkClass}>
-              Book
-            </Link>
-            {!token && (
-              <Link to="/register" className={linkClass}>
-                Register
-              </Link>
-            )}
             {token && (
               <Link to={getDefaultDashboardPath()} className={linkClass}>
                 Dashboard
@@ -96,8 +88,14 @@ export default function SiteHeader() {
             )}
           </nav>
 
-          <div className="hidden md:block">
+          <div className="hidden items-center gap-2 md:flex">
             <ProfileDropdown />
+            <Link
+              to="/book"
+              className="interactive-press inline-flex h-9 items-center rounded-xl bg-teal-600 px-4 text-sm font-semibold text-white shadow-sm shadow-teal-600/20 transition-colors hover:bg-teal-700"
+            >
+              Book now
+            </Link>
           </div>
         </div>
       </div>
