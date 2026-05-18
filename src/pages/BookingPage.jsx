@@ -211,49 +211,34 @@ export default function BookingPage() {
                   />
                 </div>
                 <div>
-                  <label className="mb-2 block text-sm font-medium text-ink">Selection</label>
-                  <p className="flex h-11 items-center rounded-lg border border-dashed border-border-subtle bg-canvas/80 px-4 text-sm text-ink-muted">
-                    {slotsLoading
-                      ? 'Loading slots…'
-                      : timeSlot
-                        ? formatBookingTimeSlot(timeSlot)
-                        : 'Pick a slot below'}
-                  </p>
+                  <label htmlFor="time-slot" className="mb-2 block text-sm font-medium text-ink">
+                    Time slot
+                  </label>
+                  {slotsLoading ? (
+                    <div className="h-11 animate-pulse rounded-lg bg-canvas" aria-hidden />
+                  ) : slots.filter((s) => s.available).length === 0 ? (
+                    <p className="flex min-h-11 items-center rounded-lg border border-dashed border-border-subtle bg-canvas/80 px-4 text-sm text-ink-muted">
+                      No slots available for this date
+                    </p>
+                  ) : (
+                    <select
+                      id="time-slot"
+                      value={timeSlot}
+                      onChange={(e) => setTimeSlot(e.target.value)}
+                      className={inputClass}
+                      disabled={bookingLoading}
+                    >
+                      <option value="">Select a time</option>
+                      {slots
+                        .filter((s) => s.available)
+                        .map((s) => (
+                          <option key={s.timeSlot} value={s.timeSlot}>
+                            {formatBookingTimeSlot(s.timeSlot)}
+                          </option>
+                        ))}
+                    </select>
+                  )}
                 </div>
-              </div>
-
-              <div className="mt-5">
-                {slotsLoading ? (
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    {Array.from({ length: 6 }, (_, i) => (
-                      <div key={i} className="h-11 animate-pulse rounded-lg bg-canvas" />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    {slots.map((s) => {
-                      const active = s.timeSlot === timeSlot
-                      return (
-                        <button
-                          key={s.timeSlot}
-                          type="button"
-                          disabled={!s.available}
-                          onClick={() => setTimeSlot(s.timeSlot)}
-                          className={
-                            'interactive-press rounded-lg px-4 py-2.5 text-sm font-medium transition-all duration-200 ' +
-                            (s.available
-                              ? active
-                                ? 'border-2 border-brand bg-brand-soft text-ink shadow-sm'
-                                : 'border border-border-subtle bg-white text-ink shadow-sm hover:border-ink/15 hover:bg-canvas'
-                              : 'cursor-not-allowed border border-border-subtle bg-canvas text-ink-muted/50')
-                          }
-                        >
-                          {formatBookingTimeSlot(s.timeSlot)}
-                        </button>
-                      )
-                    })}
-                  </div>
-                )}
               </div>
             </div>
 

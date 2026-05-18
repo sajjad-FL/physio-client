@@ -349,6 +349,19 @@ export default function RegisterPhysioPage() {
     clearErrors()
     setSaving(true)
     try {
+      // Guard: required files must be selected before we build FormData
+      const missingFiles = {}
+      if (!fCertificate)  missingFiles.certificate             = 'Qualification certificate is required'
+      if (!fIdProof)      missingFiles.idProof                 = 'ID proof is required'
+      if (!fRegCert)      missingFiles.registrationCertificate = 'Registration certificate is required'
+      if (!fSelfie)       missingFiles.selfieWithId            = 'Selfie with ID is required'
+      if (Object.keys(missingFiles).length) {
+        setFieldErrors(missingFiles)
+        setFormError('Please upload all required documents (step 4)')
+        setSaving(false)
+        return
+      }
+
       const fd = new FormData()
       fd.append('phone', normalizeIndianPhone(phone))
       fd.append('password', password)
@@ -373,13 +386,13 @@ export default function RegisterPhysioPage() {
       fd.append('feeMin', String(feeMin))
 
       if (avatarFile) fd.append('avatar', avatarFile)
-      fd.append('certificate', fCertificate)
-      fd.append('idProof', fIdProof)
+      if (fCertificate) fd.append('certificate', fCertificate)
+      if (fIdProof)     fd.append('idProof', fIdProof)
       fd.append('idProofType', String(idProofType).trim().toLowerCase())
-      fd.append('registrationCertificate', fRegCert)
-      fd.append('selfieWithId', fSelfie)
+      if (fRegCert) fd.append('registrationCertificate', fRegCert)
+      if (fSelfie)  fd.append('selfieWithId', fSelfie)
       if (fInternship) fd.append('internshipCertificate', fInternship)
-      if (fCouncil) fd.append('councilRegistrationCertificate', fCouncil)
+      if (fCouncil)    fd.append('councilRegistrationCertificate', fCouncil)
       if (ndaPolicy.requireQualificationDeclaration !== false && !qualificationAgreed) {
         setFormError('Confirm the qualification declaration')
         toast.error('Confirm the qualification declaration')
@@ -387,9 +400,8 @@ export default function RegisterPhysioPage() {
       }
       fd.append('qualificationDeclaration', qualificationAgreed ? 'true' : 'false')
 
-      await api.post('/auth/register-physio', fd, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      })
+      // Let the browser set Content-Type: multipart/form-data with the correct boundary automatically
+      await api.post('/auth/register-physio', fd)
       toast.success('Application submitted. Sign in with email & password after an admin approves you.')
       navigate('/login', { replace: true })
     } catch (e) {
