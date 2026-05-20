@@ -27,6 +27,7 @@ import DashboardBookings from './pages/dashboard/DashboardBookings'
 import DashboardWallet from './pages/dashboard/DashboardWallet'
 import UserBookingDetailPage from './pages/dashboard/UserBookingDetailPage'
 import DashboardDisputes from './pages/dashboard/DashboardDisputes'
+import DashboardReferrals from './pages/dashboard/DashboardReferrals'
 import ProfilePage from './pages/dashboard/ProfilePage'
 import AdminLayout from './pages/admin/AdminLayout'
 import BookingsAdmin from './pages/admin/BookingsAdmin'
@@ -92,6 +93,7 @@ export default function App() {
           <Route index element={<DashboardHome />} />
           <Route path="bookings" element={<DashboardBookings />} />
           <Route path="wallet" element={<DashboardWallet />} />
+          <Route path="referrals" element={<DashboardReferrals />} />
           <Route path="bookings/:id" element={<UserBookingDetailPage />} />
           <Route path="profile" element={<ProfilePage />} />
           <Route path="disputes" element={<DashboardDisputes />} />

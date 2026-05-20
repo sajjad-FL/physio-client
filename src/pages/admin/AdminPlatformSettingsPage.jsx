@@ -8,8 +8,13 @@ import { DEFAULT_QUALIFICATION_DECLARATION } from '../../constants/qualification
 export default function AdminPlatformSettingsPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [savingReferral, setSavingReferral] = useState(false)
   const [declarationText, setDeclarationText] = useState('')
   const [updatedAt, setUpdatedAt] = useState(null)
+  const [referralRewardAmount, setReferralRewardAmount] = useState(300)
+  const [referralSignupBonusAmount, setReferralSignupBonusAmount] = useState(100)
+  const [referralUpdatedAt, setReferralUpdatedAt] = useState(null)
+  const [signupBonusUpdatedAt, setSignupBonusUpdatedAt] = useState(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -17,6 +22,12 @@ export default function AdminPlatformSettingsPage() {
       const { data } = await api.get('/admin/platform/settings')
       setDeclarationText(data.qualificationDeclarationResolved || DEFAULT_QUALIFICATION_DECLARATION)
       setUpdatedAt(data.qualificationDeclarationUpdatedAt || null)
+      const amt = Number(data.referralRewardAmount)
+      setReferralRewardAmount(Number.isFinite(amt) && amt > 0 ? Math.round(amt) : 300)
+      setReferralUpdatedAt(data.referralRewardAmountUpdatedAt || null)
+      const bonus = Number(data.referralSignupBonusAmount)
+      setReferralSignupBonusAmount(Number.isFinite(bonus) && bonus >= 0 ? Math.round(bonus) : 100)
+      setSignupBonusUpdatedAt(data.referralSignupBonusAmountUpdatedAt || null)
     } catch (e) {
       toast.error(e.response?.data?.message || 'Failed to load platform settings')
     } finally {
@@ -48,6 +59,32 @@ export default function AdminPlatformSettingsPage() {
 
   function onRestoreDefault() {
     setDeclarationText(DEFAULT_QUALIFICATION_DECLARATION)
+  }
+
+  async function onSaveReferral(e) {
+    e.preventDefault()
+    setSavingReferral(true)
+    try {
+      const amount = Math.round(Number(referralRewardAmount))
+      const signupBonus = Math.round(Number(referralSignupBonusAmount))
+      const { data } = await api.patch('/admin/platform/settings', {
+        referralRewardAmount: amount,
+        referralSignupBonusAmount: signupBonus,
+      })
+      toast.success(data.message || 'Referral settings saved')
+      const resolved = Number(data.referralRewardAmount)
+      setReferralRewardAmount(Number.isFinite(resolved) && resolved > 0 ? Math.round(resolved) : amount)
+      setReferralUpdatedAt(data.referralRewardAmountUpdatedAt || null)
+      const resolvedBonus = Number(data.referralSignupBonusAmount)
+      setReferralSignupBonusAmount(
+        Number.isFinite(resolvedBonus) && resolvedBonus >= 0 ? Math.round(resolvedBonus) : signupBonus,
+      )
+      setSignupBonusUpdatedAt(data.referralSignupBonusAmountUpdatedAt || null)
+    } catch (e) {
+      toast.error(e.response?.data?.message || 'Save failed')
+    } finally {
+      setSavingReferral(false)
+    }
   }
 
   if (loading) {
@@ -95,6 +132,62 @@ export default function AdminPlatformSettingsPage() {
               Restore default wording
             </Button>
           </div>
+        </form>
+      </Card>
+
+      <Card>
+        <h2 className="text-lg font-semibold text-slate-900">Referral program</h2>
+        <p className="mt-2 text-sm text-slate-600">
+          Configure what referrers and their friends earn. Amounts are shown on Refer &amp; Earn and at signup.
+          Changes apply to future signups and completions only; amounts already credited stay unchanged.
+        </p>
+        {referralUpdatedAt || signupBonusUpdatedAt ? (
+          <p className="mt-2 text-xs text-slate-500">
+            {referralUpdatedAt
+              ? `Referrer reward saved: ${new Date(referralUpdatedAt).toLocaleString()}`
+              : null}
+            {referralUpdatedAt && signupBonusUpdatedAt ? ' · ' : null}
+            {signupBonusUpdatedAt
+              ? `Friend bonus saved: ${new Date(signupBonusUpdatedAt).toLocaleString()}`
+              : null}
+          </p>
+        ) : null}
+
+        <form onSubmit={onSaveReferral} className="mt-4 space-y-4">
+          <div>
+            <label className="mb-1 block text-xs font-medium text-slate-600" htmlFor="admin-referral-amount">
+              You earn when friend completes first session (₹)
+            </label>
+            <input
+              id="admin-referral-amount"
+              type="number"
+              min={1}
+              max={10000}
+              step={1}
+              value={referralRewardAmount}
+              onChange={(e) => setReferralRewardAmount(e.target.value)}
+              className="h-11 w-full max-w-xs rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-slate-600" htmlFor="admin-signup-bonus">
+              Friend gets on signup with your code (₹)
+            </label>
+            <input
+              id="admin-signup-bonus"
+              type="number"
+              min={0}
+              max={10000}
+              step={1}
+              value={referralSignupBonusAmount}
+              onChange={(e) => setReferralSignupBonusAmount(e.target.value)}
+              className="h-11 w-full max-w-xs rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+            />
+            <p className="mt-1 text-xs text-slate-500">Set to 0 to disable the friend signup wallet credit.</p>
+          </div>
+          <Button type="submit" loading={savingReferral} disabled={savingReferral}>
+            Save referral settings
+          </Button>
         </form>
       </Card>
     </div>

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Helmet } from 'react-helmet-async'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { api } from '../config/api'
 import AuthSpinner from '../components/AuthSpinner'
@@ -18,6 +18,7 @@ const STEP_ACCOUNT = 3
 
 export default function RegisterPage() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const [sessionRedirecting, setSessionRedirecting] = useState(() => Boolean(getToken()))
 
   const [step, setStep] = useState(STEP_PHONE)
@@ -29,6 +30,28 @@ export default function RegisterPage() {
   const [otpSendBusy, setOtpSendBusy] = useState(false)
   const [loading, setLoading] = useState(false)
   const [fieldErrors, setFieldErrors] = useState({})
+  const [referralCode, setReferralCode] = useState(() =>
+    String(searchParams.get('ref') || '')
+      .trim()
+      .toUpperCase()
+      .replace(/[^A-Z0-9]/g, ''),
+  )
+  const [friendSignupBonus, setFriendSignupBonus] = useState(100)
+
+  useEffect(() => {
+    let cancelled = false
+    api
+      .get('/referral/public-settings')
+      .then((res) => {
+        if (cancelled) return
+        const b = Number(res.data?.referralSignupBonusAmount)
+        setFriendSignupBonus(Number.isFinite(b) && b >= 0 ? Math.round(b) : 100)
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   useEffect(() => {
     const token = getToken()
@@ -123,11 +146,17 @@ export default function RegisterPage() {
         phone: pv.normalized,
         password,
         otp: digits,
+        ...(referralCode ? { referralCode } : {}),
       }
       const res = await api.post('/auth/register', body)
       const role = res.data?.role ?? 'user'
       const profileComplete = res.data.isProfileComplete === true
-      toast.success('Account created')
+      const credited = Number(res.data?.referralSignupBonusCredited)
+      if (credited > 0) {
+        toast.success(`Account created — ₹${credited} welcome credit added to your wallet`)
+      } else {
+        toast.success('Account created')
+      }
       setSession(res.data.token, role, profileComplete)
       navigate(getDefaultDashboardPath())
     } catch (err) {
@@ -311,6 +340,33 @@ export default function RegisterPage() {
                 />
                 <p className="mt-1 text-xs text-slate-500">At least 8 characters — this is what you’ll use to sign in.</p>
                 {fieldErrors.password ? <p className="mt-1 text-xs text-red-600">{fieldErrors.password}</p> : null}
+              </div>
+
+              <div>
+                <label htmlFor="reg-referral" className="mb-2 block text-sm font-medium text-slate-700">
+                  Have a referral code? <span className="font-normal text-slate-400">(optional)</span>
+                </label>
+                <input
+                  id="reg-referral"
+                  value={referralCode}
+                  onChange={(e) =>
+                    setReferralCode(
+                      e.target.value
+                        .trim()
+                        .toUpperCase()
+                        .replace(/[^A-Z0-9]/g, ''),
+                    )
+                  }
+                  className={inputCls}
+                  placeholder="e.g. ABC123"
+                  disabled={loading}
+                  maxLength={12}
+                />
+                {referralCode && friendSignupBonus > 0 ? (
+                  <p className="mt-2 rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 text-xs text-violet-900">
+                    With this code you&apos;ll receive ₹{friendSignupBonus} wallet credit after signup.
+                  </p>
+                ) : null}
               </div>
 
               <Button type="submit" variant="primary" className="mt-2 h-11 w-full text-[15px]" loading={loading}>

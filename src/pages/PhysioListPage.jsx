@@ -16,6 +16,7 @@ import { buildRazorpayPrefill } from '../utils/razorpayPrefill'
 import { mapboxReverseGeocode } from '../utils/mapboxGeocode'
 import { getCurrentCoords } from '../utils/geolocation'
 import SeoNoIndex from '../components/seo/SeoNoIndex'
+import { useReferralMyCode } from '../hooks/useReferral'
 
 function todayISO() {
   const d = new Date()
@@ -91,6 +92,8 @@ export default function PhysioListPage() {
   const [physioLoading, setPhysioLoading] = useState(false)
 
   const [loadingBooking, setLoadingBooking] = useState(false)
+  const [useWalletCredit, setUseWalletCredit] = useState(false)
+  const { walletBalance } = useReferralMyCode()
 
   useEffect(() => {
     let c = false
@@ -277,6 +280,7 @@ export default function PhysioListPage() {
       const startRes = await api.post('/bookings/online-checkout/start', {
         ...body,
         physioId: selectedPhysioId,
+        ...(useWalletCredit && walletBalance > 0 ? { useWalletCredit: true } : {}),
       })
       const { checkoutSessionId, orderId, amount, currency, keyId, prefill: prefillFromServer } =
         startRes.data || {}
@@ -596,6 +600,22 @@ export default function PhysioListPage() {
         </StepShell>
 
       </div>
+
+      {walletBalance > 0 && serviceType === 'online' ? (
+        <div className="mx-auto mb-24 max-w-4xl rounded-xl border border-teal-100 bg-teal-50/50 px-4 py-3">
+          <label className="flex cursor-pointer items-start gap-3">
+            <input
+              type="checkbox"
+              className="mt-1 h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+              checked={useWalletCredit}
+              onChange={(e) => setUseWalletCredit(e.target.checked)}
+            />
+            <span className="text-sm text-slate-700">
+              Use ₹{walletBalance.toFixed(0)} wallet credit at checkout
+            </span>
+          </label>
+        </div>
+      ) : null}
 
       <BookingSummaryBar
         selectedPhysio={serviceType === 'online' ? selectedPhysio : null}

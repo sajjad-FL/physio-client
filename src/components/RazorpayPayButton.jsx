@@ -3,7 +3,7 @@ import { api } from '../config/api'
 import { loadRazorpayCheckout } from '../utils/loadRazorpayCheckout'
 import { buildRazorpayPrefill } from '../utils/razorpayPrefill'
 
-export default function RazorpayPayButton({ bookingId, onPaid }) {
+export default function RazorpayPayButton({ bookingId, onPaid, useWalletCredit = false, walletBalance = 0 }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -14,7 +14,10 @@ export default function RazorpayPayButton({ bookingId, onPaid }) {
     setLoading(true)
 
     try {
-      const orderRes = await api.post('/payment/create-order', { bookingId })
+      const orderRes = await api.post('/payment/create-order', {
+        bookingId,
+        ...(useWalletCredit && walletBalance > 0 ? { useWalletCredit: true } : {}),
+      })
       const { orderId, amount, currency, keyId } = orderRes.data || {}
 
       await loadRazorpayCheckout()

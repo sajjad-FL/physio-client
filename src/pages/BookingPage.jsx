@@ -8,6 +8,7 @@ import ConsentModal from '../components/ConsentModal'
 import { formatBookingTimeSlot } from '../utils/date'
 import { getCurrentCoords } from '../utils/geolocation'
 import SeoNoIndex from '../components/seo/SeoNoIndex'
+import { useReferralMyCode } from '../hooks/useReferral'
 
 function todayISO() {
   const d = new Date()
@@ -36,6 +37,8 @@ export default function BookingPage() {
   const [booking, setBooking] = useState(null)
   const [error, setError] = useState('')
   const [toast, setToast] = useState('')
+  const [useWalletCredit, setUseWalletCredit] = useState(false)
+  const { walletBalance, refresh: refreshWallet } = useReferralMyCode()
 
   const [consentOpen, setConsentOpen] = useState(false)
   const [consentChecked, setConsentChecked] = useState(false)
@@ -381,13 +384,29 @@ export default function BookingPage() {
             )}
 
             {booking && booking.paymentStatus === 'pending' && (
-              <RazorpayPayButton
-                bookingId={booking._id}
-                onPaid={async () => {
-                  await refreshBookingById(booking._id)
-                  setToast('Payment secured. Our team will assign a physiotherapist shortly.')
-                }}
-              />
+              <>
+                {walletBalance > 0 ? (
+                  <label className="mb-4 flex cursor-pointer items-center gap-2 text-sm text-slate-700">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 rounded border-slate-300 text-teal-600"
+                      checked={useWalletCredit}
+                      onChange={(e) => setUseWalletCredit(e.target.checked)}
+                    />
+                    Use ₹{walletBalance.toFixed(0)} wallet credit
+                  </label>
+                ) : null}
+                <RazorpayPayButton
+                  bookingId={booking._id}
+                  useWalletCredit={useWalletCredit}
+                  walletBalance={walletBalance}
+                  onPaid={async () => {
+                    await refreshBookingById(booking._id)
+                    refreshWallet()
+                    setToast('Payment secured. Our team will assign a physiotherapist shortly.')
+                  }}
+                />
+              </>
             )}
 
             {booking && booking.paymentStatus === 'held' && (

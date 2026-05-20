@@ -32,7 +32,15 @@ function roundMoney2(n) {
  * `summary.amountPerSession` (one session line, including per-visit distance on home plans);
  * upper bound is `summary.outstanding`.
  */
-export default function PayInstallmentModal({ open, booking, summary, onClose, onPaid }) {
+export default function PayInstallmentModal({
+  open,
+  booking,
+  summary,
+  onClose,
+  onPaid,
+  useWalletCredit = false,
+  walletBalance = 0,
+}) {
   const outstanding = roundMoney2(Number(summary?.outstanding || 0))
   const perSession = roundMoney2(Number(summary?.amountPerSession || 0))
 
@@ -45,14 +53,16 @@ export default function PayInstallmentModal({ open, booking, summary, onClose, o
   const [amount, setAmount] = useState(defaultAmount)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const [applyWallet, setApplyWallet] = useState(useWalletCredit)
 
   useEffect(() => {
     if (open) {
       setAmount(defaultAmount)
       setError('')
       setSubmitting(false)
+      setApplyWallet(useWalletCredit)
     }
-  }, [open, defaultAmount])
+  }, [open, defaultAmount, useWalletCredit])
 
   async function handlePay() {
     setError('')
@@ -70,6 +80,7 @@ export default function PayInstallmentModal({ open, booking, summary, onClose, o
       const created = await api.post('/payment/installments/create', {
         bookingId: booking?._id,
         amount: amt,
+        ...(applyWallet && walletBalance > 0 ? { useWalletCredit: true } : {}),
       })
       const { paymentId, orderId, amount: orderAmount, currency, keyId } = created.data || {}
 
@@ -137,6 +148,19 @@ export default function PayInstallmentModal({ open, booking, summary, onClose, o
       description={`Outstanding balance: ₹${outstanding.toFixed(2)}. Pay any amount up to this limit.`}
     >
       <div className="space-y-4">
+        {walletBalance > 0 ? (
+          <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-700">
+            <input
+              type="checkbox"
+              className="h-4 w-4 rounded border-slate-300 text-teal-600"
+              checked={applyWallet}
+              onChange={(e) => setApplyWallet(e.target.checked)}
+              disabled={submitting}
+            />
+            <span>Apply up to ₹{Math.min(walletBalance, outstanding).toFixed(0)} wallet credit</span>
+          </label>
+        ) : null}
+
         <label className="block">
           <span className="text-xs font-semibold uppercase tracking-wide text-ink-muted">Amount (₹)</span>
           <input

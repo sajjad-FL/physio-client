@@ -24,6 +24,7 @@ import ReviewSubmitModal from '../../components/reviews/ReviewSubmitModal'
 import { StarRatingDisplay } from '../../components/reviews/StarRating'
 import { bookingStatusBadge, paymentBadge } from './dashboardUtils'
 import { assetUrl } from '../../utils/assetUrl'
+import { useReferralMyCode } from '../../hooks/useReferral'
 
 const actionBtn =
   'cursor-pointer rounded-xl px-4 py-2.5 text-sm font-semibold shadow-sm transition-all duration-200 hover:shadow-md active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50'
@@ -87,6 +88,8 @@ export default function UserBookingDetailPage() {
   const [reviewOpen, setReviewOpen] = useState(false)
   const [sessionReviewTarget, setSessionReviewTarget] = useState(null)
   const [payInstallmentOpen, setPayInstallmentOpen] = useState(false)
+  const [useWalletCredit, setUseWalletCredit] = useState(false)
+  const { walletBalance, refresh: refreshWallet } = useReferralMyCode()
 
   const load = useCallback(async () => {
     if (!id) return
@@ -463,8 +466,27 @@ export default function UserBookingDetailPage() {
         <Card hover={false} className="border-border-subtle p-5 sm:p-6">
           <h2 className="text-sm font-semibold text-ink">Pay online</h2>
           <p className="mt-1 text-xs text-ink-muted">Complete payment to confirm your booking.</p>
+          {walletBalance > 0 ? (
+            <label className="mt-3 flex cursor-pointer items-center gap-2 text-sm text-slate-700">
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded border-slate-300 text-teal-600"
+                checked={useWalletCredit}
+                onChange={(e) => setUseWalletCredit(e.target.checked)}
+              />
+              Use ₹{walletBalance.toFixed(0)} wallet credit
+            </label>
+          ) : null}
           <div className="mt-4">
-            <RazorpayPayButton bookingId={b._id} onPaid={load} />
+            <RazorpayPayButton
+              bookingId={b._id}
+              onPaid={() => {
+                load()
+                refreshWallet()
+              }}
+              useWalletCredit={useWalletCredit}
+              walletBalance={walletBalance}
+            />
           </div>
         </Card>
       )}
@@ -518,7 +540,12 @@ export default function UserBookingDetailPage() {
         booking={b}
         summary={paymentSummary}
         onClose={() => setPayInstallmentOpen(false)}
-        onPaid={load}
+        onPaid={() => {
+          load()
+          refreshWallet()
+        }}
+        useWalletCredit={useWalletCredit}
+        walletBalance={walletBalance}
       />
     </div>
   )
