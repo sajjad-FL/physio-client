@@ -38,7 +38,7 @@ export default function RazorpayPayButton({ bookingId, onPaid, useWalletCredit =
         key: keyId,
         amount,
         currency,
-        name: 'PhysioKhom',
+        name: 'PhysiOkhom',
         order_id: orderId,
         handler: async function (response) {
           try {

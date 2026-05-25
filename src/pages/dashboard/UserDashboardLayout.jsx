@@ -94,7 +94,7 @@ export default function UserDashboardLayout() {
     <>
       <SeoNoIndex />
       <AppShell
-      brand="PhysioKhom"
+      brand="PhysiOkhom"
       badge="Patient"
       topBarTitle={topBarTitle}
       topBarSubtitle=""

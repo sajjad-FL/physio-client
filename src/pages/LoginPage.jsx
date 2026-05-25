@@ -78,8 +78,8 @@ export default function LoginPage() {
     return <AuthSpinner />
   }
 
-  const title = 'Sign in — PhysioKhom'
-  const description = 'Sign in to your PhysioKhom account to book home visit physiotherapy and manage appointments.'
+  const title = 'Sign in — PhysiOkhom'
+  const description = 'Sign in to your PhysiOkhom account to book home visit physiotherapy and manage appointments.'
   const canonical = absoluteUrl('/login')
   const ogImage = absoluteUrl('/og-default.png')
 
@@ -109,7 +109,7 @@ export default function LoginPage() {
             to="/"
             className="text-[15px] font-semibold text-slate-900 transition-opacity duration-200 hover:opacity-80"
           >
-            ← PhysioKhom
+            ← PhysiOkhom
           </Link>
         </div>
       </header>

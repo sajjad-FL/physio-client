@@ -107,8 +107,8 @@ export default function ForgotPasswordPage() {
     }
   }
 
-  const title = 'Reset password — PhysioKhom'
-  const description = 'Reset your PhysioKhom account password using a one-time code sent to your registered phone.'
+  const title = 'Reset password — PhysiOkhom'
+  const description = 'Reset your PhysiOkhom account password using a one-time code sent to your registered phone.'
   const canonical = absoluteUrl('/forgot-password')
   const ogImage = absoluteUrl('/og-default.png')
 

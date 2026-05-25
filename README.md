@@ -1,4 +1,4 @@
-# PhysioKhom — Client
+# PhysiOkhom — Client
 
 Vite + React 19 SPA for physiokhom.com.
 
@@ -39,7 +39,7 @@ No amount of code will make you rank for competitive queries like "physio near m
 
 - [ ] **Google Search Console** — verify `https://physiokhom.com`, submit `https://physiokhom.com/sitemap.xml`, request indexing of `/` and each `/physio-in/*` city page, monitor the Coverage and Performance reports.
 - [ ] **Bing Webmaster Tools** — same as GSC. Bing reaches ~10% of Indian desktop searches plus ChatGPT/Copilot search.
-- [ ] **Google Business Profile** — create/verify a listing for PhysioKhom. This is what actually surfaces in the "map pack" for local "near me" queries. Add photos, services, hours, and encourage early reviews.
+- [ ] **Google Business Profile** — create/verify a listing for PhysiOkhom. This is what actually surfaces in the "map pack" for local "near me" queries. Add photos, services, hours, and encourage early reviews.
 - [ ] **Directory listings / backlinks** — submit to Justdial, Sulekha, Practo (partner program), Lybrate, and Indian healthcare/wellness directories. Each inbound link helps.
 - [ ] **City-specific Google Business Profiles** — when you open operations in new cities, add a GBP per city for local map-pack coverage.
 - [ ] **Content cadence** — publish 2–3 blog posts per month (e.g. "Exercises for sciatica at home", "Physiotherapy after knee replacement", "Home physio vs clinic physio in India"). Add a `/blog` route when ready.

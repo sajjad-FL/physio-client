@@ -97,7 +97,7 @@ export default function AdminPlatformSettingsPage() {
         <h1 className="text-xl font-semibold text-slate-900">Platform documents</h1>
         <p className="mt-1 text-sm text-slate-600">
           Text shown to physiotherapists during registration and onboarding. They must check &quot;I agree&quot; before
-          submitting. Leaving the saved text empty (restore default) uses the built-in PhysioKhom template.
+          submitting. Leaving the saved text empty (restore default) uses the built-in PhysiOkhom template.
         </p>
       </div>
 

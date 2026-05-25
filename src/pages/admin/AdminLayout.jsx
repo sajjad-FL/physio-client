@@ -120,7 +120,7 @@ export default function AdminLayout() {
     <>
       <SeoNoIndex />
       <AppShell
-      brand="PhysioKhom"
+      brand="PhysiOkhom"
       badge="Admin"
       topBarTitle="Admin console"
       topBarSubtitle="Operations and compliance"

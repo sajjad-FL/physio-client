@@ -1046,7 +1046,7 @@ export default function PhysioOnboardingPage() {
             <h3 className="text-sm font-semibold text-ink">Qualification declaration</h3>
             <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-ink-muted">
               {ndaPolicy.declarationText ||
-                'I confirm that all qualifications and documents I submit to PhysioKhom are accurate. Misrepresentation may result in removal from the platform and legal consequences.'}
+                'I confirm that all qualifications and documents I submit to PhysiOkhom are accurate. Misrepresentation may result in removal from the platform and legal consequences.'}
             </p>
             <label className="mt-4 flex cursor-pointer items-start gap-3 text-sm text-ink">
               <input

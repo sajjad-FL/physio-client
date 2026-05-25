@@ -170,7 +170,7 @@ export default function RegisterPage() {
     return <AuthSpinner />
   }
 
-  const title = 'Create account — PhysioKhom'
+  const title = 'Create account — PhysiOkhom'
   const description =
     'Sign up with your phone and a password. Add date of birth, gender, and address later in your profile when you are ready to book care.'
   const canonical = absoluteUrl('/register')
@@ -211,7 +211,7 @@ export default function RegisterPage() {
       <header className="relative border-b border-slate-200 bg-white/90 shadow-sm backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
           <Link to="/" className="text-[15px] font-semibold text-slate-900 hover:opacity-80">
-            ← PhysioKhom
+            ← PhysiOkhom
           </Link>
         </div>
       </header>

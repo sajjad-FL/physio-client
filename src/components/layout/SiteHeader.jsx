@@ -23,19 +23,12 @@ export default function SiteHeader() {
           className="flex min-w-0 items-center gap-2.5 text-[15px] font-semibold tracking-tight text-slate-900 transition-opacity duration-200 hover:opacity-85"
           onClick={() => setMobileOpen(false)}
         >
-          <span
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-teal-600 text-white shadow-md shadow-teal-600/25 transition-transform duration-200 motion-safe:hover:scale-105"
-            aria-hidden
-          >
-            <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-              />
-            </svg>
-          </span>
-          <span className="truncate">PhysioKhom</span>
+          <img
+            src="/logo.png"
+            alt="PhysiOkhom Logo"
+            className="h-12 w-12 shrink-0 object-contain transition-transform duration-200 motion-safe:hover:scale-105"
+          />
+          <span className="truncate">PhysiOkhom</span>
         </Link>
 
         <div className="flex items-center gap-2 sm:gap-3">
