@@ -158,7 +158,7 @@ export default function DashboardBookings() {
           ) : (
             <ul className="space-y-2">
               {filtered.map((b) => {
-                const st = bookingStatusBadge(b.status, b.sessionStatus, b.paymentStatus)
+                const st = bookingStatusBadge(b.status, b.sessionStatus, b.paymentStatus, b.planStatus)
                 const pay = paymentBadge(b.paymentStatus)
                 return (
                   <li key={b._id}>

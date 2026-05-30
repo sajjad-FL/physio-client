@@ -175,9 +175,9 @@ export default function DashboardHome() {
 
           {/* Wallet summary */}
           <section className="rounded-2xl bg-gradient-to-br from-slate-50/95 via-white to-emerald-50/25 p-4 sm:p-5">
-            <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Care spend</h2>
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Total paid</h2>
             <p className="mt-2 text-3xl font-bold tabular-nums tracking-tight text-slate-900 sm:text-4xl">{formatInr(revenueTotal)}</p>
-            <p className="mt-2 text-sm text-slate-500">Held and released payments across your bookings.</p>
+            <p className="mt-2 text-sm text-slate-500">all time</p>
             <div className="mt-4 flex justify-start">
               <Link to="/dashboard/wallet" className={btnSoftEmerald}>
                 Open wallet
@@ -202,7 +202,7 @@ export default function DashboardHome() {
             ) : (
               <ul className="space-y-2">
                 {recentActivity.map((b) => {
-                  const st = bookingStatusBadge(b.status, b.sessionStatus, b.paymentStatus)
+                  const st = bookingStatusBadge(b.status, b.sessionStatus, b.paymentStatus, b.planStatus)
                   const pay = paymentBadge(b.paymentStatus)
                   return (
                     <li key={b._id}>
