@@ -51,6 +51,9 @@ import techniqueCupping   from '../assets/technique_cupping.png'
 import techniqueNeedling  from '../assets/technique_needling.png'
 import techniquePediatric from '../assets/technique_pediatric.png'
 import techniqueElderly   from '../assets/technique_elderly.png'
+import techniqueKinesio   from '../assets/technique_kinesio.png'
+
+import illustrationOther  from '../assets/illustration_other.png'
 
 import illustrationBackPain from '../assets/illustration_back_pain.png'
 import illustrationKneePain from '../assets/illustration_knee_pain.png'
@@ -158,18 +161,17 @@ const STAT_PILLS = [
 
 const SPECIALTIES = [
   { id: 'Back Pain', title: 'Orthopedic', image: specialtyOrthopedic, bg: 'bg-[#e6f4f3]', color: 'text-[#0d6b6b]' },
-  { id: 'Stroke/Paralysis', title: 'Neuro Rehab', image: specialtyNeuro, bg: 'bg-[#eff6ff]', color: 'text-[#2563eb]' },
-  { id: 'Knee Pain', title: 'Knee & Joint', image: specialtyKnee, bg: 'bg-[#f5f3ff]', color: 'text-[#5b21b6]' },
+  { id: 'Stroke/Paralysis', title: 'Stroke/Paralysis', image: specialtyNeuro, bg: 'bg-[#eff6ff]', color: 'text-[#2563eb]' },
+  { id: 'Pediatric Rehab', title: 'Pediatric Rehab', image: techniquePediatric, bg: 'bg-[#eff6ff]', color: 'text-[#1d4ed8]' },
   { id: 'Post Surgery Rehab', title: 'Post-Op', image: specialtyPostOp, bg: 'bg-[#ecfdf5]', color: 'text-[#047857]' },
-  { id: 'Neck Pain', title: 'Neck & Spine', image: specialtyNeck, bg: 'bg-[#fffbeb]', color: 'text-[#f59e0b]' },
+  { id: 'Elderly Care', title: 'Elderly Care', image: techniqueElderly, bg: 'bg-[#f0fdf4]', color: 'text-[#15803d]' },
   { id: 'Many More', title: 'Other Care', image: specialtyOther, bg: 'bg-[#fff1f2]', color: 'text-[#dc2626]' },
 ]
 
 const TECHNIQUES = [
   { title: 'Cupping',        image: techniqueCupping,   bg: 'bg-[#fff7ed]', color: 'text-[#c2410c]' },
   { title: 'Dry Needling',   image: techniqueNeedling,  bg: 'bg-[#f5f3ff]', color: 'text-[#6d28d9]' },
-  { title: 'Pediatric Rehab',image: techniquePediatric, bg: 'bg-[#eff6ff]', color: 'text-[#1d4ed8]' },
-  { title: 'Elderly Care',   image: techniqueElderly,   bg: 'bg-[#f0fdf4]', color: 'text-[#15803d]' },
+  { title: 'Kinesio Taping', image: techniqueKinesio,   bg: 'bg-[#e6f4f3]', color: 'text-[#0d6b6b]' },
 ]
 
 const PLAN_TIER_CARDS = [
@@ -600,16 +602,23 @@ export default function HomePage() {
                   <span>{demandInsightText}</span>
                 </div>
 
-                {/* Main Heading */}
                 <h1 className="text-balance text-4xl font-extrabold tracking-tight sm:text-5xl md:text-6xl sm:leading-[1.1] text-transparent bg-clip-text bg-gradient-to-r from-white via-slate-100 to-teal-100">
-                  {userName ? `Hello, ${userName} 👋` : 'Expert home physio,'} <br />
-                  right at your door
+                  {userName ? (
+                    <>
+                      Hello, {userName} 👋 <br />
+                      Connect with expert physiotherapists near you
+                    </>
+                  ) : (
+                    <>
+                      Connect with expert <br />
+                      physiotherapists near you
+                    </>
+                  )}
                 </h1>
 
                 {/* Subtitle */}
                 <p className="max-w-2xl text-base leading-relaxed text-slate-300 sm:text-lg">
-                  PhysiOkhom connects patients with verified home-visit physiotherapists for back pain, knee pain,
-                  post-surgery rehab, stroke recovery, and more. 
+                  PhysiOkhom connects patients with qualified, clinical physiotherapy specialists for post-surgery rehab, stroke recovery, and more. 
                   {areaLine ? (
                     <>
                       {' '}Currently serving <span className="font-semibold text-teal-300 underline decoration-teal-500/30 decoration-2 underline-offset-4">{areaLine}</span>.
@@ -951,7 +960,7 @@ export default function HomePage() {
       labelIcon={Stethoscope}
       label="Advanced Therapeutic Techniques"
       title="Specialized therapeutic methods"
-      subtitle="Evidence-based advanced treatment techniques delivered to your home by our certified specialists."
+      subtitle="Evidence-based advanced treatment techniques delivered to your home by our specialists."
       center
     />
 
@@ -983,7 +992,7 @@ export default function HomePage() {
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
             <SectionHeading
               labelIcon={Stethoscope}
-              label="Clinical Specialties"
+              label="Clinical Specialities"
               title="Tailored clinical care plans"
               subtitle="Find highly targeted care programs built around specific physical symptoms."
               center
@@ -1020,7 +1029,7 @@ export default function HomePage() {
               <SectionHeading
                 labelIcon={HeartPulse}
                 label="Interactive diagnosis"
-                title="Where does it hurt?"
+                title="Where do you need support?"
                 subtitle="Select your symptoms directly on our anatomical blueprint or choose from common categories."
               />
               
@@ -1117,8 +1126,25 @@ export default function HomePage() {
                   </div>
                   <div className="px-5 py-4 flex items-center justify-between">
                     <div>
-                      <h4 className="text-sm font-bold text-slate-800">Neuro Rehab</h4>
+                      <h4 className="text-sm font-bold text-slate-800">Stroke/Paralysis</h4>
                       <p className="text-[11px] text-slate-500 font-medium mt-0.5">Stroke recovery, numbness, paralysis</p>
+                    </div>
+                    <ChevronRight size={15} className="text-slate-400 shrink-0" />
+                  </div>
+                </button>
+
+                {/* Others */}
+                <button
+                  onClick={() => navigate('/book')}
+                  className="text-left rounded-3xl border border-slate-200 bg-white hover:border-slate-300 hover:shadow-lg transition-all duration-300 overflow-hidden group cursor-pointer"
+                >
+                  <div className="aspect-4/3 w-full bg-slate-50 overflow-hidden border-b border-slate-100 flex items-center justify-center p-3">
+                    <img src={illustrationOther} alt="" className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-105" />
+                  </div>
+                  <div className="px-5 py-4 flex items-center justify-between">
+                    <div>
+                      <h4 className="text-sm font-bold text-slate-800">Others</h4>
+                      <p className="text-[11px] text-slate-500 font-medium mt-0.5">Any other physical conditions or post-op care</p>
                     </div>
                     <ChevronRight size={15} className="text-slate-400 shrink-0" />
                   </div>
@@ -1409,7 +1435,7 @@ export default function HomePage() {
             <SectionHeading
               labelIcon={CreditCard}
               label="Flexible packages"
-              title="Home Care Plans"
+              title="Physiotherapy Plans"
               subtitle="Save with structured subscription terms matching long term muscle rehabilitation timelines."
               center
             />
