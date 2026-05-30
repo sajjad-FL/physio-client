@@ -314,7 +314,7 @@ const MAP = {
   'Neck Pain': NeckPainSvg,
   'Knee Pain': KneePainSvg,
   'Post Surgery Rehab': PostSurgerySvg,
-  'Stroke/Paralysis': StrokeSvg,
+  'Neuro Rehab': StrokeSvg,
   'Cerebral Palsy': CerebralPalsySvg,
   'Other condition': OtherConditionSvg,
 }

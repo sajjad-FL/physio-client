@@ -161,7 +161,7 @@ const STAT_PILLS = [
 
 const SPECIALTIES = [
   { id: 'Back Pain', title: 'Orthopedic', image: specialtyOrthopedic, bg: 'bg-[#e6f4f3]', color: 'text-[#0d6b6b]' },
-  { id: 'Stroke/Paralysis', title: 'Stroke/Paralysis', image: specialtyNeuro, bg: 'bg-[#eff6ff]', color: 'text-[#2563eb]' },
+  { id: 'Neuro Rehab', title: 'Neuro Rehab', image: specialtyNeuro, bg: 'bg-[#eff6ff]', color: 'text-[#2563eb]' },
   { id: 'Pediatric Rehab', title: 'Pediatric Rehab', image: techniquePediatric, bg: 'bg-[#eff6ff]', color: 'text-[#1d4ed8]' },
   { id: 'Post Surgery Rehab', title: 'Post-Op', image: specialtyPostOp, bg: 'bg-[#ecfdf5]', color: 'text-[#047857]' },
   { id: 'Elderly Care', title: 'Elderly Care', image: techniqueElderly, bg: 'bg-[#f0fdf4]', color: 'text-[#15803d]' },
@@ -169,7 +169,7 @@ const SPECIALTIES = [
 ]
 
 const TECHNIQUES = [
-  { title: 'Cupping',        image: techniqueCupping,   bg: 'bg-[#fff7ed]', color: 'text-[#c2410c]' },
+  { title: 'Cupping Therapy', image: techniqueCupping,   bg: 'bg-[#fff7ed]', color: 'text-[#c2410c]' },
   { title: 'Dry Needling',   image: techniqueNeedling,  bg: 'bg-[#f5f3ff]', color: 'text-[#6d28d9]' },
   { title: 'Kinesio Taping', image: techniqueKinesio,   bg: 'bg-[#e6f4f3]', color: 'text-[#0d6b6b]' },
 ]
@@ -227,7 +227,7 @@ const FRONT_SPOTS = [
 const BACK_SPOTS = [
   { id: 'upper_back', name: 'Upper Spine & Posture', issue: 'Neck Pain', top: '45px', left: '60px', icon: Sparkles, desc: 'Upper back postural strain, thoracic stiffness' },
   { id: 'lower_back', name: 'Lower Back Care', issue: 'Back Pain', top: '85px', left: '60px', icon: Home, desc: 'Sciatica, slip disc, lumbar muscle spasms' },
-  { id: 'neuro_rehab', name: 'Stroke Rehabilitation', issue: 'Stroke/Paralysis', top: '15px', left: '78px', icon: HeartPulse, desc: 'Hemiplegia, neural weakness, balance issues' },
+  { id: 'neuro_rehab', name: 'Stroke Rehabilitation', issue: 'Neuro Rehab', top: '15px', left: '78px', icon: HeartPulse, desc: 'Hemiplegia, neural weakness, balance issues' },
 ]
 
 const FAQ_CATEGORIES = ['All', 'Booking', 'Therapists', 'Payments']
@@ -970,10 +970,10 @@ export default function HomePage() {
           <Link
             key={tech.title}
             to="/book"
-            className="flex flex-col items-center w-[120px] text-center group cursor-pointer"
+            className="flex flex-col items-center w-[150px] text-center group cursor-pointer"
           >
-            <div className={`w-20 h-20 rounded-full flex items-center justify-center transition-all duration-300 group-hover:scale-105 group-hover:shadow-lg ${tech.bg}`}>
-              <img src={tech.image} alt={tech.title} className="w-16 h-16 object-contain" />
+            <div className={`w-32 h-32 rounded-full flex items-center justify-center transition-all duration-300 group-hover:scale-105 group-hover:shadow-lg ${tech.bg}`}>
+              <img src={tech.image} alt={tech.title} className="w-[110px] h-[110px] object-contain" />
             </div>
             <span className={`text-sm font-bold mt-3 group-hover:opacity-80 transition-opacity ${tech.color}`}>
               {tech.title}
@@ -1005,10 +1005,10 @@ export default function HomePage() {
                     key={spec.title}
                     to={spec.id === 'Many More' ? '/book' : '/book'}
                     state={spec.id !== 'Many More' ? { selectedIssue: spec.id } : undefined}
-                    className="flex flex-col items-center w-[120px] text-center group cursor-pointer"
+                    className="flex flex-col items-center w-[150px] text-center group cursor-pointer"
                   >
-                    <div className={`w-20 h-20 rounded-full flex items-center justify-center transition-all duration-300 group-hover:scale-105 group-hover:shadow-lg ${spec.bg}`}>
-                      <img src={spec.image} alt="" className="w-12 h-12 object-contain" />
+                    <div className={`w-32 h-32 rounded-full flex items-center justify-center transition-all duration-300 group-hover:scale-105 group-hover:shadow-lg ${spec.bg}`}>
+                      <img src={spec.image} alt="" className="w-[96px] h-[96px] object-contain" />
                     </div>
                     <span className="text-sm font-bold text-slate-800 mt-3 group-hover:text-teal-700 transition-colors">
                       {spec.title}
@@ -1118,7 +1118,7 @@ export default function HomePage() {
 
                 {/* Neuro Rehab */}
                 <button
-                  onClick={() => navigate('/book', { state: { selectedIssue: 'Stroke/Paralysis' } })}
+                  onClick={() => navigate('/book', { state: { selectedIssue: 'Neuro Rehab' } })}
                   className="text-left rounded-3xl border border-slate-200 bg-white hover:border-slate-300 hover:shadow-lg transition-all duration-300 overflow-hidden group cursor-pointer"
                 >
                   <div className="aspect-4/3 w-full bg-slate-50 overflow-hidden border-b border-slate-100 flex items-center justify-center p-3">

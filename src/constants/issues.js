@@ -4,7 +4,7 @@ export const ISSUE_OPTIONS = [
   'Neck Pain',
   'Knee Pain',
   'Post Surgery Rehab',
-  'Stroke/Paralysis',
+  'Neuro Rehab',
 ]
 
 /** Select value when user chooses “Other”; final `issue` text comes from a separate text field. */
