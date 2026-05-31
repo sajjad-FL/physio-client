@@ -36,7 +36,7 @@ export default function ForgotPasswordPage() {
   }
 
   async function sendCode(e) {
-    e.preventDefault()
+    e?.preventDefault()
     setError('')
     const pv = validateIndianMobile(phone)
     if (!pv.valid) {
@@ -117,8 +117,23 @@ export default function ForgotPasswordPage() {
   const canonical = absoluteUrl('/forgot-password')
   const ogImage = absoluteUrl('/og-default.png')
 
+  const STEPS = [
+    { key: ‘phone’, n: 1, title: ‘Enter your mobile’, sub: "We’ll send a verification code to your registered number.", icon: (
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg>
+    )},
+    { key: ‘otp’, n: 2, title: ‘Enter the code’, sub: ‘Check your SMS for the 6-digit verification code.’, icon: (
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/><path d="M7 8h.01M12 8h.01M17 8h.01"/></svg>
+    )},
+    { key: ‘password’, n: 3, title: ‘New password’, sub: ‘Choose a strong password with at least 8 characters.’, icon: (
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+    )},
+  ]
+
+  const stepIdx = STEPS.findIndex((s) => s.key === step)
+  const currentStep = STEPS[stepIdx]
+
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="relative min-h-screen overflow-hidden bg-slate-50">
       <Helmet>
         <title>{title}</title>
         <meta name="description" content={description} />
@@ -133,92 +148,145 @@ export default function ForgotPasswordPage() {
         <meta name="twitter:description" content={description} />
         <meta name="twitter:image" content={ogImage} />
       </Helmet>
-      <header className="border-b border-slate-200 bg-white/90 px-4 py-4 shadow-sm">
+
+      {/* Ambient teal halo glows — matching mobile ForgotPasswordScreen */}
+      <div className="pointer-events-none absolute left-[-60px] right-[-60px] top-[-120px] h-[380px] rounded-[190px] bg-[rgba(162,240,239,0.15)]" aria-hidden />
+      <div className="pointer-events-none absolute left-[20%] top-[-50px] h-[200px] w-[60%] rounded-[100px] bg-[rgba(13,107,107,0.04)]" aria-hidden />
+
+      <header className="relative z-10 border-b border-slate-200 bg-white/90 px-4 py-4 shadow-sm backdrop-blur-md">
         <div className="mx-auto max-w-md">
-          <Link to="/login" className="text-sm font-medium text-teal-700 hover:underline">
-            ← Back to sign in
-          </Link>
+          <button
+            type="button"
+            onClick={() => {
+              if (step === ‘otp’) { setStep(‘phone’); setFieldErrors({}); return }
+              if (step === ‘password’) { setStep(‘otp’); setFieldErrors({}); return }
+              navigate(‘/login’)
+            }}
+            className="flex items-center gap-1.5 text-sm font-semibold text-teal-700 hover:opacity-80"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+            Back
+          </button>
         </div>
       </header>
 
-      <div className="mx-auto max-w-md px-4 py-12">
-        <h1 className="text-2xl font-bold text-slate-900">Reset password</h1>
-        <p className="mt-2 text-sm text-slate-500">
-          {step === 'phone' && 'Enter the phone number on your account. We’ll send a 6-digit code.'}
-          {step === 'otp' && 'Enter the code we sent.'}
-          {step === 'password' && 'Choose a new password (min. 8 characters).'}
-        </p>
+      <div className="relative z-10 mx-auto max-w-md px-4 py-10">
 
-        <div className="mt-8 rounded-2xl border border-slate-100 bg-white p-8 shadow-sm">
-          {error && (
-            <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900" role="alert">
-              {error}
-            </div>
-          )}
+        {/* Step progress dots — matching mobile */}
+        <div className="mb-8 flex items-center">
+          {STEPS.map((s, idx) => {
+            const isDone = idx < stepIdx
+            const isActive = idx === stepIdx
+            return (
+              <div key={s.key} className="flex flex-1 items-center">
+                <div className={[
+                  ‘flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-[1.5px] text-[10px] font-bold transition-all’,
+                  isDone ? ‘border-teal-600 bg-teal-600 text-white’ :
+                  isActive ? ‘border-teal-600 bg-teal-600/10 text-teal-700 shadow-[0_0_0_4px_rgba(13,148,136,0.10)]’ :
+                  ‘border-slate-200 bg-white text-slate-400’,
+                ].join(‘ ‘)}>
+                  {isDone ? (
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M20 6L9 17l-5-5"/></svg>
+                  ) : s.n}
+                </div>
+                {idx < STEPS.length - 1 && (
+                  <div className={`mx-1.5 h-[1.5px] flex-1 transition-colors ${isDone ? ‘bg-teal-600’ : ‘bg-slate-200’}`} />
+                )}
+              </div>
+            )
+          })}
+        </div>
 
-          {step === 'phone' && (
-            <form onSubmit={sendCode} className="space-y-4">
+        {/* Per-step hero icon + heading */}
+        <div className="mb-8 flex flex-col items-center gap-3 text-center">
+          <div className="flex h-16 w-16 items-center justify-center rounded-[20px] border border-slate-100 bg-white text-teal-700 shadow-[0_4px_16px_rgba(13,148,136,0.08)]">
+            {currentStep.icon}
+          </div>
+          <h1 className="text-[22px] font-bold tracking-tight text-slate-900">{currentStep.title}</h1>
+          <p className="text-sm leading-relaxed text-slate-500">{currentStep.sub}</p>
+        </div>
+
+        {/* Error banner */}
+        {error && (
+          <div className="mb-5 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900" role="alert">
+            <svg className="mt-0.5 h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+            {error}
+          </div>
+        )}
+
+        {/* Form card */}
+        <div className="rounded-2xl border border-slate-100 bg-white p-8 shadow-md shadow-slate-900/5">
+          {step === ‘phone’ && (
+            <form onSubmit={sendCode} className="space-y-5">
               <div>
                 <label htmlFor="fp-phone" className="mb-2 block text-sm font-medium text-slate-700">
-                  Phone
+                  Mobile number
                 </label>
                 <input
                   id="fp-phone"
                   value={phone}
                   onChange={(e) => {
                     setPhone(e.target.value)
-                    setFieldErrors((prev) => ({ ...prev, phone: validateLiveField('phone', e.target.value) }))
-                    setError('')
+                    setFieldErrors((prev) => ({ ...prev, phone: validateLiveField(‘phone’, e.target.value) }))
+                    setError(‘’)
                   }}
-                  className={inputClsErr('phone')}
+                  className={inputClsErr(‘phone’)}
                   inputMode="tel"
                   autoComplete="tel"
+                  placeholder="+91 or 10-digit mobile"
                   disabled={loading}
                 />
                 {fieldErrors.phone ? <p className="mt-1 text-xs text-red-600">{fieldErrors.phone}</p> : null}
               </div>
-              <Button type="submit" variant="primary" className="h-11 w-full" loading={loading}>
+              <Button type="submit" variant="primary" className="h-12 w-full gap-2 text-[15px]" loading={loading}>
+                {!loading && <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>}
                 Send code
               </Button>
             </form>
           )}
 
-          {step === 'otp' && (
-            <form onSubmit={verifyCode} className="space-y-4">
-              <OtpInput
-                value={otp}
-                onChange={(v) => {
-                  setOtp(v)
-                  setFieldErrors((prev) => ({ ...prev, otp: validateLiveField('otp', v) }))
-                  setError('')
-                }}
-              />
-              {fieldErrors.otp ? <p className="text-xs text-red-600">{fieldErrors.otp}</p> : null}
-              {debugOtp ? (
-                <p className="rounded-lg bg-teal-50 px-3 py-2 text-sm text-slate-800">
-                  Debug code: <span className="font-mono font-semibold">{debugOtp}</span>
-                </p>
-              ) : null}
-              <Button type="submit" variant="primary" className="h-11 w-full" loading={loading}>
+          {step === ‘otp’ && (
+            <form onSubmit={verifyCode} className="space-y-5">
+              <div>
+                <span className="mb-2 block text-sm font-medium text-slate-700">Verification code</span>
+                <OtpInput
+                  value={otp}
+                  onChange={(v) => {
+                    setOtp(v)
+                    setFieldErrors((prev) => ({ ...prev, otp: validateLiveField(‘otp’, v) }))
+                    setError(‘’)
+                  }}
+                />
+                {fieldErrors.otp ? <p className="mt-2 text-xs text-red-600">{fieldErrors.otp}</p> : null}
+                {debugOtp ? (
+                  <p className="mt-2 rounded-lg bg-teal-50 px-3 py-2 text-sm text-slate-800">
+                    Debug code: <span className="font-mono font-semibold">{debugOtp}</span>
+                  </p>
+                ) : null}
+              </div>
+              <button
+                type="button"
+                className="flex items-center gap-1 text-sm font-semibold text-teal-700 hover:opacity-80"
+                onClick={() => sendCode()}
+              >
+                Didn’t receive it? <span className="underline underline-offset-2">Resend code</span>
+              </button>
+              <Button type="submit" variant="primary" className="h-12 w-full gap-2 text-[15px]" loading={loading}>
+                {!loading && <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>}
                 Verify code
               </Button>
               <button
                 type="button"
-                className="w-full text-sm text-slate-600 hover:text-slate-900"
-                onClick={() => {
-                  setStep('phone')
-                  setOtp('')
-                  setDebugOtp('')
-                  setError('')
-                }}
+                className="w-full text-sm text-slate-500 hover:text-slate-800"
+                onClick={() => { setStep(‘phone’); setOtp(‘’); setDebugOtp(‘’); setError(‘’) }}
               >
                 Use a different number
               </button>
             </form>
           )}
 
-          {step === 'password' && (
-            <form onSubmit={savePassword} className="space-y-4">
+          {step === ‘password’ && (
+            <form onSubmit={savePassword} className="space-y-5">
               <div>
                 <label htmlFor="fp-pass" className="mb-2 block text-sm font-medium text-slate-700">
                   New password
@@ -230,24 +298,33 @@ export default function ForgotPasswordPage() {
                     setNewPassword(e.target.value)
                     setFieldErrors((prev) => ({
                       ...prev,
-                      newPassword: validateLiveField('loginPassword', e.target.value),
+                      newPassword: validateLiveField(‘loginPassword’, e.target.value),
                     }))
-                    setError('')
+                    setError(‘’)
                   }}
-                  className={inputClsErr('newPassword')}
+                  className={inputClsErr(‘newPassword’)}
                   autoComplete="new-password"
+                  placeholder="Min. 8 characters"
                   disabled={loading}
                 />
                 {fieldErrors.newPassword ? (
                   <p className="mt-1 text-xs text-red-600">{fieldErrors.newPassword}</p>
                 ) : null}
               </div>
-              <Button type="submit" variant="primary" className="h-11 w-full" loading={loading}>
+              <Button type="submit" variant="primary" className="h-12 w-full gap-2 text-[15px]" loading={loading}>
+                {!loading && <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v14a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>}
                 Save password
               </Button>
             </form>
           )}
         </div>
+
+        <p className="mt-6 text-center text-sm text-slate-500">
+          Remember your password?{‘ ‘}
+          <Link to="/login" className="font-semibold text-teal-700 hover:underline">
+            Sign in
+          </Link>
+        </p>
       </div>
       <div id="recaptcha-container" />
     </div>

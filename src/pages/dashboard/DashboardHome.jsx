@@ -4,7 +4,7 @@ import { api } from '../../config/api'
 import { getProfileCached } from '../../utils/profileCache'
 import toast from 'react-hot-toast'
 import Skeleton from '../../components/ui/Skeleton'
-import { bookingStatusBadge, paymentBadge } from './dashboardUtils'
+import { bookingStatusBadge } from './dashboardUtils'
 import { formatBookingDateAndSlot, formatBookingTimeSlot } from '../../utils/date'
 import { normalizeSessionRows, todayYmd } from '../../components/physio/physioBookingHelpers'
 
@@ -36,16 +36,6 @@ function SectionSkeleton() {
   return <Skeleton className="h-32 w-full rounded-2xl" />
 }
 
-const btnSoftPrimary =
-  'tap-feedback inline-flex min-h-11 items-center justify-center rounded-xl px-5 py-2.5 text-sm font-semibold shadow-sm transition ' +
-  'bg-teal-50 text-teal-900 ring-1 ring-teal-200/70 hover:bg-teal-100/90 hover:ring-teal-300/60'
-
-const btnPrimaryBook =
-  'tap-feedback inline-flex min-h-11 items-center justify-center rounded-xl bg-teal-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-teal-600/25 transition hover:bg-teal-700'
-
-const btnSoftEmerald =
-  'tap-feedback inline-flex min-h-11 items-center justify-center rounded-xl px-5 py-2.5 text-sm font-semibold shadow-sm transition ' +
-  'bg-emerald-50 text-emerald-900 ring-1 ring-emerald-200/70 hover:bg-emerald-100/90 hover:ring-emerald-300/55'
 
 export default function DashboardHome() {
   const [bookings, setBookings] = useState(null)
@@ -106,6 +96,13 @@ export default function DashboardHome() {
 
   const isToday = nextSession && String(nextSession.row.date) === today
 
+  const todayStr = useMemo(
+    () => new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' }),
+    [],
+  )
+
+  const avatarInitial = (firstName?.[0] ?? '?').toUpperCase()
+
   return (
     <div className="space-y-4 sm:space-y-5">
       {loading ? (
@@ -116,11 +113,18 @@ export default function DashboardHome() {
         </>
       ) : (
         <>
-          <header className="space-y-1">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Dashboard</p>
-            <h1 className="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
-              {firstName ? `Hi, ${firstName}` : 'Your care'}
-            </h1>
+          {/* ── Dashboard header — matching mobile DashboardHomeScreen ── */}
+          <header className="flex items-center justify-between">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-teal-700">
+                {firstName ? `Hi, ${firstName.toUpperCase()}` : 'DASHBOARD'}
+              </p>
+              <h1 className="mt-1 text-lg font-bold tracking-tight text-slate-900 sm:text-xl">{todayStr}</h1>
+            </div>
+            {/* Avatar circle with initial */}
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-teal-600 text-sm font-bold text-white shadow-[0_4px_12px_rgba(13,148,136,0.22)]">
+              {avatarInitial}
+            </div>
           </header>
 
           {openDisputes > 0 && (
@@ -132,97 +136,152 @@ export default function DashboardHome() {
             </div>
           )}
 
-          {/* Next session */}
-          <section
-            aria-labelledby="next-heading"
-            className="rounded-2xl bg-gradient-to-br from-slate-50/95 via-white to-sky-50/30 p-4 sm:p-5"
-          >
-            <h2 id="next-heading" className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Next session
-            </h2>
-            {nextSession ? (
-              <>
-                <p className="mt-2 text-2xl font-bold tabular-nums tracking-tight text-slate-900 sm:text-3xl">
-                  {isToday ? formatBookingTimeSlot(nextSession.row.time) : formatBookingDateAndSlot(nextSession.row.date, nextSession.row.time)}
-                </p>
-                <p className="mt-1 text-xs text-slate-500">{isToday ? 'Today' : 'Scheduled'}</p>
-                <p className="mt-3 truncate text-sm font-medium text-slate-800">
-                  {nextSession.booking.physioId?.name || 'Physiotherapist TBD'}
-                </p>
-                <div className="mt-4 flex flex-col flex-wrap gap-2 sm:flex-row sm:items-center sm:gap-3">
-                  <Link to={`/dashboard/bookings/${nextSession.booking._id}`} className={`${btnPrimaryBook} w-full justify-center sm:w-auto sm:min-w-32`}>
-                    View details
-                  </Link>
-                  {nextSession.booking.physioId?.phone ? (
-                    <a
-                      href={`tel:${String(nextSession.booking.physioId.phone).replace(/\s/g, '')}`}
-                      className="tap-feedback flex min-h-11 w-full items-center justify-center rounded-xl border border-slate-200/90 bg-white/80 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-white sm:w-auto sm:min-w-32"
-                    >
-                      Call
-                    </a>
-                  ) : null}
+          {/* ── Next session — teal hero card matching mobile ── */}
+          {nextSession ? (
+            <Link
+              to={`/dashboard/bookings/${nextSession.booking._id}`}
+              className="relative block overflow-hidden rounded-2xl bg-teal-600 p-5 shadow-[0_8px_32px_rgba(13,148,136,0.22)] transition active:opacity-95"
+              aria-label="View upcoming session details"
+            >
+              {/* Glow bubbles */}
+              <div className="pointer-events-none absolute -right-12 -top-12 h-36 w-36 rounded-full bg-white/10" aria-hidden />
+              <div className="pointer-events-none absolute -bottom-14 -left-5 h-28 w-28 rounded-full bg-white/6" aria-hidden />
+
+              <div className="relative z-10 flex items-start justify-between gap-2">
+                <div>
+                  <span className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/15 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">
+                    <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                    Upcoming session
+                  </span>
+                  <p className="mt-2 text-sm font-bold text-white">
+                    {isToday
+                      ? formatBookingTimeSlot(nextSession.row.time)
+                      : formatBookingDateAndSlot(nextSession.row.date, nextSession.row.time)}
+                  </p>
                 </div>
-              </>
-            ) : (
-              <p className="mt-3 text-sm text-slate-600">No upcoming sessions.</p>
-            )}
-            <div className="mt-4 flex justify-start">
-              <Link to="/book" className={btnSoftPrimary}>
-                Book a session
-              </Link>
-            </div>
-          </section>
+                <span className="flex shrink-0 items-center gap-1 rounded-md bg-emerald-500/20 px-2 py-1">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                  <span className="text-[9px] font-bold uppercase tracking-wide text-emerald-300">
+                    {isToday ? 'Today' : 'Scheduled'}
+                  </span>
+                </span>
+              </div>
 
-          {/* Wallet summary */}
-          <section className="rounded-2xl bg-gradient-to-br from-slate-50/95 via-white to-emerald-50/25 p-4 sm:p-5">
-            <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Total paid</h2>
-            <p className="mt-2 text-3xl font-bold tabular-nums tracking-tight text-slate-900 sm:text-4xl">{formatInr(revenueTotal)}</p>
-            <p className="mt-2 text-sm text-slate-500">all time</p>
-            <div className="mt-4 flex justify-start">
-              <Link to="/dashboard/wallet" className={btnSoftEmerald}>
-                Open wallet
-              </Link>
-            </div>
-          </section>
+              {/* Physio details box */}
+              <div className="relative z-10 mt-3 flex items-center gap-3 rounded-xl border border-white/5 bg-white/8 p-2.5">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0d9488" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+                </div>
+                <div className="min-w-0">
+                  <p className="truncate text-[11px] font-bold text-white">
+                    {nextSession.booking.physioId?.name || 'Physio TBD'}
+                  </p>
+                  <p className="text-[9px] text-white/70">
+                    {nextSession.booking.physioId?.specialization || 'Verified Physiotherapist'} · At Home
+                  </p>
+                </div>
+              </div>
 
-          {/* Recent activity */}
+              <div className="relative z-10 mt-4 flex gap-2">
+                <span className="flex-1 rounded-xl bg-white py-2.5 text-center text-[13px] font-bold text-slate-900">
+                  View details
+                </span>
+                {nextSession.booking.physioId?.phone ? (
+                  <a
+                    href={`tel:${String(nextSession.booking.physioId.phone).replace(/\s/g, '')}`}
+                    onClick={(e) => e.stopPropagation()}
+                    className="flex-1 rounded-xl bg-white/15 py-2.5 text-center text-[13px] font-bold text-white"
+                  >
+                    Call
+                  </a>
+                ) : null}
+              </div>
+            </Link>
+          ) : (
+            /* Book CTA when no upcoming session */
+            <Link
+              to="/book"
+              className="flex items-center gap-3 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm transition hover:shadow-md active:opacity-90"
+            >
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-teal-50">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0d9488" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg>
+              </div>
+              <div className="flex-1">
+                <p className="text-[15px] font-bold text-teal-700">Book a session</p>
+                <p className="text-xs text-slate-500">Find a verified physio near you</p>
+              </div>
+              <svg className="h-4 w-4 text-slate-300" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden><path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>
+            </Link>
+          )}
+
+          {/* ── Stats row — matching mobile 2-card layout ── */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+              <div className="flex items-center justify-between">
+                <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Sessions</p>
+                <div className="flex h-5 w-5 items-center justify-center rounded-md bg-teal-50">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#0d9488" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+                </div>
+              </div>
+              <p className="mt-2 text-3xl font-bold tabular-nums tracking-tight text-slate-900">{(bookings || []).length}</p>
+              <p className="mt-1 text-[11px] text-slate-400">all time</p>
+            </div>
+            <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+              <div className="flex items-center justify-between">
+                <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Total Paid</p>
+                <div className="flex h-5 w-5 items-center justify-center rounded-md bg-teal-50">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#0d9488" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M20 12V22H4V12"/><path d="M22 7H2v5h20V7z"/><path d="M12 22V7M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
+                </div>
+              </div>
+              <p className="mt-2 text-2xl font-bold tabular-nums tracking-tight text-slate-900">{formatInr(revenueTotal)}</p>
+              <p className="mt-1 text-[11px] text-slate-400">all time</p>
+            </div>
+          </div>
+
+          {/* ── Recent activity ── */}
           <section aria-labelledby="activity-heading">
-            <div className="mb-3 flex items-end justify-between gap-3">
-              <h2 id="activity-heading" className="text-sm font-semibold text-slate-900">
-                Recent activity
-              </h2>
-              <Link to="/dashboard/bookings" className="text-xs font-semibold text-teal-700 hover:text-teal-800">
-                All bookings
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <div className="flex h-6 w-6 items-center justify-center rounded-md bg-teal-50">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#0d9488" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+                </div>
+                <h2 id="activity-heading" className="text-sm font-bold text-slate-900">
+                  Recent activity
+                </h2>
+              </div>
+              <Link to="/dashboard/bookings" className="text-xs font-bold text-teal-700 hover:text-teal-800">
+                See all
               </Link>
             </div>
             {recentActivity.length === 0 ? (
-              <p className="rounded-xl border border-dashed border-slate-200 bg-slate-50/80 px-4 py-8 text-center text-sm text-slate-500">
-                Nothing here yet. Book a session to see updates.
-              </p>
+              <div className="flex flex-col items-center gap-2 rounded-2xl border border-slate-100 bg-white px-4 py-10 shadow-sm">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+                <p className="text-sm font-semibold text-slate-400">No bookings yet</p>
+                <p className="text-xs text-slate-400">Your session history will appear here</p>
+              </div>
             ) : (
-              <ul className="space-y-2">
-                {recentActivity.map((b) => {
+              <ul className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm">
+                {recentActivity.map((b, idx) => {
                   const st = bookingStatusBadge(b.status, b.sessionStatus, b.paymentStatus, b.planStatus)
-                  const pay = paymentBadge(b.paymentStatus)
                   return (
-                    <li key={b._id}>
+                    <li key={b._id} className={idx < recentActivity.length - 1 ? 'border-b border-slate-100' : ''}>
                       <Link
                         to={`/dashboard/bookings/${b._id}`}
-                        className="tap-feedback flex min-h-13 items-center justify-between gap-3 rounded-xl bg-white/90 px-3 py-3 shadow-sm ring-1 ring-slate-200/40 transition hover:bg-white active:bg-slate-50/80 sm:px-4"
+                        className="flex items-center gap-3 px-4 py-3.5 transition hover:bg-slate-50 active:bg-slate-100"
                       >
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px] bg-teal-50">
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0d9488" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+                        </div>
                         <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-semibold text-slate-900">
+                          <p className="truncate text-sm font-bold text-slate-900">
                             {formatBookingDateAndSlot(b.date, b.timeSlot)}
                           </p>
                           <p className="truncate text-xs text-slate-500">{b.physioId?.name ?? 'Physio'}</p>
                         </div>
-                        <div className="flex shrink-0 flex-col items-end gap-1">
+                        <div className="flex shrink-0 items-center gap-2">
                           <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ${st.cls}`}>{st.label}</span>
-                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ${pay.cls}`}>{pay.label}</span>
+                          <svg className="h-3.5 w-3.5 text-slate-300" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden><path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>
                         </div>
-                        <svg className="h-4 w-4 shrink-0 text-slate-300" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-                        </svg>
                       </Link>
                     </li>
                   )

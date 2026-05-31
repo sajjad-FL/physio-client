@@ -99,27 +99,36 @@ export default function LoginPage() {
         <meta name="twitter:description" content={description} />
         <meta name="twitter:image" content={ogImage} />
       </Helmet>
+      {/* Ambient teal halo glows — matching mobile LoginScreen */}
       <div
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(13,148,136,0.12),transparent)]"
+        className="pointer-events-none absolute left-[-60px] right-[-60px] top-[-120px] h-[380px] rounded-[190px] bg-[rgba(162,240,239,0.15)]"
         aria-hidden
       />
-      <header className="relative border-b border-slate-200 bg-white/90 shadow-sm backdrop-blur-md">
+      <div
+        className="pointer-events-none absolute left-[20%] top-[-50px] h-[200px] w-[60%] rounded-[100px] bg-[rgba(13,107,107,0.04)]"
+        aria-hidden
+      />
+      <header className="relative z-10 border-b border-slate-200 bg-white/90 shadow-sm backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
           <Link
             to="/"
-            className="text-[15px] font-semibold text-slate-900 transition-opacity duration-200 hover:opacity-80"
+            className="flex items-center gap-1.5 text-[15px] font-semibold text-teal-700 transition-opacity duration-200 hover:opacity-80"
           >
-            ← PhysiOkhom
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M15 18l-6-6 6-6"/></svg>
+            PhysiOkhom
           </Link>
         </div>
       </header>
 
-      <div className="relative mx-auto flex min-h-[calc(100vh-61px)] max-w-md flex-col justify-center px-4 py-16 sm:px-6 sm:py-20 lg:py-24">
-        <div className="motion-safe:animate-enter-up mb-10 space-y-3 text-center sm:mb-12">
-          <p className="text-xs font-semibold uppercase tracking-wider text-teal-600">Sign in</p>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">Continue to booking</h1>
+      <div className="relative z-10 mx-auto flex min-h-[calc(100vh-61px)] max-w-md flex-col justify-center px-4 py-16 sm:px-6 sm:py-20 lg:py-24">
+        {/* Hero icon + title — matching mobile LoginScreen heroSection */}
+        <div className="mb-10 flex flex-col items-center gap-3 text-center sm:mb-12">
+          <div className="flex h-[68px] w-[68px] items-center justify-center rounded-[20px] bg-teal-600 shadow-[0_6px_24px_rgba(13,148,136,0.30)]">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+          </div>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">Welcome back</h1>
           <p className="text-sm leading-relaxed text-slate-500">
-            Sign in with the same mobile number and password you used when you registered.
+            Sign in with your registered Indian mobile and password.
           </p>
         </div>
 
