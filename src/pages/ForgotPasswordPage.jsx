@@ -118,13 +118,13 @@ export default function ForgotPasswordPage() {
   const ogImage = absoluteUrl('/og-default.png')
 
   const STEPS = [
-    { key: ‘phone’, n: 1, title: ‘Enter your mobile’, sub: "We’ll send a verification code to your registered number.", icon: (
+    { key: 'phone', n: 1, title: 'Enter your mobile', sub: "We'll send a verification code to your registered number.", icon: (
       <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg>
     )},
-    { key: ‘otp’, n: 2, title: ‘Enter the code’, sub: ‘Check your SMS for the 6-digit verification code.’, icon: (
+    { key: 'otp', n: 2, title: 'Enter the code', sub: 'Check your SMS for the 6-digit verification code.', icon: (
       <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/><path d="M7 8h.01M12 8h.01M17 8h.01"/></svg>
     )},
-    { key: ‘password’, n: 3, title: ‘New password’, sub: ‘Choose a strong password with at least 8 characters.’, icon: (
+    { key: 'password', n: 3, title: 'New password', sub: 'Choose a strong password with at least 8 characters.', icon: (
       <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
     )},
   ]
@@ -158,9 +158,9 @@ export default function ForgotPasswordPage() {
           <button
             type="button"
             onClick={() => {
-              if (step === ‘otp’) { setStep(‘phone’); setFieldErrors({}); return }
-              if (step === ‘password’) { setStep(‘otp’); setFieldErrors({}); return }
-              navigate(‘/login’)
+              if (step === 'otp') { setStep('phone'); setFieldErrors({}); return }
+              if (step === 'password') { setStep('otp'); setFieldErrors({}); return }
+              navigate('/login')
             }}
             className="flex items-center gap-1.5 text-sm font-semibold text-teal-700 hover:opacity-80"
           >
@@ -180,17 +180,17 @@ export default function ForgotPasswordPage() {
             return (
               <div key={s.key} className="flex flex-1 items-center">
                 <div className={[
-                  ‘flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-[1.5px] text-[10px] font-bold transition-all’,
-                  isDone ? ‘border-teal-600 bg-teal-600 text-white’ :
-                  isActive ? ‘border-teal-600 bg-teal-600/10 text-teal-700 shadow-[0_0_0_4px_rgba(13,148,136,0.10)]’ :
-                  ‘border-slate-200 bg-white text-slate-400’,
-                ].join(‘ ‘)}>
+                  'flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-[1.5px] text-[10px] font-bold transition-all',
+                  isDone ? 'border-teal-600 bg-teal-600 text-white' :
+                  isActive ? 'border-teal-600 bg-teal-600/10 text-teal-700 shadow-[0_0_0_4px_rgba(13,148,136,0.10)]' :
+                  'border-slate-200 bg-white text-slate-400',
+                ].join(' ')}>
                   {isDone ? (
                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M20 6L9 17l-5-5"/></svg>
                   ) : s.n}
                 </div>
                 {idx < STEPS.length - 1 && (
-                  <div className={`mx-1.5 h-[1.5px] flex-1 transition-colors ${isDone ? ‘bg-teal-600’ : ‘bg-slate-200’}`} />
+                  <div className={`mx-1.5 h-[1.5px] flex-1 transition-colors ${isDone ? 'bg-teal-600' : 'bg-slate-200'}`} />
                 )}
               </div>
             )
@@ -216,7 +216,7 @@ export default function ForgotPasswordPage() {
 
         {/* Form card */}
         <div className="rounded-2xl border border-slate-100 bg-white p-8 shadow-md shadow-slate-900/5">
-          {step === ‘phone’ && (
+          {step === 'phone' && (
             <form onSubmit={sendCode} className="space-y-5">
               <div>
                 <label htmlFor="fp-phone" className="mb-2 block text-sm font-medium text-slate-700">
@@ -227,10 +227,10 @@ export default function ForgotPasswordPage() {
                   value={phone}
                   onChange={(e) => {
                     setPhone(e.target.value)
-                    setFieldErrors((prev) => ({ ...prev, phone: validateLiveField(‘phone’, e.target.value) }))
-                    setError(‘’)
+                    setFieldErrors((prev) => ({ ...prev, phone: validateLiveField('phone', e.target.value) }))
+                    setError('')
                   }}
-                  className={inputClsErr(‘phone’)}
+                  className={inputClsErr('phone')}
                   inputMode="tel"
                   autoComplete="tel"
                   placeholder="+91 or 10-digit mobile"
@@ -245,7 +245,7 @@ export default function ForgotPasswordPage() {
             </form>
           )}
 
-          {step === ‘otp’ && (
+          {step === 'otp' && (
             <form onSubmit={verifyCode} className="space-y-5">
               <div>
                 <span className="mb-2 block text-sm font-medium text-slate-700">Verification code</span>
@@ -253,8 +253,8 @@ export default function ForgotPasswordPage() {
                   value={otp}
                   onChange={(v) => {
                     setOtp(v)
-                    setFieldErrors((prev) => ({ ...prev, otp: validateLiveField(‘otp’, v) }))
-                    setError(‘’)
+                    setFieldErrors((prev) => ({ ...prev, otp: validateLiveField('otp', v) }))
+                    setError('')
                   }}
                 />
                 {fieldErrors.otp ? <p className="mt-2 text-xs text-red-600">{fieldErrors.otp}</p> : null}
@@ -269,7 +269,7 @@ export default function ForgotPasswordPage() {
                 className="flex items-center gap-1 text-sm font-semibold text-teal-700 hover:opacity-80"
                 onClick={() => sendCode()}
               >
-                Didn’t receive it? <span className="underline underline-offset-2">Resend code</span>
+                Didn't receive it? <span className="underline underline-offset-2">Resend code</span>
               </button>
               <Button type="submit" variant="primary" className="h-12 w-full gap-2 text-[15px]" loading={loading}>
                 {!loading && <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>}
@@ -278,14 +278,14 @@ export default function ForgotPasswordPage() {
               <button
                 type="button"
                 className="w-full text-sm text-slate-500 hover:text-slate-800"
-                onClick={() => { setStep(‘phone’); setOtp(‘’); setDebugOtp(‘’); setError(‘’) }}
+                onClick={() => { setStep('phone'); setOtp(''); setDebugOtp(''); setError('') }}
               >
                 Use a different number
               </button>
             </form>
           )}
 
-          {step === ‘password’ && (
+          {step === 'password' && (
             <form onSubmit={savePassword} className="space-y-5">
               <div>
                 <label htmlFor="fp-pass" className="mb-2 block text-sm font-medium text-slate-700">
@@ -298,11 +298,11 @@ export default function ForgotPasswordPage() {
                     setNewPassword(e.target.value)
                     setFieldErrors((prev) => ({
                       ...prev,
-                      newPassword: validateLiveField(‘loginPassword’, e.target.value),
+                      newPassword: validateLiveField('loginPassword', e.target.value),
                     }))
-                    setError(‘’)
+                    setError('')
                   }}
-                  className={inputClsErr(‘newPassword’)}
+                  className={inputClsErr('newPassword')}
                   autoComplete="new-password"
                   placeholder="Min. 8 characters"
                   disabled={loading}
@@ -320,7 +320,7 @@ export default function ForgotPasswordPage() {
         </div>
 
         <p className="mt-6 text-center text-sm text-slate-500">
-          Remember your password?{‘ ‘}
+          Remember your password?{' '}
           <Link to="/login" className="font-semibold text-teal-700 hover:underline">
             Sign in
           </Link>
