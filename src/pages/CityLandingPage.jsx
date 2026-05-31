@@ -333,7 +333,7 @@ export default function CityLandingPage() {
                 to="/book"
                 className="interactive-press inline-flex h-12 items-center justify-center rounded-xl bg-teal-600 px-10 text-[15px] font-semibold text-white shadow-lg shadow-teal-600/25 transition-colors duration-200 hover:bg-teal-700"
               >
-                Book now
+                Book appointment
               </Link>
             </div>
           </div>
@@ -352,6 +352,7 @@ export default function CityLandingPage() {
               <Link to="/register" className="transition-colors hover:text-white">Create account</Link>
               <Link to="/login" className="transition-colors hover:text-white">Sign in</Link>
               <Link to="/book" className="transition-colors hover:text-white">Book a physio</Link>
+              <Link to="/privacy-policy" className="transition-colors hover:text-white">Privacy Policy</Link>
             </div>
             <Link to="/register-physio" className="text-white/90 transition-colors duration-200 hover:text-white">
               Register as a physiotherapist →

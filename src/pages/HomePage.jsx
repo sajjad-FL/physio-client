@@ -715,7 +715,7 @@ export default function HomePage() {
                   {/* Step 2 Match Clinician */}
                   <p className="text-xs font-bold text-slate-800 mb-2.5 flex items-center gap-1.5">
                     <span className="flex h-4 w-4 items-center justify-center rounded-full bg-slate-200 text-[10px] font-extrabold text-slate-700">2</span>
-                    Clinician Matched
+                    clinical Appointed
                   </p>
                   <div className="space-y-3">
                     <div className="flex items-center gap-3 p-3 bg-slate-50/80 border border-slate-100 rounded-2xl">
@@ -724,7 +724,7 @@ export default function HomePage() {
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5">
-                          <p className="text-xs font-bold text-slate-900 truncate">Dr. Abhijit Das, MPT</p>
+                          <p className="text-xs font-bold text-slate-900 truncate">Dr. Abhijit , PT</p>
                           <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-teal-500 text-white text-[8px] font-bold">✓</span>
                         </div>
                         <p className="text-[10px] text-slate-500 font-medium truncate">Ortho Specialist · 8+ yrs exp</p>
@@ -1474,7 +1474,7 @@ export default function HomePage() {
                         to="/book"
                         className="text-xs font-bold text-teal-700 hover:text-teal-800 transition-colors"
                       >
-                        Book now →
+                        Book appointment →
                       </Link>
                     </div>
                   </div>
@@ -1936,12 +1936,16 @@ export default function HomePage() {
               </nav>
             </div>
 
-            {/* For physios */}
+            {/* For physios & Legal */}
             <div>
               <p className="mb-4 text-xs font-bold uppercase tracking-wider text-slate-500">For Clinicians</p>
-              <nav className="flex flex-col gap-2.5 text-xs font-semibold text-slate-400">
+              <nav className="flex flex-col gap-2.5 text-xs font-semibold text-slate-400 mb-5">
                 <Link to="/register-physio" className="transition-colors hover:text-white">Join as physiotherapist</Link>
                 <Link to="/login" className="transition-colors hover:text-white">Physio sign in</Link>
+              </nav>
+              <p className="mb-4 text-xs font-bold uppercase tracking-wider text-slate-500">Legal</p>
+              <nav className="flex flex-col gap-2.5 text-xs font-semibold text-slate-400">
+                <Link to="/privacy-policy" className="transition-colors hover:text-white">Privacy Policy</Link>
               </nav>
             </div>
 

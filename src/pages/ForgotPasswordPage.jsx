@@ -9,6 +9,7 @@ import PasswordInput from '../components/ui/PasswordInput'
 import { validateIndianMobile } from '../utils/phoneIndia'
 import { validateLiveField } from '../utils/liveFieldValidation'
 import { absoluteUrl } from '../utils/siteMeta'
+import { sendFirebaseOtp, confirmFirebaseOtp, toE164India, friendlyFirebaseError } from '../utils/firebasePhoneAuth'
 
 export default function ForgotPasswordPage() {
   const navigate = useNavigate()
@@ -20,6 +21,7 @@ export default function ForgotPasswordPage() {
   const [error, setError] = useState('')
   const [debugOtp, setDebugOtp] = useState('')
   const [fieldErrors, setFieldErrors] = useState({})
+  const [confirmation, setConfirmation] = useState(null)
 
   const inputCls =
     'h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-slate-900 shadow-sm outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20'
@@ -44,11 +46,13 @@ export default function ForgotPasswordPage() {
     setLoading(true)
     try {
       const res = await api.post('/auth/forgot-password', { phone: pv.normalized })
+      const conf = await sendFirebaseOtp(toE164India(phone), 'recaptcha-container')
+      setConfirmation(conf)
       if (res.data?.otp) setDebugOtp(res.data.otp)
       toast.success(res.data?.message || 'Check your phone for the code')
       setStep('otp')
     } catch (err) {
-      setError(err.response?.data?.message || err.message || 'Could not send code')
+      setError(friendlyFirebaseError(err) || err.response?.data?.message || err.message || 'Could not send code')
     } finally {
       setLoading(false)
     }
@@ -69,11 +73,12 @@ export default function ForgotPasswordPage() {
     }
     setLoading(true)
     try {
-      await api.post('/auth/verify-otp', { phone: pv.normalized, otp: otp.replace(/\D/g, '') })
+      const idToken = await confirmFirebaseOtp(confirmation, otp)
+      await api.post('/auth/verify-otp', { firebaseIdToken: idToken })
       toast.success('Code verified — choose a new password')
       setStep('password')
     } catch (err) {
-      setError(err.response?.data?.message || err.message || 'Invalid code')
+      setError(friendlyFirebaseError(err) || err.response?.data?.message || err.message || 'Invalid code')
     } finally {
       setLoading(false)
     }
@@ -244,6 +249,7 @@ export default function ForgotPasswordPage() {
           )}
         </div>
       </div>
+      <div id="recaptcha-container" />
     </div>
   )
 }

@@ -87,7 +87,7 @@ export default function SiteHeader() {
               to="/book"
               className="interactive-press inline-flex h-9 items-center rounded-xl bg-teal-600 px-4 text-sm font-semibold text-white shadow-sm shadow-teal-600/20 transition-colors hover:bg-teal-700"
             >
-              Book now
+              Book appointment
             </Link>
           </div>
         </div>

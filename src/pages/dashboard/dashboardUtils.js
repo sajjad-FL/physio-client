@@ -25,9 +25,9 @@ export function bookingStatusBadge(status, sessionStatus, paymentStatus, planSta
 
 export function paymentBadge(paymentStatus) {
   const map = {
-    pending: { label: 'Payment pending', cls: 'bg-amber-50 text-amber-900 ring-amber-200/80' },
-    held: { label: 'Payment secured', cls: 'bg-sky-50 text-sky-900 ring-sky-200/80' },
-    released: { label: 'Released', cls: 'bg-emerald-50 text-emerald-900 ring-emerald-200/80' },
+    pending: { label: 'Awaiting Payment', cls: 'bg-amber-50 text-amber-900 ring-amber-200/80' },
+    held: { label: 'Payment Secured', cls: 'bg-sky-50 text-sky-900 ring-sky-200/80' },
+    released: { label: 'Completed & Settled', cls: 'bg-emerald-50 text-emerald-900 ring-emerald-200/80' },
     refunded: { label: 'Refunded', cls: 'bg-rose-50 text-rose-900 ring-rose-200/80' },
   }
   return map[paymentStatus] || { label: paymentStatus || '—', cls: 'bg-canvas text-ink-muted ring-border-subtle' }

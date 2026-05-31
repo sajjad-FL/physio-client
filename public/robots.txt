@@ -9,4 +9,4 @@ Disallow: /profile
 Disallow: /unauthorized
 Disallow: /physio-dashboard
 
-# Production: run `VITE_PUBLIC_SITE_URL=https://your-domain npm run build` so dist/robots.txt includes Sitemap lines.
+Sitemap: https://physiokhom.com/sitemap.xml

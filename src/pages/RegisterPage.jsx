@@ -11,6 +11,7 @@ import { setSession, getToken, getDefaultDashboardPath } from '../auth/session'
 import { validateIndianMobile } from '../utils/phoneIndia'
 import { validateLiveField } from '../utils/liveFieldValidation'
 import { absoluteUrl } from '../utils/siteMeta'
+import { sendFirebaseOtp, confirmFirebaseOtp, toE164India, friendlyFirebaseError } from '../utils/firebasePhoneAuth'
 
 const STEP_PHONE = 1
 const STEP_OTP = 2
@@ -30,6 +31,7 @@ export default function RegisterPage() {
   const [otpSendBusy, setOtpSendBusy] = useState(false)
   const [loading, setLoading] = useState(false)
   const [fieldErrors, setFieldErrors] = useState({})
+  const [confirmation, setConfirmation] = useState(null)
   const [referralCode, setReferralCode] = useState(() =>
     String(searchParams.get('ref') || '')
       .trim()
@@ -98,14 +100,13 @@ export default function RegisterPage() {
     setOtpSendBusy(true)
     setDevOtpHint('')
     try {
-      const res = await api.post('/auth/signup-otp', { phone: pv.normalized })
+      const conf = await sendFirebaseOtp(toE164India(phone), 'recaptcha-container')
+      setConfirmation(conf)
       setOtp('')
-      const code = res.data?.otp ?? res.data?.data?.otp
-      if (code != null) setDevOtpHint(String(code))
-      toast.success(res.data?.message || 'Verification code sent.')
+      toast.success('Verification code sent.')
       setStep(STEP_OTP)
     } catch (err) {
-      const msg = err.response?.data?.message || err.message || 'Could not send code'
+      const msg = friendlyFirebaseError(err) || err.response?.data?.message || err.message || 'Could not send code'
       toast.error(msg)
       if (err.response?.status === 409) {
         setFieldErrors((prev) => ({ ...prev, phone: 'This number is already registered' }))
@@ -141,11 +142,11 @@ export default function RegisterPage() {
 
     setLoading(true)
     try {
+      const idToken = await confirmFirebaseOtp(confirmation, otp)
       const body = {
         name: name.trim(),
-        phone: pv.normalized,
         password,
-        otp: digits,
+        firebaseIdToken: idToken,
         ...(referralCode ? { referralCode } : {}),
       }
       const res = await api.post('/auth/register', body)
@@ -160,7 +161,7 @@ export default function RegisterPage() {
       setSession(res.data.token, role, profileComplete)
       navigate(getDefaultDashboardPath())
     } catch (err) {
-      toast.error(err.response?.data?.message || err.message || 'Registration failed')
+      toast.error(friendlyFirebaseError(err) || err.response?.data?.message || err.message || 'Registration failed')
     } finally {
       setLoading(false)
     }
@@ -397,6 +398,7 @@ export default function RegisterPage() {
           </Link>
         </p>
       </div>
+      <div id="recaptcha-container" />
     </div>
   )
 }
