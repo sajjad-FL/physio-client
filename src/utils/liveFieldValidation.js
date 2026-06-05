@@ -38,7 +38,7 @@ export function validateLiveField(name, value, ctx = {}) {
     case 'password':
     case 'loginPassword': {
       if (!str) return ''
-      return str.length < 8 ? 'Password must be at least 8 characters' : ''
+      return str.length < 6 ? 'Password must be at least 6 characters' : ''
     }
     case 'email':
     case 'loginEmail': {

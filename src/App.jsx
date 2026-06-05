@@ -2,6 +2,7 @@ import { BrowserRouter, Navigate, Route, Routes, useParams } from 'react-router-
 import { Toaster } from 'react-hot-toast'
 import HomePage from './pages/HomePage'
 import CityLandingPage from './pages/CityLandingPage'
+import PrivacyPolicyPage from './pages/PrivacyPolicyPage'
 import NearMeHubPage from './pages/NearMeHubPage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
@@ -36,7 +37,6 @@ import AdminDirectoryPage from './pages/admin/AdminDirectoryPage'
 import PhysiosAdmin from './pages/admin/PhysiosAdmin'
 import AdminPhysioDetailPage from './pages/admin/AdminPhysioDetailPage'
 import DisputesAdmin from './pages/admin/DisputesAdmin'
-import AdminPaymentsPage from './pages/admin/AdminPaymentsPage'
 import AdminFinancePage from './pages/admin/AdminFinancePage'
 import AdminPlatformSettingsPage from './pages/admin/AdminPlatformSettingsPage'
 import RoleProtectedRoute from './components/RoleProtectedRoute'
@@ -63,6 +63,7 @@ export default function App() {
       />
       <Routes>
         <Route path="/" element={<HomePage />} />
+        <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
         <Route path="/physio-in/:city" element={<CityLandingPage />} />
         <Route path="/near-me-physio" element={<NearMeHubPage />} />
         <Route path="/near-me-physio/:city" element={<NearMeHubPage />} />
@@ -156,7 +157,7 @@ export default function App() {
           <Route path="physios/:id" element={<AdminPhysioDetailPage />} />
           <Route path="verifications" element={<Navigate to="/admin/physios?tab=queue" replace />} />
           <Route path="disputes" element={<DisputesAdmin />} />
-          <Route path="payments" element={<AdminPaymentsPage />} />
+          <Route path="payments" element={<Navigate to="/admin/finance?tab=queue" replace />} />
           <Route path="finance" element={<AdminFinancePage />} />
           <Route path="withdrawals" element={<Navigate to="/admin/finance" replace />} />
           <Route path="settlements" element={<Navigate to="/admin/finance" replace />} />

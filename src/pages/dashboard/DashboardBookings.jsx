@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { api } from '../../config/api'
 import toast from 'react-hot-toast'
 import { bookingStatusBadge, paymentBadge } from './dashboardUtils'
-import { matchesPatientBookingFilter } from './bookingFilterUtils'
+import { matchesPatientBookingFilter, sortPatientBookingsLatestFirst } from './bookingFilterUtils'
 import EmptyState from '../../components/ui/EmptyState'
 import { formatBookingDateAndSlot } from '../../utils/date'
 import { todayYmd } from '../../components/physio/physioBookingHelpers'
@@ -45,7 +45,8 @@ export default function DashboardBookings() {
 
   const filtered = useMemo(() => {
     if (!bookings?.length) return []
-    return bookings.filter((b) => matchesPatientBookingFilter(b, { filter, dateRange, today }))
+    const matched = bookings.filter((b) => matchesPatientBookingFilter(b, { filter, dateRange, today }))
+    return sortPatientBookingsLatestFirst(matched)
   }, [bookings, filter, dateRange, today])
 
   const loading = bookings === null
@@ -157,7 +158,7 @@ export default function DashboardBookings() {
           ) : (
             <ul className="space-y-2">
               {filtered.map((b) => {
-                const st = bookingStatusBadge(b.status, b.sessionStatus, b.paymentStatus)
+                const st = bookingStatusBadge(b.status, b.sessionStatus, b.paymentStatus, b.planStatus)
                 const pay = paymentBadge(b.paymentStatus)
                 return (
                   <li key={b._id}>

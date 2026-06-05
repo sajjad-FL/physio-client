@@ -12,28 +12,30 @@ function formatInr(n) {
 }
 
 function typeLabel(row) {
-  if (row?.isSynthetic && row?.syntheticKind === 'net_available') return 'Withdrawable balance'
   const t = row?.type
+  const direction = row?.direction
   const leg = row?.meta?.leg
-  if (t === 'online' && leg === 'refund') return 'Refund (online)'
-  switch (t) {
-    case 'online':
-      return 'Online payment'
-    case 'offline':
-      return 'Offline payment'
-    case 'settlement':
-      return 'Settlement'
-    case 'withdrawal':
-      return 'Withdrawal'
-    default:
-      return t || '—'
+
+  if (t === 'online') {
+    if (leg === 'refund') return 'Refund (reversed)'
+    if (direction === 'credit') return 'Online Booking Earned'
+    return 'Online payment'
   }
+  if (t === 'offline') {
+    if (leg === 'gross') return 'Cash Collected'
+    if (leg === 'commission') return 'Platform Fee (Cash)'
+    return 'Offline payment'
+  }
+  if (t === 'settlement') {
+    return 'Fee Remitted to Platform'
+  }
+  if (t === 'withdrawal') {
+    return 'Withdrawal Paid Out'
+  }
+  return t || '—'
 }
 
-function typeBadgeClass(t, row) {
-  if (row?.isSynthetic && row?.syntheticKind === 'net_available') {
-    return 'bg-slate-100 text-slate-900 ring-slate-200'
-  }
+function typeBadgeClass(t) {
   switch (t) {
     case 'online':
       return 'bg-emerald-50 text-emerald-900 ring-emerald-200'
@@ -143,7 +145,7 @@ export default function PhysioWalletPage() {
     <div className="mx-auto max-w-5xl space-y-8 px-4 py-8 sm:px-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight text-gray-900">Wallet</h1>
-        <p className="mt-1 text-sm text-gray-500">Earnings, commission due, and transaction history.</p>
+        <p className="mt-1 text-sm text-gray-500">Earnings, platform fees owed, and transaction history.</p>
       </div>
 
       {loading ? (
@@ -155,15 +157,15 @@ export default function PhysioWalletPage() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-3">
           <Card hover={false} className="border-emerald-100/80">
-            <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Available balance</p>
+            <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Withdrawable balance</p>
             <p className="mt-2 text-2xl font-semibold tabular-nums text-emerald-800">{formatInr(w?.availableBalance)}</p>
             {showNetExplainer ? (
               <p className="mt-2 text-xs leading-relaxed text-gray-600">
-                Online balance {formatInr(onlineAvail)} − Commission due {formatInr(commissionDue)} ={' '}
+                Online balance {formatInr(onlineAvail)} − Platform fee owed {formatInr(commissionDue)} ={' '}
                 <span className="font-semibold text-emerald-900">withdrawable {formatInr(available)}</span>
               </p>
             ) : (
-              <p className="mt-2 text-xs text-gray-500">Withdrawable from online collections (no commission offset)</p>
+              <p className="mt-2 text-xs text-gray-500">Withdrawable from online collections (no fee offset)</p>
             )}
             {hasPending && (
               <p className="mt-2 rounded-lg bg-amber-50 px-2 py-1.5 text-xs text-amber-900 ring-1 ring-amber-200">
@@ -186,16 +188,16 @@ export default function PhysioWalletPage() {
             </div>
           </Card>
           <Card hover={false} className="border-amber-100/80">
-            <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Commission due</p>
+            <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Platform Fee Owed</p>
             <p className="mt-2 text-2xl font-semibold tabular-nums text-amber-900">{formatInr(w?.commissionDue)}</p>
             <p className="mt-2 text-xs text-gray-500">
-              Owed to platform from offline cash visits — already subtracted from Available balance above.
+              Owed to platform from offline cash visits — already subtracted from Withdrawable balance above.
             </p>
           </Card>
           <Card hover={false}>
-            <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Total earnings</p>
+            <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Total earned</p>
             <p className="mt-2 text-2xl font-semibold tabular-nums text-gray-900">{formatInr(w?.totalEarned)}</p>
-            <p className="mt-2 text-xs text-gray-500">Lifetime physio share recorded</p>
+            <p className="mt-2 text-xs text-gray-500">Lifetime earnings share recorded</p>
           </Card>
         </div>
       )}
@@ -225,7 +227,7 @@ export default function PhysioWalletPage() {
                   </td>
                   <td className="px-6 py-4 tabular-nums text-gray-700">{b.online_payment?.count ?? 0}</td>
                   <td className="px-6 py-4 tabular-nums font-medium text-gray-900">{formatInr(b.online_payment?.volume)}</td>
-                  <td className="px-6 py-4 text-gray-500">Online wallet (withdrawals use this minus commission due)</td>
+                  <td className="px-6 py-4 text-gray-500">Online wallet (withdrawals use this minus platform fee due)</td>
                 </tr>
                 <tr>
                   <td className="px-6 py-4">
@@ -236,14 +238,14 @@ export default function PhysioWalletPage() {
                   <td className="px-6 py-4 tabular-nums text-gray-700">{b.offline_payment?.count ?? 0}</td>
                   <td className="px-6 py-4 tabular-nums font-medium text-gray-900">{formatInr(b.offline_payment?.volume)}</td>
                   <td className="px-6 py-4 text-gray-500">
-                    Commission accrued {formatInr(b.offline_payment?.commissionAccrued)} · Share{' '}
+                    Platform fee accrued {formatInr(b.offline_payment?.commissionAccrued)} · Share{' '}
                     {formatInr(b.offline_payment?.physioShare)}
                   </td>
                 </tr>
                 <tr>
                   <td className="px-6 py-4">
                     <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${typeBadgeClass('settlement')}`}>
-                      Settlements
+                      Fee collection
                     </span>
                   </td>
                   <td className="px-6 py-4 tabular-nums text-gray-700">{b.settlement?.count ?? 0}</td>
@@ -260,7 +262,7 @@ export default function PhysioWalletPage() {
         <div className="border-b border-gray-100 px-6 py-4">
           <h2 className="text-sm font-semibold text-gray-900">Transaction history</h2>
           <p className="text-xs text-gray-500">
-            Ledger lines plus a summary row when commission due reduces your withdrawable balance
+            Ledger transactions recorded on your wallet.
           </p>
         </div>
         {txLoading ? (
@@ -282,12 +284,10 @@ export default function PhysioWalletPage() {
                 {tx.map((row) => (
                   <tr
                     key={row._id}
-                    className={row.isSynthetic ? 'bg-slate-50/80 hover:bg-slate-50' : 'hover:bg-gray-50/50'}
+                    className="hover:bg-gray-50/50"
                   >
                     <td className="whitespace-nowrap px-6 py-3 text-gray-600">
-                      {row.isSynthetic ? (
-                        <span className="text-xs font-medium text-slate-600">Summary</span>
-                      ) : row.createdAt ? (
+                      {row.createdAt ? (
                         new Date(row.createdAt).toLocaleString()
                       ) : (
                         '—'
@@ -295,47 +295,38 @@ export default function PhysioWalletPage() {
                     </td>
                     <td className="px-6 py-3">
                       <span
-                        className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${typeBadgeClass(row.type, row)}`}
+                        className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${typeBadgeClass(row.type)}`}
                       >
                         {typeLabel(row)}
                       </span>
                       <span className="ml-2 text-xs text-gray-500">
-                        {row.isSynthetic ? '—' : row.direction === 'debit' ? 'Debit' : 'Credit'}
+                        {row.direction === 'debit' ? 'Debit' : 'Credit'}
                       </span>
                     </td>
                     <td className="px-6 py-3 tabular-nums font-medium text-gray-900">{formatInr(row.totalAmount)}</td>
                     <td className="max-w-md px-6 py-3 text-gray-600">
-                      {row.isSynthetic && row.syntheticKind === 'net_available' && row.meta ? (
-                        <span className="text-xs leading-relaxed">
-                          Online wallet balance {formatInr(row.meta.onlineAvailableBalance)} minus offline commission due{' '}
-                          {formatInr(row.meta.commissionDue)}. This is the amount you can request to withdraw (same as
-                          Available balance). Individual commission lines below are the ledger entries that build that
-                          due.
-                        </span>
-                      ) : null}
-                      {!row.isSynthetic && row.bookingId?.date && (
+                      {row.bookingId?.date && (
                         <span className="block text-xs text-gray-500">
                           Booking {row.bookingId.date} {row.bookingId.timeSlot || ''}
                         </span>
                       )}
-                      {!row.isSynthetic && row.type === 'settlement' && row.meta?.note && (
+                      {row.type === 'settlement' && row.meta?.note && (
                         <span className="text-xs">{row.meta.note}</span>
                       )}
-                      {!row.isSynthetic &&
-                        row.type === 'online' &&
+                      {row.type === 'online' &&
                         row.meta?.gross != null &&
                         row.direction === 'credit' && (
                           <span className="text-xs">
-                            Gross {formatInr(row.meta.gross)} · Commission {formatInr(row.commission)}
+                            Gross {formatInr(row.meta.gross)} · Platform fee {formatInr(row.commission)}
                           </span>
                         )}
-                      {!row.isSynthetic && row.type === 'offline' && row.meta?.leg === 'gross' && (
+                      {row.type === 'offline' && row.meta?.leg === 'gross' && (
                         <span className="text-xs">Gross collection · Share {formatInr(row.physioEarning)}</span>
                       )}
-                      {!row.isSynthetic && row.type === 'offline' && row.meta?.leg === 'commission' && (
-                        <span className="text-xs">Platform commission owed (reduces withdrawable balance)</span>
+                      {row.type === 'offline' && row.meta?.leg === 'commission' && (
+                        <span className="text-xs">Platform fee owed (reduces withdrawable balance)</span>
                       )}
-                      {!row.isSynthetic && row.type === 'withdrawal' && row.meta?.note && (
+                      {row.type === 'withdrawal' && row.meta?.note && (
                         <span className="text-xs">{row.meta.note}</span>
                       )}
                     </td>

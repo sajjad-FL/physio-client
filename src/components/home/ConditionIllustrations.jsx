@@ -1,5 +1,5 @@
 /**
- * PhysioKhom — Condition Illustrations
+ * PhysiOkhom — Condition Illustrations
  * Professional medical SVGs for each condition card.
  * Fully scalable — safe to use in marketing, print, or social media.
  * Each component accepts a className prop (use w-full h-full, etc.)

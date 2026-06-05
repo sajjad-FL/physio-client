@@ -102,7 +102,7 @@ export default function PayInstallmentModal({
         key: keyId,
         amount: orderAmount,
         currency,
-        name: 'PhysioKhom',
+        name: 'PhysiOkhom',
         order_id: orderId,
         prefill,
         handler: async function (response) {

@@ -11,6 +11,7 @@ import { setSession, getToken, getDefaultDashboardPath } from '../auth/session'
 import { validateIndianMobile } from '../utils/phoneIndia'
 import { validateLiveField } from '../utils/liveFieldValidation'
 import { absoluteUrl } from '../utils/siteMeta'
+import { sendFirebaseOtp, confirmFirebaseOtp, toE164India, friendlyFirebaseError } from '../utils/firebasePhoneAuth'
 
 const STEP_PHONE = 1
 const STEP_OTP = 2
@@ -30,6 +31,7 @@ export default function RegisterPage() {
   const [otpSendBusy, setOtpSendBusy] = useState(false)
   const [loading, setLoading] = useState(false)
   const [fieldErrors, setFieldErrors] = useState({})
+  const [confirmation, setConfirmation] = useState(null)
   const [referralCode, setReferralCode] = useState(() =>
     String(searchParams.get('ref') || '')
       .trim()
@@ -75,6 +77,10 @@ export default function RegisterPage() {
   }
 
   function goBackStep() {
+    if (step === STEP_PHONE) {
+      navigate('/')
+      return
+    }
     if (step === STEP_OTP) {
       setStep(STEP_PHONE)
       setOtp('')
@@ -98,14 +104,13 @@ export default function RegisterPage() {
     setOtpSendBusy(true)
     setDevOtpHint('')
     try {
-      const res = await api.post('/auth/signup-otp', { phone: pv.normalized })
+      const conf = await sendFirebaseOtp(toE164India(phone), 'recaptcha-container')
+      setConfirmation(conf)
       setOtp('')
-      const code = res.data?.otp ?? res.data?.data?.otp
-      if (code != null) setDevOtpHint(String(code))
-      toast.success(res.data?.message || 'Verification code sent.')
+      toast.success('Verification code sent.')
       setStep(STEP_OTP)
     } catch (err) {
-      const msg = err.response?.data?.message || err.message || 'Could not send code'
+      const msg = friendlyFirebaseError(err) || err.response?.data?.message || err.message || 'Could not send code'
       toast.error(msg)
       if (err.response?.status === 409) {
         setFieldErrors((prev) => ({ ...prev, phone: 'This number is already registered' }))
@@ -141,11 +146,11 @@ export default function RegisterPage() {
 
     setLoading(true)
     try {
+      const idToken = await confirmFirebaseOtp(confirmation, otp)
       const body = {
         name: name.trim(),
-        phone: pv.normalized,
         password,
-        otp: digits,
+        firebaseIdToken: idToken,
         ...(referralCode ? { referralCode } : {}),
       }
       const res = await api.post('/auth/register', body)
@@ -160,7 +165,7 @@ export default function RegisterPage() {
       setSession(res.data.token, role, profileComplete)
       navigate(getDefaultDashboardPath())
     } catch (err) {
-      toast.error(err.response?.data?.message || err.message || 'Registration failed')
+      toast.error(friendlyFirebaseError(err) || err.response?.data?.message || err.message || 'Registration failed')
     } finally {
       setLoading(false)
     }
@@ -170,13 +175,11 @@ export default function RegisterPage() {
     return <AuthSpinner />
   }
 
-  const title = 'Create account — PhysioKhom'
+  const title = 'Create account — PhysiOkhom'
   const description =
     'Sign up with your phone and a password. Add date of birth, gender, and address later in your profile when you are ready to book care.'
   const canonical = absoluteUrl('/register')
   const ogImage = absoluteUrl('/og-default.png')
-
-  const stepLabel = step === STEP_PHONE ? '1 / 3' : step === STEP_OTP ? '2 / 3' : '3 / 3'
 
   const stepTitle =
     step === STEP_PHONE ? 'Your phone number' : step === STEP_OTP ? 'Verify your number' : 'Almost there'
@@ -204,23 +207,49 @@ export default function RegisterPage() {
         <meta name="twitter:description" content={description} />
         <meta name="twitter:image" content={ogImage} />
       </Helmet>
-      <div
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(13,148,136,0.12),transparent)]"
-        aria-hidden
-      />
-      <header className="relative border-b border-slate-200 bg-white/90 shadow-sm backdrop-blur-md">
+      {/* Ambient teal halo glows — matching mobile RegisterScreen */}
+      <div className="pointer-events-none absolute left-[-60px] right-[-60px] top-[-120px] h-[380px] rounded-[190px] bg-[rgba(162,240,239,0.15)]" aria-hidden />
+      <div className="pointer-events-none absolute left-[20%] top-[-50px] h-[200px] w-[60%] rounded-[100px] bg-[rgba(13,107,107,0.04)]" aria-hidden />
+      <header className="relative z-10 border-b border-slate-200 bg-white/90 shadow-sm backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
-          <Link to="/" className="text-[15px] font-semibold text-slate-900 hover:opacity-80">
-            ← PhysioKhom
-          </Link>
+          <button
+            type="button"
+            onClick={goBackStep}
+            className="flex items-center gap-1.5 text-[15px] font-semibold text-teal-700 hover:opacity-80"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M15 18l-6-6 6-6"/></svg>
+            {step === STEP_PHONE ? 'PhysiOkhom' : 'Back'}
+          </button>
         </div>
       </header>
 
-      <div className="relative mx-auto flex min-h-[calc(100vh-61px)] max-w-md flex-col justify-center px-4 py-16 sm:px-6">
+      <div className="relative z-10 mx-auto flex min-h-[calc(100vh-61px)] max-w-md flex-col justify-center px-4 py-16 sm:px-6">
+        {/* Step progress dots — matching mobile SignupPhoneStep */}
+        <div className="mb-8 flex items-center">
+          {[STEP_PHONE, STEP_OTP, STEP_ACCOUNT].map((s, idx) => {
+            const isDone = step > s
+            const isActive = step === s
+            return (
+              <div key={s} className="flex flex-1 items-center">
+                <div className={[
+                  'flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-[1.5px] text-[10px] font-bold transition-all',
+                  isDone ? 'border-teal-600 bg-teal-600 text-white' :
+                  isActive ? 'border-teal-600 bg-teal-600/10 text-teal-700 shadow-[0_0_0_4px_rgba(13,148,136,0.10)]' :
+                  'border-slate-200 bg-white text-slate-400',
+                ].join(' ')}>
+                  {isDone ? (
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M20 6L9 17l-5-5"/></svg>
+                  ) : idx + 1}
+                </div>
+                {idx < 2 && (
+                  <div className={`mx-1.5 h-[1.5px] flex-1 transition-colors ${isDone ? 'bg-teal-600' : 'bg-slate-200'}`} />
+                )}
+              </div>
+            )
+          })}
+        </div>
+
         <div className="mb-8 space-y-2 text-center">
-          <p className="inline-block rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-teal-700">
-            {stepLabel}
-          </p>
           <p className="text-xs font-semibold uppercase tracking-wider text-teal-600">Create account</p>
           <h1 className="text-2xl font-bold text-slate-900">{stepTitle}</h1>
           <p className="text-sm leading-relaxed text-slate-500">{stepSub}</p>
@@ -397,6 +426,7 @@ export default function RegisterPage() {
           </Link>
         </p>
       </div>
+      <div id="recaptcha-container" />
     </div>
   )
 }

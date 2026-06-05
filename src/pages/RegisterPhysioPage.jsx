@@ -21,7 +21,6 @@ import {
 import { normalizeIndianPhone } from '../utils/phoneIndia'
 import { validateLiveField } from '../utils/liveFieldValidation'
 import { PHYSIO_DEGREE_OPTIONS, isPhysioDegreeOption } from '../constants/physioQualification.js'
-import { formatPhysioSessionFeeLabel } from '../utils/physioSessionFee.js'
 import { ID_PROOF_TYPE_OPTIONS } from '../constants/idProofTypes.js'
 import { absoluteUrl } from '../utils/siteMeta'
 
@@ -85,7 +84,6 @@ export default function RegisterPhysioPage() {
   const [specialization, setSpecialization] = useState('')
   const [serviceType, setServiceType] = useState('both')
   const [areas, setAreas] = useState('')
-  const [feeMin, setFeeMin] = useState('')
 
   const [fCertificate, setFCertificate] = useState(null)
   const [fIdProof, setFIdProof] = useState(null)
@@ -291,7 +289,6 @@ export default function RegisterPhysioPage() {
           specialization,
           serviceType,
           areas,
-          feeMin,
         })
         if (Object.keys(errors).length) {
           setFieldErrors(errors)
@@ -303,7 +300,7 @@ export default function RegisterPhysioPage() {
 
       if (fromStep === 4) {
         const { errors, ok } = validateDocumentsStep(
-          { fCertificate, fIdProof, fRegCert, fSelfie, fInternship, fCouncil },
+          { fCertificate, fIdProof, fRegCert, fSelfie, fInternship },
           { certificate: '', idProof: '', registration: '', selfie: '' },
           {
             requireQualificationDeclaration: ndaPolicy.requireQualificationDeclaration,
@@ -351,10 +348,10 @@ export default function RegisterPhysioPage() {
     try {
       // Guard: required files must be selected before we build FormData
       const missingFiles = {}
-      if (!fCertificate)  missingFiles.certificate             = 'Qualification certificate is required'
-      if (!fIdProof)      missingFiles.idProof                 = 'ID proof is required'
-      if (!fRegCert)      missingFiles.registrationCertificate = 'Registration certificate is required'
-      if (!fSelfie)       missingFiles.selfieWithId            = 'Selfie with ID is required'
+      if (!fCertificate) missingFiles.certificate = 'BPT/MPT pass certificate is required'
+      if (!fInternship) missingFiles.internshipCertificate = 'Upload at least one internship certificate'
+      if (!fIdProof) missingFiles.idProof = 'GOVERNMENT ID is required'
+      if (!fSelfie) missingFiles.selfieWithId = 'Selfie with ID is required'
       if (Object.keys(missingFiles).length) {
         setFieldErrors(missingFiles)
         setFormError('Please upload all required documents (step 4)')
@@ -383,16 +380,14 @@ export default function RegisterPhysioPage() {
       fd.append('specialization', specialization.trim())
       fd.append('serviceType', serviceType)
       fd.append('areas', areas)
-      fd.append('feeMin', String(feeMin))
 
       if (avatarFile) fd.append('avatar', avatarFile)
       if (fCertificate) fd.append('certificate', fCertificate)
-      if (fIdProof)     fd.append('idProof', fIdProof)
+      if (fIdProof) fd.append('idProof', fIdProof)
       fd.append('idProofType', String(idProofType).trim().toLowerCase())
       if (fRegCert) fd.append('registrationCertificate', fRegCert)
-      if (fSelfie)  fd.append('selfieWithId', fSelfie)
+      if (fSelfie) fd.append('selfieWithId', fSelfie)
       if (fInternship) fd.append('internshipCertificate', fInternship)
-      if (fCouncil)    fd.append('councilRegistrationCertificate', fCouncil)
       if (ndaPolicy.requireQualificationDeclaration !== false && !qualificationAgreed) {
         setFormError('Confirm the qualification declaration')
         toast.error('Confirm the qualification declaration')
@@ -406,10 +401,24 @@ export default function RegisterPhysioPage() {
       navigate('/login', { replace: true })
     } catch (e) {
       const data = e.response?.data
-      if (data?.errors && typeof data.errors === 'object') {
-        setFieldErrors(data.errors)
-        setFormError(data.message || 'Please fix the errors below')
-        toastValidationErrors(data.errors, data.message || 'Please fix the errors')
+      const apiErrors =
+        data?.errors && typeof data.errors === 'object'
+          ? data.errors
+          : data && typeof data === 'object'
+            ? Object.fromEntries(
+                Object.entries(data).filter(
+                  ([key, value]) => key !== 'message' && typeof value === 'string' && value.trim(),
+                ),
+              )
+            : {}
+      if (Object.keys(apiErrors).length) {
+        const { feeMin, feeMax, ...rest } = apiErrors
+        setFieldErrors(rest)
+        setFormError(data?.message || 'Please fix the errors below')
+        toastValidationErrors(rest, data?.message || 'Please fix the errors')
+        if (feeMin) {
+          toast.error('Production server still requires fee per session — deploy the latest physio-server.')
+        }
       } else {
         toastApiError(e, data?.message || 'Registration failed')
       }
@@ -418,9 +427,9 @@ export default function RegisterPhysioPage() {
     }
   }
 
-  const title = 'Register as a physiotherapist — PhysioKhom'
+  const title = 'Register as a physiotherapist — PhysiOkhom'
   const description =
-    'Apply to join PhysioKhom as a verified home-visit physiotherapist. Submit your qualifications and documents for admin review.'
+    'Apply to join PhysiOkhom as a verified home-visit physiotherapist. Submit your qualifications and documents for admin review.'
   const canonical = absoluteUrl('/register-physio')
   const ogImage = absoluteUrl('/og-default.png')
 
@@ -443,7 +452,7 @@ export default function RegisterPhysioPage() {
       <header className="border-b border-gray-200 bg-white/90 shadow-sm">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-4">
           <Link to="/" className="text-sm font-semibold text-gray-900 hover:opacity-80">
-            ← PhysioKhom
+            ← PhysiOkhom
           </Link>
           <Link to="/login" className="text-sm text-blue-600 hover:underline">
             Sign in
@@ -828,25 +837,6 @@ export default function RegisterPhysioPage() {
                 />
                 {fieldErrors.areas ? <p className="mt-1 text-xs text-red-600">{fieldErrors.areas}</p> : null}
               </div>
-              <div className="sm:col-span-2">
-                <label className="mb-1 block text-xs font-medium text-ink-muted" htmlFor="reg-fee-min">
-                  Fee per session (₹)
-                </label>
-                <p className="mb-2 text-xs text-ink-muted">One fixed amount you charge per session.</p>
-                <input
-                  id="reg-fee-min"
-                  className={inputClass('feeMin')}
-                  type="number"
-                  min="0"
-                  value={feeMin}
-                  onChange={(e) => {
-                    const v = e.target.value
-                    setFeeMin(v)
-                    patchField('feeMin', v)
-                  }}
-                />
-                {fieldErrors.feeMin ? <p className="mt-1 text-xs text-red-600">{fieldErrors.feeMin}</p> : null}
-              </div>
             </div>
           </section>
         )}
@@ -969,7 +959,7 @@ export default function RegisterPhysioPage() {
               <h3 className="text-sm font-semibold text-ink">Qualification declaration</h3>
               <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-ink-muted">
                 {ndaPolicy.declarationText ||
-                  'I confirm that all qualifications and documents I submit to PhysioKhom are accurate. Misrepresentation may result in removal from the platform and legal consequences.'}
+                  'I confirm that all qualifications and documents I submit to PhysiOkhom are accurate. Misrepresentation may result in removal from the platform and legal consequences.'}
               </p>
               <label className="mt-4 flex cursor-pointer items-start gap-3 text-sm text-ink">
                 <input
@@ -1014,12 +1004,6 @@ export default function RegisterPhysioPage() {
               <div className="flex justify-between gap-4 border-b border-border-subtle py-2">
                 <dt className="text-ink-muted">Experience</dt>
                 <dd className="text-right font-medium text-ink">{experience} yrs</dd>
-              </div>
-              <div className="flex justify-between gap-4 border-b border-border-subtle py-2">
-                <dt className="text-ink-muted">Fee / session</dt>
-                <dd className="text-right font-medium text-ink">
-                  {feeMin === '' ? '—' : formatPhysioSessionFeeLabel({ pricePerSession: Number(feeMin) })}
-                </dd>
               </div>
               <div className="flex justify-between gap-4 border-b border-border-subtle py-2">
                 <dt className="text-ink-muted">Coverage (map)</dt>

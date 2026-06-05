@@ -111,23 +111,6 @@ export function validatePracticeSection(practice) {
         : []
   if (areaList.length === 0) errors.areas = 'Add at least one service area'
 
-  const MAX_FEE = 500000
-  const minStr =
-    practice?.feeMin !== undefined && practice?.feeMin !== null && String(practice.feeMin).trim() !== ''
-      ? String(practice.feeMin).trim()
-      : String(practice?.fees ?? '').trim()
-
-  if (!minStr) {
-    errors.feeMin = 'Fee per session is required'
-  } else {
-    const min = Number(minStr)
-    if (!Number.isFinite(min) || min <= 0) {
-      errors.feeMin = 'Enter a valid fee greater than zero (₹)'
-    } else if (min > MAX_FEE) {
-      errors.feeMin = 'Fee seems unreasonably high — please check'
-    }
-  }
-
   return { errors }
 }
 
@@ -174,17 +157,24 @@ export function validateSubmitForm(values) {
       specialization: values.specialization,
       serviceType: values.serviceType,
       areas: values.areas,
-      feeMin: values.feeMin !== undefined ? values.feeMin : values.fees,
-    }).errors
+    }).errors,
   )
 
-  if (!hasUrl(values.docCertificate)) errors.certificate = 'Upload your qualification certificate'
-  if (!hasUrl(values.docIdProof)) errors.idProof = 'Upload ID proof'
-  if (!hasUrl(values.docRegistration)) errors.registrationCertificate = 'Upload registration certificate'
+  if (!hasUrl(values.docCertificate)) errors.certificate = 'Upload your BPT/MPT pass certificate'
+  if (!hasUrl(values.docIdProof)) errors.idProof = 'Upload your GOVERNMENT ID'
   if (!hasUrl(values.docSelfie)) errors.selfieWithId = 'Upload a selfie with your ID'
+  const internshipUrls = Array.isArray(values.docInternshipCertificates)
+    ? values.docInternshipCertificates.filter((u) => hasUrl(u))
+    : hasUrl(values.docInternship)
+      ? [values.docInternship]
+      : []
+  if (internshipUrls.length === 0) {
+    errors.internshipCertificate = 'Upload at least one internship certificate'
+  }
 
   if (!isValidIdProofType(values.idProofType)) {
-    errors.idProofType = 'Select the type of government ID you uploaded (Aadhaar, PAN, Passport, or Voter ID)'
+    errors.idProofType =
+      'Select the GOVT ID type you uploaded (Aadhaar, PAN, Passport, or Voter ID)'
   }
 
   if (values.requireSignedNda && !hasUrl(values.docSignedNda)) {
@@ -236,8 +226,8 @@ export function validateRegistrationAccount({ phone, password }) {
   const errors = {}
   const pv = validateIndianMobile(phone)
   if (!pv.valid) errors.phone = pv.message
-  if (!password || String(password).length < 8) {
-    errors.password = 'Password must be at least 8 characters'
+  if (!password || String(password).length < 6) {
+    errors.password = 'Password must be at least 6 characters'
   }
   return { errors }
 }
@@ -264,14 +254,21 @@ export function validateRegistrationAccount({ phone, password }) {
 export function validateDocumentsStep(files, existing = {}, opts = {}) {
   const errors = {}
   const has = (url, file) => Boolean(String(url || '').trim()) || Boolean(file)
+  const hasInternship =
+    (Array.isArray(files.fInternships) && files.fInternships.some(Boolean)) ||
+    Boolean(files.fInternship) ||
+    (Array.isArray(existing.internshipCertificates) &&
+      existing.internshipCertificates.some((u) => String(u || '').trim())) ||
+    Boolean(String(existing.internship || '').trim())
+
   if (!has(existing.certificate, files.fCertificate)) {
-    errors.certificate = 'Qualification certificate is required'
+    errors.certificate = 'BPT/MPT pass certificate is required'
+  }
+  if (!hasInternship) {
+    errors.internshipCertificate = 'Upload at least one internship certificate'
   }
   if (!has(existing.idProof, files.fIdProof)) {
-    errors.idProof = 'ID proof is required'
-  }
-  if (!has(existing.registration, files.fRegCert)) {
-    errors.registrationCertificate = 'Registration certificate is required'
+    errors.idProof = 'GOVERNMENT ID is required'
   }
   if (!has(existing.selfie, files.fSelfie)) {
     errors.selfieWithId = 'Selfie with ID is required'
@@ -279,7 +276,7 @@ export function validateDocumentsStep(files, existing = {}, opts = {}) {
 
   const idType = opts.idProofType != null ? String(opts.idProofType).trim().toLowerCase() : ''
   if (has(existing.idProof, files.fIdProof) && !isValidIdProofType(idType)) {
-    errors.idProofType = 'Select ID type (Aadhaar, PAN, Passport, or Voter ID)'
+    errors.idProofType = 'Select GOVT ID type (Aadhaar, PAN, Passport, or Voter ID)'
   }
   if (opts.requireSignedNda && !has(existing.signedNda, files.fSignedNda)) {
     errors.signedNda = 'Download the NDA, sign it, and upload the signed copy'

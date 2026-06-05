@@ -10,7 +10,7 @@ export default function UnauthorizedPage() {
     <>
       <SeoNoIndex />
       <Helmet>
-        <title>Access denied | PhysioKhom</title>
+        <title>Access denied | PhysiOkhom</title>
       </Helmet>
       <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50 px-4">
       <h1 className="text-2xl font-semibold text-gray-900">Access denied</h1>

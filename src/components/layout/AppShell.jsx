@@ -44,7 +44,7 @@ function NavItemBadge({ count, active }) {
 }
 
 export default function AppShell({
-  brand = 'PhysioKhom',
+  brand = 'PhysiOkhom',
   badge,
   navItems = [],
   bottomNavItems = null,
@@ -60,15 +60,11 @@ export default function AppShell({
     <>
       <div className="flex h-16 shrink-0 items-center gap-2 border-b border-slate-100 px-4 lg:h-[4.25rem]">
         <Link to="/" className="flex min-w-0 items-center gap-2" onClick={() => setMobileOpen(false)}>
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-teal-600 text-white shadow-md shadow-teal-600/20 transition-transform duration-200 motion-safe:group-hover:scale-105">
-            <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden>
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-              />
-            </svg>
-          </span>
+          <img
+            src="/logo.png"
+            alt="PhysiOkhom Logo"
+            className="h-12 w-12 shrink-0 object-contain transition-transform duration-200 motion-safe:group-hover:scale-105"
+          />
           <span className="truncate text-[15px] font-semibold text-slate-900">{brand}</span>
         </Link>
         {badge && (

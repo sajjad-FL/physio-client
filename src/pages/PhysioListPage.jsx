@@ -154,6 +154,17 @@ export default function PhysioListPage() {
       setLng(Number(userCoords.lng))
       setLocation((prev) => prev || 'Location from map')
     }
+    const selectedIssue = routerLocation.state?.selectedIssue
+    if (selectedIssue) {
+      if (ISSUE_OPTIONS.includes(selectedIssue)) {
+        setIssue(selectedIssue)
+      } else if (selectedIssue === 'Other condition') {
+        setIssue(ISSUE_OTHER_VALUE)
+      } else {
+        setIssue(ISSUE_OTHER_VALUE)
+        setIssueOther(selectedIssue)
+      }
+    }
   }, [routerLocation.state])
 
   const locOk = lat != null && lng != null && location.trim().length > 0
@@ -303,7 +314,7 @@ export default function PhysioListPage() {
           key: String(keyId),
           amount: amountPaise,
           currency: currency || 'INR',
-          name: 'PhysioKhom',
+          name: 'PhysiOkhom',
           description: 'Online consultation',
           order_id: orderIdStr,
           modal: {

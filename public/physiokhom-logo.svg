@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 220" role="img" aria-labelledby="title desc">
-  <title id="title">PhysioKhom logo</title>
-  <desc id="desc">Minimal logo with healing motion icon and PhysioKhom wordmark</desc>
+  <title id="title">PhysiOkhom logo</title>
+  <desc id="desc">Minimal logo with healing motion icon and PhysiOkhom wordmark</desc>
 
   <defs>
     <style>
@@ -28,8 +28,9 @@
 
   <!-- Wordmark -->
   <g transform="translate(218 126)">
-    <text x="0" y="0" font-size="64" class="pk-word pk-slate">Physio</text>
-    <text x="220" y="0" font-size="64" class="pk-word pk-teal">Khom</text>
+    <text x="0" y="0" font-size="64" class="pk-word">
+      <tspan class="pk-slate">PhysiO</tspan><tspan class="pk-teal">khom</tspan>
+    </text>
     <text x="2" y="38" font-size="20" fill="#475569" font-family="Inter, Segoe UI, Roboto, Arial, sans-serif" letter-spacing="2.8">
       HOME PHYSIOTHERAPY
     </text>
