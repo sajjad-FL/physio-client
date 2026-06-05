@@ -78,33 +78,45 @@ export default function AppShell({
         )}
       </div>
       <nav className="flex flex-1 flex-col gap-1 overflow-y-auto p-4">
-        {navItems.map(({ to, label, end, icon, disabled, badgeCount }) =>
-          disabled ? (
-            <span
-              key={to}
-              className="group relative flex w-full cursor-not-allowed items-center justify-between gap-2 rounded-r-xl py-2.5 pl-4 pr-3 text-sm font-medium text-slate-400"
-              title="Available after your profile is approved"
-            >
-              <span className="flex min-w-0 flex-1 items-center gap-3">
-                {icon}
-                <span className="truncate">{label}</span>
-              </span>
-              <NavItemBadge count={badgeCount} active={false} />
-            </span>
-          ) : (
-            <NavLink key={to} to={to} end={end} className={navLinkClass} onClick={() => setMobileOpen(false)}>
-              {({ isActive }) => (
-                <>
+        {navItems.map(({ to, label, end, icon, disabled, badgeCount, section }, index) => {
+          const prevSection = index > 0 ? navItems[index - 1]?.section : null
+          const showSection = section && section !== prevSection
+          const itemKey = to || `section-${section}-${index}`
+
+          return (
+            <span key={itemKey} className="contents">
+              {showSection && (
+                <p className="mb-1 mt-3 first:mt-0 px-4 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  {section}
+                </p>
+              )}
+              {disabled ? (
+                <span
+                  className="group relative flex w-full cursor-not-allowed items-center justify-between gap-2 rounded-r-xl py-2.5 pl-4 pr-3 text-sm font-medium text-slate-400"
+                  title="Available after your profile is approved"
+                >
                   <span className="flex min-w-0 flex-1 items-center gap-3">
                     {icon}
                     <span className="truncate">{label}</span>
                   </span>
-                  <NavItemBadge count={badgeCount} active={isActive} />
-                </>
+                  <NavItemBadge count={badgeCount} active={false} />
+                </span>
+              ) : (
+                <NavLink to={to} end={end} className={navLinkClass} onClick={() => setMobileOpen(false)}>
+                  {({ isActive }) => (
+                    <>
+                      <span className="flex min-w-0 flex-1 items-center gap-3">
+                        {icon}
+                        <span className="truncate">{label}</span>
+                      </span>
+                      <NavItemBadge count={badgeCount} active={isActive} />
+                    </>
+                  )}
+                </NavLink>
               )}
-            </NavLink>
+            </span>
           )
-        )}
+        })}
       </nav>
       {sidebarFooter && <div className="border-t border-slate-100 p-4">{sidebarFooter}</div>}
     </>

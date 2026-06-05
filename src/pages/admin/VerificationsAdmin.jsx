@@ -134,7 +134,7 @@ function Row({ label, value, multiline }) {
   )
 }
 
-export default function VerificationsAdmin() {
+export default function VerificationsAdmin({ embedded = false }) {
   const [list, setList] = useState([])
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(null)
@@ -171,15 +171,21 @@ export default function VerificationsAdmin() {
   }
 
   if (loading) {
-    return <p className="text-sm text-ink-muted">Loading…</p>
+    return <p className="text-sm text-slate-500">Loading…</p>
   }
 
   return (
     <div>
-      <h1 className="text-2xl font-semibold text-ink">Verification queue</h1>
-      <p className="mt-2 text-sm text-ink-muted">Approve or reject physiotherapist applications.</p>
+      {!embedded && (
+        <>
+          <h1 className="text-2xl font-semibold text-slate-900">Verification queue</h1>
+          <p className="mt-2 text-sm text-slate-500">
+            Review new physio applications with submitted documents. Approved physios can accept bookings.
+          </p>
+        </>
+      )}
 
-      <div className="surface-card mt-8 overflow-hidden rounded-2xl">
+      <div className={`surface-card overflow-hidden rounded-2xl ${embedded ? '' : 'mt-8'}`}>
         <table className="min-w-full text-left text-sm">
           <thead className="border-b border-border-subtle bg-canvas/80 text-xs uppercase text-ink-muted">
             <tr>

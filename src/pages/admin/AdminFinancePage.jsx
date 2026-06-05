@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { api } from '../../config/api'
 import toast from 'react-hot-toast'
+import AdminPageHeader, { AdminLink } from '../../components/admin/AdminPageHeader'
+import AdminFlowGuide from '../../components/admin/AdminFlowGuide'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import Input from '../../components/ui/Input'
@@ -191,13 +193,28 @@ export default function AdminFinancePage() {
   )
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6 px-4 py-8 sm:px-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-gray-900">Finance &amp; payouts</h1>
-        <p className="mt-1 text-sm text-gray-500">
-          Physio wallets, commission settlements, and withdrawal approvals in one place.
-        </p>
-      </div>
+    <div className="space-y-6">
+      <AdminPageHeader
+        title="Wallets & payouts"
+        subtitle="Track physio earnings, record commission settlements, and approve withdrawal requests."
+        breadcrumbs={[{ label: 'Admin', to: '/admin' }, { label: 'Wallets & payouts' }]}
+        actions={
+          <>
+            <AdminLink to="/admin/payments">Payment queue →</AdminLink>
+            <AdminLink to="/admin/physios">Physiotherapists →</AdminLink>
+          </>
+        }
+      />
+
+      <AdminFlowGuide
+        title="Finance flow"
+        steps={[
+          'Verified payments (from Payment queue) credit physio wallets and accrue platform commission.',
+          'Use Commission due filter to find physios who owe the platform — record settlement when they pay back.',
+          'Approve pending payout requests to debit withdrawable balance after you transfer funds externally.',
+          'Open a physio row for full wallet history, settlements, and recent ledger activity.',
+        ]}
+      />
 
       {loading && !summary ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

@@ -1,12 +1,22 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { api } from '../../config/api'
 import toast from 'react-hot-toast'
 import { toastApiError, toastValidationErrors } from '../../utils/formToast'
 import Pagination from '../../components/Pagination'
+import AdminPageHeader from '../../components/admin/AdminPageHeader'
+import VerificationsAdmin from './VerificationsAdmin'
 import { formatPhysioSessionFeeLabel } from '../../utils/physioSessionFee.js'
 
+const TABS = [
+  { id: 'directory', label: 'Directory & manage' },
+  { id: 'queue', label: 'Verification queue' },
+]
+
 export default function PhysiosAdmin() {
+  const [searchParams, setSearchParams] = useSearchParams()
+  const activeTab = searchParams.get('tab') === 'queue' ? 'queue' : 'directory'
+  const [showAddForms, setShowAddForms] = useState(false)
   const [list, setList] = useState([])
   const [candidates, setCandidates] = useState([])
   const [loading, setLoading] = useState(true)
@@ -284,7 +294,11 @@ export default function PhysiosAdmin() {
     }
   }
 
-  if (loading) {
+  function setTab(tab) {
+    setSearchParams(tab === 'queue' ? { tab: 'queue' } : {})
+  }
+
+  if (loading && activeTab === 'directory') {
     return (
       <div className="flex items-center gap-3">
         <div className="h-5 w-5 animate-spin rounded-full border-2 border-border-subtle border-t-brand" aria-hidden />
@@ -332,11 +346,49 @@ export default function PhysiosAdmin() {
         </div>
       )}
 
-      <div className="mb-10">
-        <h1 className="text-2xl font-semibold tracking-tight text-ink sm:text-3xl">Physiotherapists</h1>
-        <p className="mt-2 text-sm leading-relaxed text-ink-muted">Add team members and manage availability.</p>
+      <AdminPageHeader
+        title="Physiotherapists"
+        subtitle="Manage the physio directory, approve new applications, and create profiles."
+        breadcrumbs={[{ label: 'Admin', to: '/admin' }, { label: 'Physiotherapists' }]}
+        actions={
+          activeTab === 'directory' ? (
+            <button
+              type="button"
+              onClick={() => setShowAddForms((v) => !v)}
+              className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-800 shadow-sm hover:bg-slate-50"
+            >
+              {showAddForms ? 'Hide add forms' : 'Add physiotherapist'}
+            </button>
+          ) : (
+            <Link to="/admin/users" className="text-sm font-semibold text-teal-700 hover:text-teal-900">
+              Browse users →
+            </Link>
+          )
+        }
+      />
+
+      <div className="mb-6 inline-flex rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
+        {TABS.map((tab) => {
+          const active = activeTab === tab.id
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setTab(tab.id)}
+              className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
+                active ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'
+              }`}
+            >
+              {tab.label}
+            </button>
+          )
+        })}
       </div>
 
+      {activeTab === 'queue' ? (
+        <VerificationsAdmin embedded />
+      ) : (
+        <>
       {error && (
         <div
           className="mb-6 rounded-xl border border-red-200/80 bg-red-50 px-4 py-3 text-sm text-red-900"
@@ -346,6 +398,8 @@ export default function PhysiosAdmin() {
         </div>
       )}
 
+      {showAddForms && (
+      <>
       <form
         onSubmit={handleFromUser}
         className="mb-10 rounded-2xl border border-border-subtle bg-white p-6 shadow-[0_2px_8px_rgba(10,37,64,0.04)] sm:p-8"
@@ -573,6 +627,8 @@ export default function PhysiosAdmin() {
           {submitting ? 'Saving…' : 'Add physiotherapist'}
         </button>
       </form>
+      </>
+      )}
 
       <div className="surface-card overflow-hidden rounded-2xl">
         <div className="border-b border-border-subtle bg-canvas/80 px-4 py-3.5 sm:px-6">
@@ -692,6 +748,8 @@ export default function PhysiosAdmin() {
         </div>
       </div>
       <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+        </>
+      )}
     </div>
   )
 }

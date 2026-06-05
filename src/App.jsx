@@ -32,9 +32,9 @@ import ProfilePage from './pages/dashboard/ProfilePage'
 import AdminLayout from './pages/admin/AdminLayout'
 import BookingsAdmin from './pages/admin/BookingsAdmin'
 import AdminBookingDetailPage from './pages/admin/AdminBookingDetailPage'
+import AdminDirectoryPage from './pages/admin/AdminDirectoryPage'
 import PhysiosAdmin from './pages/admin/PhysiosAdmin'
 import AdminPhysioDetailPage from './pages/admin/AdminPhysioDetailPage'
-import VerificationsAdmin from './pages/admin/VerificationsAdmin'
 import DisputesAdmin from './pages/admin/DisputesAdmin'
 import AdminPaymentsPage from './pages/admin/AdminPaymentsPage'
 import AdminFinancePage from './pages/admin/AdminFinancePage'
@@ -151,9 +151,10 @@ export default function App() {
         >
           <Route index element={<BookingsAdmin />} />
           <Route path="bookings/:id" element={<AdminBookingDetailPage />} />
+          <Route path="users" element={<AdminDirectoryPage />} />
           <Route path="physios" element={<PhysiosAdmin />} />
           <Route path="physios/:id" element={<AdminPhysioDetailPage />} />
-          <Route path="verifications" element={<VerificationsAdmin />} />
+          <Route path="verifications" element={<Navigate to="/admin/physios?tab=queue" replace />} />
           <Route path="disputes" element={<DisputesAdmin />} />
           <Route path="payments" element={<AdminPaymentsPage />} />
           <Route path="finance" element={<AdminFinancePage />} />

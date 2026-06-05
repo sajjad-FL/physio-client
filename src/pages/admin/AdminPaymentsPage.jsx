@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../../config/api'
 import toast from 'react-hot-toast'
+import AdminPageHeader, { AdminLink } from '../../components/admin/AdminPageHeader'
+import AdminFlowGuide from '../../components/admin/AdminFlowGuide'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import Input from '../../components/ui/Input'
@@ -166,26 +168,35 @@ export default function AdminPaymentsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6 px-4 py-8 sm:px-6">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-gray-900">Payments</h1>
-          <p className="mt-1 text-sm text-gray-500">
-            One row per installment. Verify cash collections from physios — online installments auto-verify via Razorpay.
-            {pendingVerification > 0 && (
-              <span className="ml-1 font-medium text-amber-800">
-                {pendingVerification} awaiting verification
-              </span>
-            )}
-          </p>
+    <div className="space-y-6">
+      <AdminPageHeader
+        title="Payment queue"
+        subtitle="Verify offline cash collections reported by physiotherapists. Online payments via Razorpay are verified automatically."
+        breadcrumbs={[{ label: 'Admin', to: '/admin' }, { label: 'Payment queue' }]}
+        actions={
+          <>
+            <AdminLink to="/admin/finance">Wallets &amp; payouts →</AdminLink>
+            <AdminLink to="/admin">Bookings →</AdminLink>
+          </>
+        }
+      />
+
+      <AdminFlowGuide
+        title="Payment flow (offline)"
+        steps={[
+          'Patient pays physio in cash → physio marks installment as collected in their app.',
+          'You verify the collection here (or on the booking detail page under Installments).',
+          'Verified amounts update physio wallets — commission due appears under Finance.',
+          'After sessions complete, release escrow from the booking detail page when appropriate.',
+        ]}
+      />
+
+      {pendingVerification > 0 && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+          <span className="font-semibold">{pendingVerification} installment{pendingVerification === 1 ? '' : 's'}</span>{' '}
+          awaiting verification — filter by status &quot;Collected&quot; or use the Offline tab.
         </div>
-        <Link
-          to="/admin/finance"
-          className="text-sm font-medium text-blue-600 hover:text-blue-800"
-        >
-          Finance &amp; payouts →
-        </Link>
-      </div>
+      )}
 
       <Card hover={false} className="p-4 sm:p-5">
         <div className="flex flex-wrap items-center gap-2">

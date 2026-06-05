@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { api } from '../../config/api'
 import { formatBookingTimeSlot } from '../../utils/date'
 import toast from 'react-hot-toast'
+import AdminPageHeader, { AdminLink } from '../../components/admin/AdminPageHeader'
 import Pagination from '../../components/Pagination'
 
 function idShort(id) {
@@ -77,12 +79,14 @@ export default function DisputesAdmin() {
 
   return (
     <div>
-      <h1 className="text-2xl font-semibold text-ink">Dispute management</h1>
-      <p className="mt-2 text-sm text-ink-muted">
-        Review open cases. Refund or release secured payment when resolving in favor of a party.
-      </p>
+      <AdminPageHeader
+        title="Disputes"
+        subtitle="Review cases raised by patients or physiotherapists. Open the related booking for full payment and session context."
+        breadcrumbs={[{ label: 'Admin', to: '/admin' }, { label: 'Disputes' }]}
+        actions={<AdminLink to="/admin">Bookings →</AdminLink>}
+      />
 
-      <div className="surface-card mt-8 overflow-x-auto rounded-2xl shadow-sm ring-1 ring-border-subtle/80">
+      <div className="surface-card mt-6 overflow-x-auto rounded-2xl shadow-sm ring-1 ring-border-subtle/80">
         <table className="min-w-full text-left text-sm">
           <thead className="border-b border-border-subtle bg-canvas/80 text-xs uppercase text-ink-muted">
             <tr>
@@ -106,7 +110,19 @@ export default function DisputesAdmin() {
                 const open = d.status === 'open' || d.status === 'under_review'
                 return (
                   <tr key={d._id} className="bg-white/60 transition duration-200 ease-in-out hover:bg-gray-50">
-                    <td className="px-4 py-3 font-mono text-xs text-ink">{idShort(bid)}</td>
+                    <td className="px-4 py-3">
+                      {bid ? (
+                        <Link
+                          to={`/admin/bookings/${bid}`}
+                          className="font-mono text-xs font-semibold text-teal-700 hover:underline"
+                          title={String(bid)}
+                        >
+                          {idShort(bid)}
+                        </Link>
+                      ) : (
+                        <span className="font-mono text-xs text-ink">—</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3">
                       {d.raisedBy === 'physio' ? 'Physiotherapist' : 'Patient'}
                     </td>
@@ -120,6 +136,14 @@ export default function DisputesAdmin() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap gap-2">
+                        {bid && (
+                          <Link
+                            to={`/admin/bookings/${bid}`}
+                            className="inline-flex rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-800 shadow-sm hover:bg-slate-50"
+                          >
+                            Open booking
+                          </Link>
+                        )}
                         <button
                           type="button"
                           onClick={() => setDetail(d)}
@@ -155,9 +179,20 @@ export default function DisputesAdmin() {
               <div>
                 <dt className="text-ink-muted">Booking</dt>
                 <dd className="font-mono text-xs">
-                  {detail.bookingId?.date}{' '}
-                  {detail.bookingId?.timeSlot ? formatBookingTimeSlot(detail.bookingId.timeSlot) : '—'} ·{' '}
-                  {idShort(detail.bookingId?._id)}
+                  {detail.bookingId?._id ? (
+                    <Link
+                      to={`/admin/bookings/${detail.bookingId._id}`}
+                      className="font-semibold text-teal-700 hover:underline"
+                    >
+                      Open booking {idShort(detail.bookingId._id)}
+                    </Link>
+                  ) : (
+                    '—'
+                  )}
+                  <span className="mt-1 block text-slate-600">
+                    {detail.bookingId?.date}{' '}
+                    {detail.bookingId?.timeSlot ? formatBookingTimeSlot(detail.bookingId.timeSlot) : '—'}
+                  </span>
                 </dd>
               </div>
               <div>
