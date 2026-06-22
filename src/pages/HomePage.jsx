@@ -121,7 +121,7 @@ function homeStructuredData({ siteBase, ogImage, areas }) {
       '@type': 'WebSite',
       '@id': `${siteBase}/#website`,
       name: 'PhysiOkhom',
-      alternateName: ['physiokhom', 'physiokhom.com'],
+      alternateName: ['physiokhom'],
       url: `${siteBase}/`,
       inLanguage: 'en-IN',
       publisher: { '@id': `${siteBase}/#organization` },
@@ -132,7 +132,7 @@ function homeStructuredData({ siteBase, ogImage, areas }) {
       },
     },
     {
-      '@type': 'MedicalBusiness',
+      '@type': ['MedicalBusiness', 'Organization'],
       '@id': `${siteBase}/#organization`,
       name: 'PhysiOkhom',
       alternateName: ['physiokhom', 'Physio Okhom'],

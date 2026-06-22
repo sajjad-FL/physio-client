@@ -31,6 +31,38 @@ if (!fs.existsSync(distDir)) {
  * Remove SEO head tags that react-helmet-async will re-populate at runtime.
  * Keeps charset/viewport/favicon/fonts/manifest/theme-color.
  */
+/**
+ * Move Helmet-injected SEO tags to the top of <head> (right after viewport).
+ * Crawlers and Google often prefer early head tags over ones appended after JS/CSS.
+ */
+function promoteSeoHead(html) {
+  const seoTagRegexes = [
+    /<title[^>]*>[\s\S]*?<\/title>/gi,
+    /<meta[^>]+name=["'](?:description|robots|keywords|googlebot)["'][^>]*>/gi,
+    /<link[^>]+rel=["']canonical["'][^>]*>/gi,
+    /<meta[^>]+property=["']og:[^"']+["'][^>]*>/gi,
+    /<meta[^>]+name=["']twitter:[^"']+["'][^>]*>/gi,
+    /<script[^>]+type=["']application\/ld\+json["'][\s\S]*?<\/script>/gi,
+  ]
+
+  const collected = []
+  let out = html
+  for (const re of seoTagRegexes) {
+    out = out.replace(re, (match) => {
+      collected.push(match.replace(/\sdata-rh="true"/gi, ''))
+      return ''
+    })
+  }
+  if (!collected.length) return html
+
+  const seoBlock = collected.join('\n    ')
+  const viewportRe = /<meta\s+name=["']viewport["'][^>]*>/i
+  if (viewportRe.test(out)) {
+    return out.replace(viewportRe, (m) => `${m}\n\n    ${seoBlock}`)
+  }
+  return out.replace(/<head[^>]*>/i, (m) => `${m}\n    ${seoBlock}`)
+}
+
 function stripStaticSeoTags(html) {
   const patterns = [
     /<title>[\s\S]*?<\/title>\s*/gi,
@@ -201,7 +233,8 @@ async function main() {
       try {
         await page.goto(target, { waitUntil: 'networkidle0', timeout: 45_000 })
         await page.evaluate(() => new Promise((r) => setTimeout(r, 150)))
-        const html = await page.evaluate(() => `<!doctype html>\n${document.documentElement.outerHTML}`)
+        let html = await page.evaluate(() => `<!doctype html>\n${document.documentElement.outerHTML}`)
+        html = promoteSeoHead(html)
         fs.writeFileSync(outFile, html, 'utf8')
       } catch (err) {
         console.warn(`[prerender] failed ${route}: ${err?.message || err}`)
