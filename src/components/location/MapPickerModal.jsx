@@ -124,7 +124,7 @@ export default function MapPickerModal({
       className={`fixed inset-0 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm ${overlayClassName}`}
     >
       <div className="w-full max-w-3xl rounded-2xl border border-gray-100 bg-white p-4 shadow-2xl sm:p-6">
-        <h2 className="text-lg font-semibold text-gray-900">Pick location on map</h2>
+        <h2 className="type-page-title text-gray-900">Pick location on map</h2>
         <p className="mt-1 text-sm text-gray-500">
           Use your location, click the map, or drag the red pin to adjust exactly where you are.
         </p>

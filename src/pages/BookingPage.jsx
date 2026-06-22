@@ -154,7 +154,7 @@ export default function BookingPage() {
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3.5 sm:px-6">
           <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-wider text-brand">Booking</p>
-            <h1 className="truncate text-lg font-semibold text-ink sm:text-xl">Home visit physiotherapy</h1>
+            <h1 className="type-page-title truncate text-ink">Home visit physiotherapy</h1>
           </div>
           <div className="flex shrink-0 items-center gap-2">
             <Link
@@ -195,7 +195,7 @@ export default function BookingPage() {
             <div className="surface-card rounded-2xl p-7 sm:p-8 lg:p-10">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <h2 className="text-lg font-semibold text-ink">Date & time</h2>
+                  <h2 className="type-page-title text-ink">Date & time</h2>
                   <p className="mt-1 text-sm text-ink-muted">Choose an available slot for your visit.</p>
                 </div>
               </div>
@@ -246,7 +246,7 @@ export default function BookingPage() {
             </div>
 
             <div className="surface-card rounded-2xl p-7 sm:p-8 lg:p-10">
-              <h2 className="text-lg font-semibold text-ink">Your details</h2>
+              <h2 className="type-page-title text-ink">Your details</h2>
               <p className="mt-2 text-sm leading-relaxed text-ink-muted">
                 Location helps us plan your visit. A physiotherapist is assigned by our team after you book (and pay when
                 required).

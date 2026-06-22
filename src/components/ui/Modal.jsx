@@ -40,7 +40,7 @@ export default function Modal({ open, onClose, title, description, children, cla
         onMouseDown={(e) => e.stopPropagation()}
       >
         {title && (
-          <h2 id="modal-title" className="text-lg font-semibold tracking-tight text-slate-900">
+          <h2 id="modal-title" className="type-page-title tracking-tight text-slate-900">
             {title}
           </h2>
         )}

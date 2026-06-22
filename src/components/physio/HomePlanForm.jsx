@@ -392,7 +392,7 @@ export default function HomePlanForm({ booking, busy, onSubmit }) {
             <dt>Discount ({totals.discountPct}%)</dt>
             <dd className="tabular-nums font-medium text-emerald-800">− ₹{totals.discountAmount.toFixed(2)}</dd>
           </div>
-          <div className="flex justify-between gap-4 border-t border-blue-200/70 pt-4 text-xl font-bold text-gray-900">
+          <div className="type-stat flex justify-between gap-4 border-t border-blue-200/70 pt-4 text-gray-900">
             <dt>Patient pays</dt>
             <dd className="tabular-nums text-blue-700">₹{totals.patientPays.toFixed(2)}</dd>
           </div>

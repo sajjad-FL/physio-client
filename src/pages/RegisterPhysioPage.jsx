@@ -462,7 +462,7 @@ export default function RegisterPhysioPage() {
 
       <div className="mx-auto max-w-3xl space-y-8 px-4 py-10">
         <div>
-          <h1 className="text-2xl font-semibold text-ink">Register as a physiotherapist</h1>
+          <h1 className="type-page-title text-ink">Register as a physiotherapist</h1>
           <p className="mt-1 text-sm text-ink-muted">
             Same details as workspace onboarding. After submit, an admin reviews your application before you can work
             on the platform.
@@ -492,7 +492,7 @@ export default function RegisterPhysioPage() {
 
         {step === 1 && (
           <section className="surface-card rounded-2xl p-6 ring-1 ring-border-subtle">
-            <h2 className="text-lg font-semibold text-ink">Account & basic info</h2>
+            <h2 className="type-page-title text-ink">Account & basic info</h2>
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
               <div>
                 <label className="mb-1 block text-xs font-medium text-ink-muted" htmlFor="reg-phone">
@@ -686,7 +686,7 @@ export default function RegisterPhysioPage() {
 
         {step === 2 && (
           <section className="surface-card rounded-2xl p-6 ring-1 ring-border-subtle">
-            <h2 className="text-lg font-semibold text-ink">Qualification</h2>
+            <h2 className="type-page-title text-ink">Qualification</h2>
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
               <div className="sm:col-span-2">
                 <label className="mb-1 block text-xs font-medium text-ink-muted" htmlFor="reg-degree">
@@ -770,7 +770,7 @@ export default function RegisterPhysioPage() {
 
         {step === 3 && (
           <section className="surface-card rounded-2xl p-6 ring-1 ring-border-subtle">
-            <h2 className="text-lg font-semibold text-ink">Practice details</h2>
+            <h2 className="type-page-title text-ink">Practice details</h2>
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
               <div>
                 <label className="mb-1 block text-xs font-medium text-ink-muted">Experience (years)</label>
@@ -843,7 +843,7 @@ export default function RegisterPhysioPage() {
 
         {step === 4 && (
           <section className="surface-card rounded-2xl p-6 ring-1 ring-border-subtle">
-            <h2 className="text-lg font-semibold text-ink">Documents</h2>
+            <h2 className="type-page-title text-ink">Documents</h2>
             <p className="mt-1 text-sm text-ink-muted">
               PDF or images (max 2MB each). Upload the required credentials below, choose your government ID type, and
               agree to the declaration. Internship and council registration certificates are optional but help
@@ -983,7 +983,7 @@ export default function RegisterPhysioPage() {
 
         {step === 5 && (
           <section className="surface-card rounded-2xl p-6 ring-1 ring-border-subtle">
-            <h2 className="text-lg font-semibold text-ink">Review & submit</h2>
+            <h2 className="type-page-title text-ink">Review & submit</h2>
             <dl className="mt-4 grid gap-2 text-sm">
               <div className="flex justify-between gap-4 border-b border-border-subtle py-2">
                 <dt className="text-ink-muted">Phone</dt>

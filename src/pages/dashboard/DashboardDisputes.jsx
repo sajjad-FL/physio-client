@@ -42,7 +42,7 @@ export default function DashboardDisputes() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-semibold tracking-tight text-ink">Disputes</h2>
+        <h2 className="type-page-title text-ink">Disputes</h2>
         <p className="mt-1 text-sm text-ink-muted">
           Disputes on bookings you are involved in (including those raised by your physiotherapist).
         </p>

@@ -280,7 +280,7 @@ export default function ProfilePage() {
       </div>
 
       <div className="mb-8 text-center">
-        <h1 className="text-xl font-semibold text-gray-900">Profile</h1>
+        <h1 className="type-page-title text-gray-900">Profile</h1>
         <p className="mt-1 text-sm text-gray-500">Your details, photo, and saved address</p>
       </div>
 
@@ -291,7 +291,7 @@ export default function ProfilePage() {
               {displayAvatarSrc ? (
                 <img src={displayAvatarSrc} alt="" className="h-full w-full object-cover" />
               ) : (
-                <div className="flex h-full w-full items-center justify-center text-3xl font-semibold text-gray-400">
+                <div className="flex h-full w-full items-center justify-center text-[19px] font-semibold text-gray-400 sm:text-2xl">
                   {(name || phone || '?').slice(0, 1).toUpperCase()}
                 </div>
               )}

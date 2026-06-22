@@ -461,7 +461,7 @@ export default function AdminFinancePage() {
           {statTiles.map((t) => (
             <Card key={t.label} hover={false}>
               <p className="text-xs font-medium uppercase tracking-wide text-gray-500">{t.label}</p>
-              <p className="mt-2 text-2xl font-semibold tabular-nums text-gray-900">{formatInr(t.value)}</p>
+              <p className="type-stat mt-2 text-gray-900">{formatInr(t.value)}</p>
               <p className="mt-2 text-xs text-gray-500">{t.sub}</p>
             </Card>
           ))}
@@ -964,7 +964,7 @@ export default function AdminFinancePage() {
       {settleOpen && selectedPhysio && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog">
           <Card hover={false} className="w-full max-w-md shadow-xl">
-            <h3 className="text-lg font-semibold text-gray-900">Record fee collection</h3>
+            <h3 className="type-page-title text-gray-900">Record fee collection</h3>
             <p className="mt-1 text-sm text-gray-500">
               {selectedPhysio.name} — Platform fee owed{' '}
               <span className="font-semibold text-amber-900">{formatInr(selectedPhysio.wallet?.commissionDue)}</span>
@@ -1004,7 +1004,7 @@ export default function AdminFinancePage() {
       {payoutAction && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog">
           <Card hover={false} className="w-full max-w-md shadow-xl">
-            <h3 className="text-lg font-semibold text-gray-900">
+            <h3 className="type-page-title text-gray-900">
               {payoutAction.action === 'approve' ? 'Approve payout' : 'Reject payout'}
             </h3>
             <p className="mt-1 text-sm text-gray-500">
@@ -1056,7 +1056,7 @@ export default function AdminFinancePage() {
       {queueVerifyTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog">
           <Card hover={false} className="max-w-md shadow-xl">
-            <h3 className="text-lg font-semibold text-gray-900">Verify payment</h3>
+            <h3 className="type-page-title text-gray-900">Verify payment</h3>
             <p className="mt-2 text-sm text-gray-600">
               Confirm <span className="font-semibold text-gray-900">{formatInr(queueVerifyTarget.amount)}</span> collected by{' '}
               <span className="font-semibold text-gray-900">{queueVerifyTarget.physioName}</span>? This posts the ledger
@@ -1078,7 +1078,7 @@ export default function AdminFinancePage() {
       {queueRejectTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog">
           <Card hover={false} className="max-w-md shadow-xl">
-            <h3 className="text-lg font-semibold text-gray-900">Reject collection</h3>
+            <h3 className="type-page-title text-gray-900">Reject collection</h3>
             <p className="mt-1 text-sm text-gray-600">The physio can record a fresh collection after this.</p>
             <label className="mt-4 block text-xs font-medium text-gray-500">Reason</label>
             <textarea
@@ -1123,7 +1123,7 @@ function DetailDrawer({ physio, detail, loading, onClose, onSettle, onPayoutActi
         <div className="sticky top-0 z-10 border-b border-gray-100 bg-white px-5 py-4">
           <div className="flex items-start justify-between gap-2">
             <div>
-              <h2 className="text-lg font-semibold text-gray-900">{physio.name}</h2>
+              <h2 className="type-page-title text-gray-900">{physio.name}</h2>
               {physio.phone && <p className="text-xs text-gray-500">{physio.phone}</p>}
             </div>
             <button
@@ -1151,7 +1151,7 @@ function DetailDrawer({ physio, detail, loading, onClose, onSettle, onPayoutActi
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-amber-900">Pending payout</p>
-                  <p className="mt-1 text-lg font-semibold tabular-nums text-gray-900">{formatInr(pending.amount)}</p>
+                  <p className="type-stat mt-1 text-gray-900">{formatInr(pending.amount)}</p>
                   <p className="text-xs text-gray-500">Requested {formatDateTime(pending.requestedAt)}</p>
                 </div>
                 <div className="flex gap-2">
@@ -1179,7 +1179,7 @@ function DetailDrawer({ physio, detail, loading, onClose, onSettle, onPayoutActi
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Platform fee owed</p>
-                  <p className="mt-1 text-lg font-semibold tabular-nums text-amber-900">
+                  <p className="type-stat mt-1 text-amber-900">
                     {formatInr(wallet.commissionDue)}
                   </p>
                   <p className="text-xs text-gray-500">Record once the platform fee has been collected.</p>

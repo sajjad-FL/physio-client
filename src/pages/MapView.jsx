@@ -298,7 +298,7 @@ export default function MapView() {
       <div className="mx-auto max-w-[1600px] px-4 py-6 sm:px-6 lg:px-8">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-gray-900">Map &amp; nearby physios</h1>
+            <h1 className="type-page-title text-gray-900">Map &amp; nearby physios</h1>
             <p className="mt-1 text-sm text-gray-500">
               Explore nearby therapists on the map (optional). Booking does not require a selection — our team assigns a
               physiotherapist after you submit.

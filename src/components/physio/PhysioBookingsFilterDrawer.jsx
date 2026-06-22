@@ -66,7 +66,7 @@ export default function PhysioBookingsFilterDrawer({ onClose, appliedFilters, on
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex shrink-0 items-center justify-between border-b border-gray-100 px-4 py-4 sm:px-5">
-          <h2 id="filter-drawer-title" className="text-lg font-semibold text-gray-900">
+          <h2 id="filter-drawer-title" className="type-page-title text-gray-900">
             Filters
           </h2>
           <button

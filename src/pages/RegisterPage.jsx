@@ -250,7 +250,7 @@ export default function RegisterPage() {
 
         <div className="mb-8 space-y-2 text-center">
           <p className="text-xs font-semibold uppercase tracking-wider text-teal-600">Create account</p>
-          <h1 className="text-2xl font-bold text-slate-900">{stepTitle}</h1>
+          <h1 className="type-hero text-slate-900">{stepTitle}</h1>
           <p className="text-sm leading-relaxed text-slate-500">{stepSub}</p>
         </div>
 

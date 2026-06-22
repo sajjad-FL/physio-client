@@ -198,7 +198,7 @@ export default function ForgotPasswordPage() {
           <div className="flex h-16 w-16 items-center justify-center rounded-[20px] border border-slate-100 bg-white text-teal-700 shadow-[0_4px_16px_rgba(13,148,136,0.08)]">
             {currentStep.icon}
           </div>
-          <h1 className="text-[22px] font-bold tracking-tight text-slate-900">{currentStep.title}</h1>
+          <h1 className="type-hero">{currentStep.title}</h1>
           <p className="text-sm leading-relaxed text-slate-500">{currentStep.sub}</p>
         </div>
 

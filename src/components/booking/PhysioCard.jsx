@@ -45,7 +45,7 @@ function PhysioCard({ physio: p, selected, onSelect }) {
                 decoding="async"
               />
             ) : (
-              <div className="flex h-full w-full items-center justify-center text-lg font-semibold text-gray-400">
+              <div className="flex h-full w-full items-center justify-center text-[15px] font-semibold text-gray-400 sm:text-lg">
                 {(p.name || '?').slice(0, 1).toUpperCase()}
               </div>
             )}
@@ -53,7 +53,7 @@ function PhysioCard({ physio: p, selected, onSelect }) {
           <div className="min-w-0 flex-1">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
-                <h3 className="truncate text-lg font-semibold text-slate-900">{p.name}</h3>
+                <h3 className="type-page-title truncate text-slate-900">{p.name}</h3>
                 {p.specialization ? (
                   <p className="mt-0.5 line-clamp-2 text-sm text-slate-500">{p.specialization}</p>
                 ) : null}
@@ -69,7 +69,7 @@ function PhysioCard({ physio: p, selected, onSelect }) {
                   </div>
                 ) : null}
               </div>
-              <p className="shrink-0 text-lg font-bold tabular-nums text-slate-900">
+              <p className="type-stat shrink-0 text-slate-900">
                 {formatPhysioSessionFeeLabel(p)}
               </p>
             </div>

@@ -314,7 +314,7 @@ export default function PhysiosAdmin() {
       {editOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4 backdrop-blur-sm">
           <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl ring-1 ring-border-subtle">
-            <h3 className="text-lg font-semibold text-ink">Edit physiotherapist</h3>
+            <h3 className="type-page-title text-ink">Edit physiotherapist</h3>
             <form onSubmit={saveEdit} className="mt-4 space-y-4">
               <input className={inputClass} value={editName} onChange={(e) => setEditName(e.target.value)} required />
               <input className={inputClass} value={editSpec} onChange={(e) => setEditSpec(e.target.value)} required />
@@ -404,7 +404,7 @@ export default function PhysiosAdmin() {
         onSubmit={handleFromUser}
         className="mb-10 rounded-2xl border border-border-subtle bg-white p-6 shadow-[0_2px_8px_rgba(10,37,64,0.04)] sm:p-8"
       >
-        <h2 className="text-lg font-semibold text-ink">Add from patient account</h2>
+        <h2 className="type-page-title text-ink">Add from patient account</h2>
         <p className="mt-1 text-sm text-ink-muted">
           Pick an existing user (no physio profile yet). Their phone is used for OTP login. Add specialization and
           optional overrides.
@@ -524,7 +524,7 @@ export default function PhysiosAdmin() {
         onSubmit={handleSubmit}
         className="mb-10 rounded-2xl border border-border-subtle bg-white p-6 shadow-[0_2px_8px_rgba(10,37,64,0.04)] sm:p-8"
       >
-        <h2 className="text-lg font-semibold text-ink">Add manually</h2>
+        <h2 className="type-page-title text-ink">Add manually</h2>
         <p className="mt-1 text-sm text-ink-muted">
           Create a physiotherapist record without linking a user (link on first OTP if phone matches).
         </p>

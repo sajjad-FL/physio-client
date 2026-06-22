@@ -45,13 +45,13 @@ function PatientPhysioCard({ physio }) {
           {avatar ? (
             <img src={avatar} alt="" className="h-full w-full object-cover" loading="lazy" decoding="async" />
           ) : (
-            <div className="flex h-full w-full items-center justify-center text-lg font-semibold text-slate-500">
+            <div className="flex h-full w-full items-center justify-center text-[15px] font-semibold text-slate-500 sm:text-lg">
               {(physio.name || '?').slice(0, 1).toUpperCase()}
             </div>
           )}
         </div>
         <div className="min-w-0 flex-1">
-          <h3 className="truncate text-lg font-semibold text-slate-900 sm:text-xl">{physio.name || 'Physiotherapist'}</h3>
+          <h3 className="type-page-title truncate text-slate-900">{physio.name || 'Physiotherapist'}</h3>
           {physio.specialization ? <p className="truncate text-sm text-slate-500">{physio.specialization}</p> : null}
           <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
             <StarRatingDisplay value={avg} size="sm" />
@@ -222,7 +222,7 @@ export default function UserBookingDetailPage() {
 
       <Card hover={false} className="border-border-subtle p-5 sm:p-6">
         <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-muted">Visit</p>
-        <p className="mt-1 text-xl font-semibold text-ink">{formatBookingDateAndSlot(b.date, b.timeSlot)}</p>
+        <p className="type-page-title mt-1 text-ink">{formatBookingDateAndSlot(b.date, b.timeSlot)}</p>
         {b.rescheduled && b.previousDate && (
           <p className="mt-2 text-xs text-amber-800">
             Rescheduled from {formatBookingDateAndSlot(b.previousDate, b.previousTimeSlot)}

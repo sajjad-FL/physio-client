@@ -217,7 +217,7 @@ function SectionHeading({ label, labelIcon, title, subtitle, center = false }) {
           <SectionLabel Icon={labelIcon}>{label}</SectionLabel>
         </div>
       )}
-      <h2 className="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl md:text-4xl">
+      <h2 className="type-page-title font-extrabold sm:text-2xl md:text-3xl">
         {title}
       </h2>
       {subtitle && (
@@ -573,8 +573,8 @@ export default function HomePage() {
                   <span>{demandInsightText}</span>
                 </div>
 
-                <h1 className="text-balance text-3xl font-extrabold tracking-tight sm:text-4xl md:text-6xl sm:leading-[1.1] text-transparent bg-clip-text bg-gradient-to-r from-white via-slate-100 to-teal-100">
-                  <span className="block text-2xl font-bold tracking-tight text-teal-200 sm:text-3xl md:text-4xl">
+                <h1 className="type-hero text-balance font-extrabold sm:leading-[1.1] text-transparent bg-clip-text bg-gradient-to-r from-white via-slate-100 to-teal-100">
+                  <span className="block text-[15px] font-bold tracking-tight text-teal-200 sm:text-lg md:text-xl">
                     PhysiOkhom
                   </span>
                   {userName ? (
@@ -591,7 +591,7 @@ export default function HomePage() {
                 </h1>
 
                 {/* Subtitle */}
-                <p className="max-w-2xl text-base leading-relaxed text-slate-300 sm:text-lg">
+                <p className="type-body max-w-2xl text-slate-300 sm:text-lg">
                   PhysiOkhom connects patients with qualified, clinical physiotherapy specialists for post-surgery rehab, stroke recovery, and more. 
                   {areaLine ? (
                     <>
@@ -748,7 +748,7 @@ export default function HomePage() {
                       <Sparkles size={11} className="animate-pulse" />
                       Your Recovery Steps
                     </span>
-                    <h3 className="text-lg font-bold text-slate-900 mt-2">Start your recovery path in 3 easy steps</h3>
+                    <h3 className="type-page-title mt-2 text-slate-900">Start your recovery path in 3 easy steps</h3>
                   </div>
                   <span className="text-xs font-semibold text-slate-500 bg-slate-100 px-3 py-1 rounded-full mt-2 sm:mt-0">
                     {consultationClaimed ? '1 of 3 steps completed' : '0 of 3 steps completed'}
@@ -854,7 +854,7 @@ export default function HomePage() {
                             {sessionsLeft} of {totalSessions} sessions left
                           </span>
                         </div>
-                        <h3 className="text-xl font-bold text-slate-900">
+                        <h3 className="type-page-title text-slate-900">
                           {activeBooking.issue || 'Home Visit Therapy'}
                         </h3>
                         <div className="space-y-1">
@@ -1356,7 +1356,7 @@ export default function HomePage() {
                     <Search size={18} className="text-teal-700" />
                   </div>
                 </div>
-                <h3 className="text-lg font-bold text-slate-900">Book Online</h3>
+                <h3 className="type-page-title text-slate-900">Book Online</h3>
                 <p className="mt-2 text-sm leading-relaxed text-slate-500">Choose your preferred date, share physical concerns, and confirm slots in minutes.</p>
                 <div className="mt-4 inline-flex items-center gap-1 text-[10px] font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded">
                   <Sparkles size={9} /> Instant Confirmation
@@ -1374,7 +1374,7 @@ export default function HomePage() {
                     <Users size={18} className="text-teal-700" />
                   </div>
                 </div>
-                <h3 className="text-lg font-bold text-slate-900">Get Matched</h3>
+                <h3 className="type-page-title text-slate-900">Get Matched</h3>
                 <p className="mt-2 text-sm leading-relaxed text-slate-500">We assign an MPT/BPT verified clinical physiotherapist specializing in your condition.</p>
                 <div className="mt-4 inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">
                   <ShieldCheck size={9} /> Verified Graduates
@@ -1391,7 +1391,7 @@ export default function HomePage() {
                     <Home size={18} className="text-teal-700" />
                   </div>
                 </div>
-                <h3 className="text-lg font-bold text-slate-900">Recover At Home</h3>
+                <h3 className="type-page-title text-slate-900">Recover At Home</h3>
                 <p className="mt-2 text-sm leading-relaxed text-slate-500">Receive regular physical treatment at home. Log all daily session summaries in-app.</p>
                 <div className="mt-4 inline-flex items-center gap-1 text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded">
                   <Activity size={9} /> Interactive Progress
@@ -1484,7 +1484,7 @@ export default function HomePage() {
                     <XCircle className="text-rose-600" size={20} />
                   </div>
                   <div>
-                    <h3 className="text-lg font-bold text-slate-900">Traditional Clinic Visits</h3>
+                    <h3 className="type-page-title text-slate-900">Traditional Clinic Visits</h3>
                     <p className="text-xs text-slate-500 font-medium">Standard outpatient commutes</p>
                   </div>
                 </div>
@@ -1514,7 +1514,7 @@ export default function HomePage() {
                     <CheckCircle2 className="text-teal-600" size={20} />
                   </div>
                   <div>
-                    <h3 className="text-lg font-bold text-slate-900">PhysiOkhom Home Visits</h3>
+                    <h3 className="type-page-title text-slate-900">PhysiOkhom Home Visits</h3>
                     <p className="text-xs text-teal-700 font-bold uppercase tracking-wider">Premium standard</p>
                   </div>
                 </div>
@@ -1671,7 +1671,7 @@ export default function HomePage() {
               <Shield size={24} className="animate-pulse" />
             </div>
 
-            <h2 className="text-3xl font-extrabold tracking-tight sm:text-4xl text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-200">
+            <h2 className="type-hero font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-200">
               The PhysiOkhom At-Home Safety Promise
             </h2>
             <p className="mt-4 max-w-2xl text-slate-455 text-sm leading-relaxed">
@@ -1850,7 +1850,7 @@ export default function HomePage() {
               <MapPin size={12} className="animate-pulse" />
               Available in your region
             </div>
-            <h2 className="mt-6 text-3xl font-extrabold tracking-tight sm:text-4xl md:text-5xl text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-200">
+            <h2 className="type-hero mt-6 font-extrabold md:text-3xl text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-200">
               Ready to recover?
             </h2>
             <p className="mx-auto mt-4 max-w-lg text-slate-300 text-sm leading-relaxed">

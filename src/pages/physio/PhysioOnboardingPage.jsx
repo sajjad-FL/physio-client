@@ -465,7 +465,7 @@ export default function PhysioOnboardingPage() {
     return (
       <div className="mx-auto max-w-3xl space-y-6">
         <div className="rounded-2xl border border-emerald-200/90 bg-emerald-50/60 p-6 ring-1 ring-emerald-100/80">
-          <h1 className="text-xl font-semibold text-ink">Profile verified</h1>
+          <h1 className="type-page-title text-ink">Profile verified</h1>
           <p className="mt-2 text-sm leading-relaxed text-ink-muted">
             Your account has been verified. Onboarding is closed — you cannot change these steps or submit again. Update
             your photo, address, and account details from{' '}
@@ -487,7 +487,7 @@ export default function PhysioOnboardingPage() {
         </div>
 
         <section className="surface-card rounded-2xl p-6 ring-1 ring-border-subtle">
-          <h2 className="text-lg font-semibold text-ink">On file (read-only)</h2>
+          <h2 className="type-page-title text-ink">On file (read-only)</h2>
           <dl className="mt-4 grid gap-2 text-sm">
             <div className="flex justify-between gap-4 border-b border-border-subtle py-2">
               <dt className="text-ink-muted">Name</dt>
@@ -516,7 +516,7 @@ export default function PhysioOnboardingPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold text-ink">Physiotherapist onboarding</h1>
+        <h1 className="type-page-title text-ink">Physiotherapist onboarding</h1>
         <p className="mt-1 text-sm text-ink-muted">
           Complete all steps. Documents are stored on S3 when configured, otherwise on the server.
         </p>
@@ -552,7 +552,7 @@ export default function PhysioOnboardingPage() {
 
       {step === 1 && (
         <section className="surface-card rounded-2xl p-6 ring-1 ring-border-subtle">
-          <h2 className="text-lg font-semibold text-ink">Basic info</h2>
+          <h2 className="type-page-title text-ink">Basic info</h2>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <div className="sm:col-span-2">
               <label className="mb-1 block text-xs font-medium text-ink-muted" htmlFor="ob-name">
@@ -697,7 +697,7 @@ export default function PhysioOnboardingPage() {
 
       {step === 2 && (
         <section className="surface-card rounded-2xl p-6 ring-1 ring-border-subtle">
-          <h2 className="text-lg font-semibold text-ink">Qualification</h2>
+          <h2 className="type-page-title text-ink">Qualification</h2>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <div className="sm:col-span-2">
               <label className="mb-1 block text-xs font-medium text-ink-muted" htmlFor="ob-degree">
@@ -785,7 +785,7 @@ export default function PhysioOnboardingPage() {
 
       {step === 3 && (
         <section className="surface-card rounded-2xl p-6 ring-1 ring-border-subtle">
-          <h2 className="text-lg font-semibold text-ink">Practice details</h2>
+          <h2 className="type-page-title text-ink">Practice details</h2>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <div>
               <label className="mb-1 block text-xs font-medium text-ink-muted">Experience (years)</label>
@@ -882,7 +882,7 @@ export default function PhysioOnboardingPage() {
 
       {step === 4 && (
         <section className="surface-card rounded-2xl p-6 ring-1 ring-border-subtle">
-          <h2 className="text-lg font-semibold text-ink">Documents</h2>
+          <h2 className="type-page-title text-ink">Documents</h2>
           <p className="mt-1 text-sm text-ink-muted">
             PDF or images (max 2MB each). Required uploads are marked; internship and council registration certificates
             are optional. Choose your government ID type and agree to the declaration below.
@@ -1070,7 +1070,7 @@ export default function PhysioOnboardingPage() {
 
       {step === 5 && (
         <section className="surface-card rounded-2xl p-6 ring-1 ring-border-subtle">
-          <h2 className="text-lg font-semibold text-ink">Review & submit</h2>
+          <h2 className="type-page-title text-ink">Review & submit</h2>
           <dl className="mt-4 grid gap-2 text-sm">
             <div className="flex justify-between gap-4 border-b border-border-subtle py-2">
               <dt className="text-ink-muted">Name</dt>

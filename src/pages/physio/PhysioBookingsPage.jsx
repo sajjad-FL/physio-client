@@ -109,7 +109,7 @@ export default function PhysioBookingsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-semibold tracking-tight text-gray-900 sm:text-2xl">Assigned bookings</h1>
+        <h1 className="type-page-title text-gray-900">Assigned bookings</h1>
         <p className="mt-1 max-w-2xl text-sm leading-relaxed text-gray-500">
           Search, filter, list or calendar — open a row for session actions and full details.
         </p>

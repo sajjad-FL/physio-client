@@ -119,7 +119,7 @@ export default function DashboardHome() {
               <p className="text-[11px] font-semibold uppercase tracking-wider text-teal-700">
                 {firstName ? `Hi, ${firstName.toUpperCase()}` : 'DASHBOARD'}
               </p>
-              <h1 className="mt-1 text-lg font-bold tracking-tight text-slate-900 sm:text-xl">{todayStr}</h1>
+              <h1 className="type-page-title mt-1">{todayStr}</h1>
             </div>
             {/* Avatar circle with initial */}
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-teal-600 text-sm font-bold text-white shadow-[0_4px_12px_rgba(13,148,136,0.22)]">
@@ -223,7 +223,7 @@ export default function DashboardHome() {
                   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#0d9488" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
                 </div>
               </div>
-              <p className="mt-2 text-3xl font-bold tabular-nums tracking-tight text-slate-900">{(bookings || []).length}</p>
+              <p className="type-stat mt-2 text-slate-900">{(bookings || []).length}</p>
               <p className="mt-1 text-[11px] text-slate-400">all time</p>
             </div>
             <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
@@ -233,7 +233,7 @@ export default function DashboardHome() {
                   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#0d9488" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M20 12V22H4V12"/><path d="M22 7H2v5h20V7z"/><path d="M12 22V7M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
                 </div>
               </div>
-              <p className="mt-2 text-2xl font-bold tabular-nums tracking-tight text-slate-900">{formatInr(revenueTotal)}</p>
+              <p className="type-stat mt-2 text-slate-900">{formatInr(revenueTotal)}</p>
               <p className="mt-1 text-[11px] text-slate-400">all time</p>
             </div>
           </div>

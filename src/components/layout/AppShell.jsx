@@ -20,7 +20,7 @@ function CloseIcon() {
 
 const navLinkClass = ({ isActive }) =>
   [
-    'group relative flex w-full items-center justify-between gap-2 rounded-r-xl py-2.5 pl-4 pr-3 text-sm font-medium transition-all duration-200 ease-out',
+    'group relative flex w-full items-center justify-between gap-2 rounded-r-xl py-2.5 pl-4 pr-3 text-[13px] font-medium sm:text-sm transition-all duration-200 ease-out',
     isActive
       ? 'bg-gradient-to-r from-teal-50/95 to-teal-50/30 text-teal-950 shadow-sm before:absolute before:left-0 before:top-1/2 before:h-9 before:w-[3px] before:-translate-y-1/2 before:rounded-full before:bg-teal-600 before:shadow-[0_0_12px_rgba(13,148,136,0.35)]'
       : 'text-slate-600 hover:bg-slate-50/90 hover:text-slate-900',
@@ -88,7 +88,7 @@ export default function AppShell({
               )}
               {disabled ? (
                 <span
-                  className="group relative flex w-full cursor-not-allowed items-center justify-between gap-2 rounded-r-xl py-2.5 pl-4 pr-3 text-sm font-medium text-slate-400"
+                  className="group relative flex w-full cursor-not-allowed items-center justify-between gap-2 rounded-r-xl py-2.5 pl-4 pr-3 text-[13px] font-medium text-slate-400 sm:text-sm"
                   title="Available after your profile is approved"
                 >
                   <span className="flex min-w-0 flex-1 items-center gap-3">
@@ -151,8 +151,8 @@ export default function AppShell({
               {mobileOpen ? <CloseIcon /> : <MenuIcon />}
             </button>
             <div className="min-w-0">
-              {topBarTitle && <h1 className="truncate text-lg font-semibold text-slate-900">{topBarTitle}</h1>}
-              {topBarSubtitle && <p className="truncate text-sm text-slate-500">{topBarSubtitle}</p>}
+              {topBarTitle && <h1 className="type-page-title truncate">{topBarTitle}</h1>}
+              {topBarSubtitle && <p className="type-caption truncate sm:text-sm">{topBarSubtitle}</p>}
             </div>
           </div>
           <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 sm:gap-3">

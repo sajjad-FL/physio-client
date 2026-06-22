@@ -32,7 +32,7 @@ export default function PrivacyPolicyPage() {
                 <ShieldCheck size={13} className="animate-pulse" />
                 <span>Security & Trust</span>
               </div>
-              <h1 className="text-3xl font-extrabold text-slate-900 sm:text-4xl">Privacy Policy</h1>
+              <h1 className="type-hero">Privacy Policy</h1>
               <p className="mt-2 text-sm text-slate-500 font-medium">Last Updated: {lastUpdated}</p>
             </div>
 
@@ -48,7 +48,7 @@ export default function PrivacyPolicyPage() {
 
               {/* 1. Information Collection */}
               <section className="space-y-4 pt-4 border-t border-slate-100">
-                <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2.5">
+                <h2 className="type-page-title flex items-center gap-2.5">
                   <FileText size={18} className="text-teal-600" />
                   1. Information We Collect
                 </h2>
@@ -76,7 +76,7 @@ export default function PrivacyPolicyPage() {
 
               {/* 2. How We Use Data */}
               <section className="space-y-4 pt-4 border-t border-slate-100">
-                <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2.5">
+                <h2 className="type-page-title flex items-center gap-2.5">
                   <Eye size={18} className="text-teal-600" />
                   2. How We Use Your Information
                 </h2>
@@ -95,7 +95,7 @@ export default function PrivacyPolicyPage() {
 
               {/* 3. Data Sharing */}
               <section className="space-y-4 pt-4 border-t border-slate-100">
-                <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2.5">
+                <h2 className="type-page-title flex items-center gap-2.5">
                   <MapPin size={18} className="text-teal-600" />
                   3. Information Sharing & Disclosure
                 </h2>
@@ -117,7 +117,7 @@ export default function PrivacyPolicyPage() {
 
               {/* 4. Security */}
               <section className="space-y-4 pt-4 border-t border-slate-100">
-                <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2.5">
+                <h2 className="type-page-title flex items-center gap-2.5">
                   <Lock size={18} className="text-teal-600" />
                   4. Data Security & Storage
                 </h2>
@@ -133,7 +133,7 @@ export default function PrivacyPolicyPage() {
 
               {/* 5. User Rights */}
               <section className="space-y-4 pt-4 border-t border-slate-100">
-                <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2.5">
+                <h2 className="type-page-title flex items-center gap-2.5">
                   <ShieldCheck size={18} className="text-teal-600" />
                   5. Your Rights & Data Deletion
                 </h2>
@@ -147,7 +147,7 @@ export default function PrivacyPolicyPage() {
 
               {/* 6. Contacts */}
               <section className="space-y-4 pt-4 border-t border-slate-100">
-                <h2 className="text-xl font-bold text-slate-900">6. Contact Information</h2>
+                <h2 className="type-page-title">6. Contact Information</h2>
                 <p>
                   If you have questions or concerns regarding this Privacy Policy, please contact us at:
                 </p>

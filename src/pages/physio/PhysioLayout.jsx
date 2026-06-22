@@ -207,7 +207,7 @@ export default function PhysioLayout() {
         >
           <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-start sm:gap-6 sm:p-6">
             <div
-              className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-2xl ${
+              className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-xl sm:text-2xl ${
                 rejected ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-800'
               }`}
               aria-hidden

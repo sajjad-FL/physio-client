@@ -10,7 +10,7 @@ export default function ConsentModal({ open, onClose, onAccept, accepted, onTogg
         onClick={onClose}
       />
       <div className="relative z-10 max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-border-subtle bg-white p-6 shadow-xl sm:p-8">
-        <h2 className="text-lg font-semibold text-ink">Consent &amp; disclaimer</h2>
+        <h2 className="type-page-title text-ink">Consent &amp; disclaimer</h2>
         <div className="mt-4 space-y-3 text-sm leading-relaxed text-ink-muted">
           <p>
             By booking a home visit, you understand that physiotherapy involves physical assessment and

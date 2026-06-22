@@ -56,7 +56,7 @@ export default function ReviewSubmitModal({
         onSubmit={submit}
         className="w-full max-w-md rounded-2xl border border-gray-100 bg-white p-6 shadow-2xl"
       >
-        <h2 className="text-lg font-semibold text-gray-900">Rate your session</h2>
+        <h2 className="type-page-title text-gray-900">Rate your session</h2>
         {sessionLabel ? (
           <p className="mt-1 text-sm text-gray-600">
             {sessionLabel}

@@ -234,7 +234,7 @@ export default function AdminAssignPhysioModal({
         <div className="shrink-0 border-b border-slate-100 px-4 py-4 sm:px-5">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <h2 id="assign-physio-title" className="text-lg font-semibold text-slate-900">
+              <h2 id="assign-physio-title" className="type-page-title text-slate-900">
                 Assign physiotherapist
               </h2>
               <p className="mt-1 text-sm text-slate-500">

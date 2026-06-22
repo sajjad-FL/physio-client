@@ -115,7 +115,7 @@ export default function LocationPickerModal({
           onSubmit={submit}
           className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-gray-100 bg-white p-5 shadow-2xl sm:p-6"
         >
-          <h2 className="text-lg font-semibold text-gray-900">Set location</h2>
+          <h2 className="type-page-title text-gray-900">Set location</h2>
           <p className="mt-1 text-sm text-gray-500">Search, use GPS, or drop a pin. This session uses this point until you change it.</p>
 
           <div className="mt-4 space-y-3">

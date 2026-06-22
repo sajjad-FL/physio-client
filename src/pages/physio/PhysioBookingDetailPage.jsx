@@ -212,7 +212,7 @@ export default function PhysioBookingDetailPage() {
       <Card hover={false} className="p-5 sm:p-6">
         <h1 className="sr-only">Booking details</h1>
         <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Visit</p>
-        <p className="mt-1 text-xl font-semibold text-gray-900">{formatBookingDateAndSlot(b.date, b.timeSlot)}</p>
+        <p className="type-page-title mt-1 text-gray-900">{formatBookingDateAndSlot(b.date, b.timeSlot)}</p>
         <div className="mt-4 flex flex-wrap gap-2">
           <span
             className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ring-1 ${
@@ -495,7 +495,7 @@ export default function PhysioBookingDetailPage() {
       {noShowRow && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal>
           <Card hover={false} className="w-full max-w-md shadow-xl">
-            <h3 className="text-lg font-semibold text-gray-900">Mark session as no-show</h3>
+            <h3 className="type-page-title text-gray-900">Mark session as no-show</h3>
             <p className="mt-2 text-sm text-gray-700">
               Session #{noShowRow.n} · {formatBookingDateAndSlot(noShowRow.date, noShowRow.time)}
             </p>

@@ -144,7 +144,7 @@ export default function PhysioWalletPage() {
   return (
     <div className="mx-auto max-w-5xl space-y-8 px-4 py-8 sm:px-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-gray-900">Wallet</h1>
+        <h1 className="type-page-title text-gray-900">Wallet</h1>
         <p className="mt-1 text-sm text-gray-500">Earnings, platform fees owed, and transaction history.</p>
       </div>
 
@@ -158,7 +158,7 @@ export default function PhysioWalletPage() {
         <div className="grid gap-4 sm:grid-cols-3">
           <Card hover={false} className="border-emerald-100/80">
             <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Withdrawable balance</p>
-            <p className="mt-2 text-2xl font-semibold tabular-nums text-emerald-800">{formatInr(w?.availableBalance)}</p>
+            <p className="type-stat mt-2 text-emerald-800">{formatInr(w?.availableBalance)}</p>
             {showNetExplainer ? (
               <p className="mt-2 text-xs leading-relaxed text-gray-600">
                 Online balance {formatInr(onlineAvail)} − Platform fee owed {formatInr(commissionDue)} ={' '}
@@ -189,14 +189,14 @@ export default function PhysioWalletPage() {
           </Card>
           <Card hover={false} className="border-amber-100/80">
             <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Platform Fee Owed</p>
-            <p className="mt-2 text-2xl font-semibold tabular-nums text-amber-900">{formatInr(w?.commissionDue)}</p>
+            <p className="type-stat mt-2 text-amber-900">{formatInr(w?.commissionDue)}</p>
             <p className="mt-2 text-xs text-gray-500">
               Owed to platform from offline cash visits — already subtracted from Withdrawable balance above.
             </p>
           </Card>
           <Card hover={false}>
             <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Total earned</p>
-            <p className="mt-2 text-2xl font-semibold tabular-nums text-gray-900">{formatInr(w?.totalEarned)}</p>
+            <p className="type-stat mt-2 text-gray-900">{formatInr(w?.totalEarned)}</p>
             <p className="mt-2 text-xs text-gray-500">Lifetime earnings share recorded</p>
           </Card>
         </div>
@@ -349,7 +349,7 @@ export default function PhysioWalletPage() {
             onSubmit={submitWithdraw}
             className="w-full max-w-md rounded-2xl border border-gray-100 bg-white p-6 shadow-2xl"
           >
-            <h2 className="text-lg font-semibold text-gray-900">Request withdrawal</h2>
+            <h2 className="type-page-title text-gray-900">Request withdrawal</h2>
             <p className="mt-1 text-sm text-gray-500">
               Max request: {formatInr(w?.availableBalance)} (after commission due). Minimum ₹1. One pending request at a
               time.

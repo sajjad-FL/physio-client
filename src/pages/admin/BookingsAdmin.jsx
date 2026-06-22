@@ -138,7 +138,7 @@ export default function BookingsAdmin() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-semibold tracking-tight text-ink sm:text-2xl">Bookings</h1>
+        <h1 className="type-page-title text-ink">Bookings</h1>
         <p className="mt-1 text-sm text-ink-muted">
           Compact list — open a row for assignments, verification, and full details.
         </p>

@@ -76,7 +76,7 @@ export default function PhysioNotesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-ink">Clinical notes</h1>
+        <h1 className="type-page-title text-ink">Clinical notes</h1>
         <p className="mt-1 text-sm text-ink-muted">SOAP-style documentation per visit. Required before admin release.</p>
       </div>
 

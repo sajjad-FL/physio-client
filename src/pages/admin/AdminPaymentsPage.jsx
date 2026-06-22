@@ -370,7 +370,7 @@ export default function AdminPaymentsPage() {
       {verifyTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog">
           <Card hover={false} className="max-w-md shadow-xl">
-            <h3 className="text-lg font-semibold text-gray-900">Verify payment</h3>
+            <h3 className="type-page-title text-gray-900">Verify payment</h3>
             <p className="mt-2 text-sm text-gray-600">
               Confirm <span className="font-semibold text-gray-900">{formatInr(verifyTarget.amount)}</span> collected by{' '}
               <span className="font-semibold text-gray-900">{verifyTarget.physioName}</span>? This posts the ledger
@@ -391,7 +391,7 @@ export default function AdminPaymentsPage() {
       {rejectTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog">
           <Card hover={false} className="max-w-md shadow-xl">
-            <h3 className="text-lg font-semibold text-gray-900">Reject collection</h3>
+            <h3 className="type-page-title text-gray-900">Reject collection</h3>
             <p className="mt-1 text-sm text-gray-600">The physio can record a fresh collection after this.</p>
             <label className="mt-4 block text-xs font-medium text-gray-500">Reason</label>
             <textarea

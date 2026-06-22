@@ -143,7 +143,7 @@ export default function ProfileCompletionModal({ initial, onComplete }) {
         <div className="flex min-h-0 flex-1 flex-col items-center justify-center overflow-y-auto px-4 py-10">
           <div className="w-full max-w-md rounded-2xl border border-white/10 bg-white p-8 shadow-2xl">
             <p className="text-center text-xs font-semibold uppercase tracking-wider text-blue-600">Finish setup</p>
-            <h1 className="mt-2 text-center text-xl font-semibold text-gray-900">Complete your profile</h1>
+            <h1 className="type-page-title mt-2 text-center text-gray-900">Complete your profile</h1>
             <p className="mt-2 text-center text-sm text-gray-500">
               Your account is already created. Add date of birth, gender, and address here — or any time under Profile — so
               you can book sessions and use your dashboard.

@@ -423,7 +423,7 @@ export default function AdminBookingDetailPage() {
             onSubmit={submitResolve}
             className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl ring-1 ring-border-subtle"
           >
-            <h3 className="text-lg font-semibold text-ink">Resolve dispute</h3>
+            <h3 className="type-page-title text-ink">Resolve dispute</h3>
             <p className="mt-1 text-xs text-ink-muted">{resolveOpen.reason}</p>
             <label className="mt-4 block text-sm font-medium text-ink">Resolution</label>
             <textarea
@@ -469,7 +469,7 @@ export default function AdminBookingDetailPage() {
             onSubmit={submitAddSession}
             className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl ring-1 ring-border-subtle"
           >
-            <h3 className="text-lg font-semibold text-ink">Add session</h3>
+            <h3 className="type-page-title text-ink">Add session</h3>
             <p className="mt-1 text-xs text-ink-muted">Choose a new date and time slot for this booking schedule.</p>
             <label className="mt-4 block text-sm font-medium text-ink">Date</label>
             <input
@@ -513,7 +513,7 @@ export default function AdminBookingDetailPage() {
 
       <Card hover={false} className="border-border-subtle p-5 sm:p-6">
         <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-muted">Visit</p>
-        <p className="mt-1 text-xl font-semibold text-ink">{formatBookingDateAndSlot(b.date, b.timeSlot)}</p>
+        <p className="type-page-title mt-1 text-ink">{formatBookingDateAndSlot(b.date, b.timeSlot)}</p>
         <div className="mt-4 flex flex-wrap gap-2">
           <span className="inline-flex rounded-full bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-800 ring-1 ring-slate-200">
             Booking: {b.status}
@@ -905,7 +905,7 @@ export default function AdminBookingDetailPage() {
       {rejectPayment && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal>
           <Card hover={false} className="w-full max-w-md shadow-xl">
-            <h3 className="text-lg font-semibold text-ink">Reject installment</h3>
+            <h3 className="type-page-title text-ink">Reject installment</h3>
             <p className="mt-2 text-sm text-ink-muted">
               This will mark the collection as rejected; the physio can record a corrected one.
             </p>

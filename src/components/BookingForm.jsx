@@ -95,7 +95,7 @@ export function BookingForm() {
       className="mx-auto max-w-xl rounded-2xl bg-white p-6 shadow-md shadow-gray-200/80 ring-1 ring-gray-100"
       noValidate
     >
-      <h2 className="text-xl font-semibold text-gray-900">Request a home visit</h2>
+      <h2 className="type-page-title text-gray-900">Request a home visit</h2>
       <p className="mt-1 text-sm text-gray-600">
         We&apos;ll contact you shortly to confirm your appointment.
       </p>

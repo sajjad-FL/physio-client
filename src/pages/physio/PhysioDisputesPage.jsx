@@ -39,7 +39,7 @@ export default function PhysioDisputesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-ink">Disputes</h1>
+        <h1 className="type-page-title text-ink">Disputes</h1>
         <p className="mt-1 text-sm text-ink-muted">
           Cases linked to your assigned bookings (patient or you may have raised them).
         </p>

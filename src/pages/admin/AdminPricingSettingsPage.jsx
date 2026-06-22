@@ -143,7 +143,7 @@ export default function AdminPricingSettingsPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-6 p-4">
       <div>
-        <h1 className="text-xl font-semibold text-slate-900">Pricing &amp; rates</h1>
+        <h1 className="type-page-title text-slate-900">Pricing &amp; rates</h1>
         <p className="mt-1 text-sm text-slate-600">
           Platform-wide pricing used on web and mobile. Referral amounts are on{' '}
           <Link to="/admin/platform" className="font-medium text-teal-700 hover:underline">
@@ -158,7 +158,7 @@ export default function AdminPricingSettingsPage() {
 
       <form onSubmit={onSave} className="space-y-6">
         <Card>
-          <h2 className="text-lg font-semibold text-slate-900">Defaults &amp; commission</h2>
+          <h2 className="type-page-title text-slate-900">Defaults &amp; commission</h2>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <label className="block text-xs font-medium text-slate-600">
               Default session price (₹)
@@ -211,7 +211,7 @@ export default function AdminPricingSettingsPage() {
         </Card>
 
         <Card>
-          <h2 className="text-lg font-semibold text-slate-900">Travel surcharge</h2>
+          <h2 className="type-page-title text-slate-900">Travel surcharge</h2>
           <p className="mt-1 text-sm text-slate-600">Applied per home visit when admin assigns a physio.</p>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <label className="block text-xs font-medium text-slate-600">
@@ -244,7 +244,7 @@ export default function AdminPricingSettingsPage() {
         </Card>
 
         <Card>
-          <h2 className="text-lg font-semibold text-slate-900">Home plan tiers</h2>
+          <h2 className="type-page-title text-slate-900">Home plan tiers</h2>
           <p className="mt-1 text-sm text-slate-600">Marketing copy and default discounts for 7 / 15 / 30 session plans.</p>
           <div className="mt-4 space-y-4">
             {planTiers.map((tier) => (
@@ -297,7 +297,7 @@ export default function AdminPricingSettingsPage() {
         </Card>
 
         <Card>
-          <h2 className="text-lg font-semibold text-slate-900">Payment milestones</h2>
+          <h2 className="type-page-title text-slate-900">Payment milestones</h2>
           <p className="mt-1 text-sm text-slate-600">
             Minimum cumulative % paid before a session can be marked complete.
           </p>

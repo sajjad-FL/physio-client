@@ -94,7 +94,7 @@ export default function AdminPlatformSettingsPage() {
   return (
     <div className="mx-auto max-w-2xl space-y-6 p-4">
       <div>
-        <h1 className="text-xl font-semibold text-slate-900">Platform documents</h1>
+        <h1 className="type-page-title text-slate-900">Platform documents</h1>
         <p className="mt-1 text-sm text-slate-600">
           Text shown to physiotherapists during registration and onboarding. They must check &quot;I agree&quot; before
           submitting. Leaving the saved text empty (restore default) uses the built-in PhysiOkhom template.
@@ -102,7 +102,7 @@ export default function AdminPlatformSettingsPage() {
       </div>
 
       <Card>
-        <h2 className="text-lg font-semibold text-slate-900">Qualification declaration</h2>
+        <h2 className="type-page-title text-slate-900">Qualification declaration</h2>
         <p className="mt-2 text-sm text-slate-600">
           This replaces the old PDF NDA download and upload flow. Edit the wording as needed for your jurisdiction;
           keep it accurate and readable.
@@ -136,7 +136,7 @@ export default function AdminPlatformSettingsPage() {
       </Card>
 
       <Card>
-        <h2 className="text-lg font-semibold text-slate-900">Referral program</h2>
+        <h2 className="type-page-title text-slate-900">Referral program</h2>
         <p className="mt-2 text-sm text-slate-600">
           Configure what referrers and their friends earn. Amounts are shown on Refer &amp; Earn and at signup.
           Changes apply to future signups and completions only; amounts already credited stay unchanged.

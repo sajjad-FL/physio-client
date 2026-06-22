@@ -104,7 +104,7 @@ export default function PatientBookingsFilterDrawer({ onClose, filter, onFilterC
           <span className="h-1 w-10 rounded-full bg-slate-200" />
         </div>
         <div className="flex shrink-0 items-center justify-between border-b border-slate-100 px-4 pb-3 pt-1 sm:px-5">
-          <h2 id="patient-filter-title" className="text-lg font-semibold text-slate-900">
+          <h2 id="patient-filter-title" className="type-page-title text-slate-900">
             Filters
           </h2>
           <button

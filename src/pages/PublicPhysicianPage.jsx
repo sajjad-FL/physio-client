@@ -184,13 +184,13 @@ export default function PublicPhysicianPage() {
                   decoding="async"
                 />
               ) : (
-                <div className="flex h-full w-full items-center justify-center text-3xl font-semibold text-gray-400">
+                <div className="flex h-full w-full items-center justify-center text-[19px] font-semibold text-gray-400 sm:text-2xl">
                   {(p.name || '?').slice(0, 1).toUpperCase()}
                 </div>
               )}
             </div>
             <div className="min-w-0 flex-1">
-              <h1 className="text-2xl font-semibold text-gray-900">{p.name}</h1>
+              <h1 className="type-page-title text-gray-900">{p.name}</h1>
               <p className="mt-1 text-sm text-gray-600">{p.specialization}</p>
               <div className="mt-3 flex flex-wrap items-center gap-3">
                 <StarRatingDisplay value={avg} size="md" />
@@ -220,7 +220,7 @@ export default function PublicPhysicianPage() {
         </Card>
 
         <div>
-          <h2 className="text-lg font-semibold text-gray-900">Reviews</h2>
+          <h2 className="type-page-title text-gray-900">Reviews</h2>
           <p className="mt-0.5 text-sm text-gray-500">Feedback from verified patients after completed sessions.</p>
 
           {reviewsLoading ? (

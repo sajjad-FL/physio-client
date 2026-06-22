@@ -178,7 +178,7 @@ export default function VerificationsAdmin({ embedded = false }) {
     <div>
       {!embedded && (
         <>
-          <h1 className="text-2xl font-semibold text-slate-900">Verification queue</h1>
+          <h1 className="type-page-title text-slate-900">Verification queue</h1>
           <p className="mt-2 text-sm text-slate-500">
             Review new physio applications with submitted documents. Approved physios can accept bookings.
           </p>
@@ -264,7 +264,7 @@ export default function VerificationsAdmin({ embedded = false }) {
           >
             <div className="flex shrink-0 items-start justify-between gap-3 border-b border-border-subtle px-5 py-4">
               <div>
-                <h2 id="verification-detail-title" className="text-lg font-semibold text-ink">
+                <h2 id="verification-detail-title" className="type-page-title text-ink">
                   {viewing.name}
                 </h2>
                 <p className="mt-0.5 text-sm text-ink-muted">

@@ -174,7 +174,7 @@ export default function DisputesAdmin() {
       {detail && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4 backdrop-blur-sm">
           <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl ring-1 ring-border-subtle">
-            <h2 className="text-lg font-semibold text-ink">Dispute details</h2>
+            <h2 className="type-page-title text-ink">Dispute details</h2>
             <dl className="mt-4 space-y-3 text-sm">
               <div>
                 <dt className="text-ink-muted">Booking</dt>
@@ -243,7 +243,7 @@ export default function DisputesAdmin() {
             onSubmit={submitResolve}
             className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl ring-1 ring-border-subtle"
           >
-            <h2 className="text-lg font-semibold text-ink">Resolve dispute</h2>
+            <h2 className="type-page-title text-ink">Resolve dispute</h2>
             <p className="mt-1 text-sm text-ink-muted">
               Choose how payment should be handled. Reject closes the case without changing payment.
             </p>

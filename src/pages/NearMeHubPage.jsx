@@ -148,7 +148,7 @@ export default function NearMeHubPage() {
       <main className="mx-auto max-w-6xl px-4 py-14 sm:px-6 lg:px-8">
         <section className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Near me search hub</p>
-          <h1 className="mt-3 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+          <h1 className="type-hero mt-3">
             {city ? `Physio near me in ${city.name}` : 'Find a physio near me in Assam'}
           </h1>
           <p className="mt-4 max-w-3xl text-base leading-relaxed text-slate-600">
@@ -160,7 +160,7 @@ export default function NearMeHubPage() {
 
         {city ? (
           <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
-            <h2 className="text-2xl font-bold tracking-tight text-slate-900">Popular localities in {city.name}</h2>
+            <h2 className="type-page-title">Popular localities in {city.name}</h2>
             <ul className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {localities.map((name) => (
                 <li key={name}>
@@ -181,7 +181,7 @@ export default function NearMeHubPage() {
           </section>
         ) : (
           <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
-            <h2 className="text-2xl font-bold tracking-tight text-slate-900">Cities and local clusters</h2>
+            <h2 className="type-page-title">Cities and local clusters</h2>
             <ul className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {SERVICE_CITIES.map((entry) => (
                 <li key={entry.slug}>
@@ -198,7 +198,7 @@ export default function NearMeHubPage() {
         )}
 
         <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
-          <h2 className="text-2xl font-bold tracking-tight text-slate-900">
+          <h2 className="type-page-title">
             {city ? `FAQ: physio near me in ${city.name}` : 'FAQ: physio near me in Assam'}
           </h2>
           <dl className="mt-6 space-y-6">

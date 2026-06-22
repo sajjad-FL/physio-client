@@ -56,7 +56,7 @@ export default function SessionProgressTracker({ booking, variant = 'full', clas
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h3 className="text-sm font-semibold text-gray-900">Session progress</h3>
-          <p className="mt-1 text-2xl font-bold tabular-nums tracking-tight text-gray-900 sm:text-3xl">
+          <p className="type-stat mt-1 text-gray-900 sm:text-3xl">
             {label}
           </p>
           <p className="mt-1 text-sm text-gray-500">{Math.round(percent)}% of your plan</p>

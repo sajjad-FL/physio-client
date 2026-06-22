@@ -50,7 +50,7 @@ export default function RaiseDisputeModal({ booking, onClose, onCreated }) {
         aria-modal="true"
         aria-labelledby="dispute-title"
       >
-        <h2 id="dispute-title" className="text-lg font-semibold text-ink">
+        <h2 id="dispute-title" className="type-page-title text-ink">
           Raise a dispute
         </h2>
         <p className="mt-1 text-sm text-ink-muted">

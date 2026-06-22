@@ -57,7 +57,7 @@ function RescheduleModal({ booking, sessionRow, patchReschedule, onClose, onUpda
         className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl ring-1 ring-gray-200"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 id="reschedule-title" className="text-lg font-semibold text-gray-900">
+        <h2 id="reschedule-title" className="type-page-title text-gray-900">
           {heading}
         </h2>
         <p className="mt-1 text-sm text-gray-500">

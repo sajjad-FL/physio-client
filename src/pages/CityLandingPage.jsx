@@ -170,7 +170,7 @@ export default function CityLandingPage() {
               <p className="inline-flex items-center rounded-full border border-slate-200 bg-white/90 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500 shadow-sm backdrop-blur">
                 Home visits in {city.name}
               </p>
-              <h1 className="mt-6 text-balance text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl sm:leading-[1.08]">
+              <h1 className="type-hero mt-6 text-balance sm:leading-[1.08]">
                 Physiotherapist in {city.name} — home visit physio near you
               </h1>
               <p className="mt-6 max-w-2xl text-lg leading-relaxed text-slate-500">
@@ -210,7 +210,7 @@ export default function CityLandingPage() {
         <section className="border-b border-slate-200 bg-white py-16 lg:py-20">
           <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
             <div className="max-w-2xl">
-              <h2 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+              <h2 className="type-page-title">
                 Home visit physiotherapy in {city.name}
               </h2>
               <p className="mt-4 text-lg leading-relaxed text-slate-500">
@@ -235,7 +235,7 @@ export default function CityLandingPage() {
 
         <section className="border-b border-slate-200 bg-slate-50 py-16 lg:py-20">
           <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-            <h2 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+            <h2 className="type-page-title">
               Neighborhoods we cover in {city.name}
             </h2>
             <p className="mt-4 max-w-2xl text-lg leading-relaxed text-slate-500">
@@ -253,7 +253,7 @@ export default function CityLandingPage() {
               ))}
             </ul>
             <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <h3 className="text-lg font-semibold text-slate-900">
+              <h3 className="type-page-title text-slate-900">
                 Locality searches in {city.name}
               </h3>
               <p className="mt-2 text-sm leading-relaxed text-slate-600">
@@ -284,13 +284,13 @@ export default function CityLandingPage() {
 
         <section className="border-b border-slate-200 bg-white py-16 lg:py-24">
           <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
-            <h2 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+            <h2 className="type-page-title">
               Frequently asked questions — physio in {city.name}
             </h2>
             <dl className="mt-10 space-y-8">
               {faq.map(({ q, a }) => (
                 <div key={q} className="border-b border-slate-100 pb-8 last:border-0 last:pb-0">
-                  <dt className="text-lg font-semibold text-slate-900">{q}</dt>
+                  <dt className="type-page-title text-slate-900">{q}</dt>
                   <dd className="mt-2 text-base leading-relaxed text-slate-600">{a}</dd>
                 </div>
               ))}
@@ -300,7 +300,7 @@ export default function CityLandingPage() {
 
         <section className="border-b border-slate-200 bg-slate-50 py-14">
           <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-            <h2 className="text-2xl font-bold tracking-tight text-slate-900">Home visit physio in other cities</h2>
+            <h2 className="type-page-title">Home visit physio in other cities</h2>
             <p className="mt-3 max-w-2xl text-base leading-relaxed text-slate-500">
               PhysiOkhom connects patients with verified physiotherapists across Assam service cities.
             </p>
@@ -321,7 +321,7 @@ export default function CityLandingPage() {
 
         <section className="bg-white py-20 lg:py-24">
           <div className="mx-auto max-w-6xl px-4 text-center sm:px-6 lg:px-8">
-            <h2 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+            <h2 className="type-page-title">
               Book a physiotherapist at home in {city.name}
             </h2>
             <p className="mx-auto mt-4 max-w-lg text-lg leading-relaxed text-slate-500">

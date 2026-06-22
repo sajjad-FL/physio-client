@@ -34,7 +34,7 @@ export default function DashboardWallet() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-lg font-semibold tracking-tight text-slate-900 sm:text-xl">Wallet</h1>
+        <h1 className="type-page-title">Wallet</h1>
         <p className="mt-1 text-sm text-slate-500">Your referral credits and booking payment history.</p>
       </div>
 
@@ -48,7 +48,7 @@ export default function DashboardWallet() {
           {/* Wallet Credits (Referral) Card */}
           <section className="rounded-2xl border border-teal-100 bg-teal-50/50 p-4 shadow-sm sm:p-6">
             <p className="text-xs font-semibold uppercase tracking-wide text-teal-800">Wallet Credits (Referral)</p>
-            <p className="mt-2 text-3xl font-bold tabular-nums tracking-tight text-teal-900 sm:text-4xl">
+            <p className="type-stat mt-2 text-teal-900">
               {formatInr(summary.walletBalance)}
             </p>
             <p className="mt-2 text-sm text-slate-600">Available balance to use at checkout for discounts on booking.</p>
@@ -57,7 +57,7 @@ export default function DashboardWallet() {
           {/* Total Care Spend Card */}
           <section className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm ring-1 ring-slate-100/80 sm:p-6">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Total care spend</p>
-            <p className="mt-2 text-3xl font-bold tabular-nums tracking-tight text-slate-900 sm:text-4xl">
+            <p className="type-stat mt-2 text-slate-900">
               {formatInr(summary.totalSpend)}
             </p>
             <div className="mt-4 flex gap-6 border-t border-slate-100 pt-4 text-sm text-slate-600">

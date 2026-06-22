@@ -382,7 +382,7 @@ export default function PhysioListPage() {
       <header className="border-b border-gray-200/80 bg-white/90 backdrop-blur-md">
         <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-4 px-4 py-6 sm:px-6">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-gray-900">Book a session</h1>
+            <h1 className="type-page-title text-gray-900">Book a session</h1>
             <p className="mt-1 text-sm text-gray-500">
               Choose when and where — our team will pick a physiotherapist for you after booking.
             </p>

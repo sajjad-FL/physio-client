@@ -113,7 +113,7 @@ export default function AdminPhysioDetailPage() {
           <Link to="/admin/physios" className="text-sm font-medium text-brand hover:underline">
             ← Physiotherapists
           </Link>
-          <h1 className="mt-2 text-2xl font-semibold text-ink">{p.name}</h1>
+          <h1 className="type-page-title mt-2 text-ink">{p.name}</h1>
           <p className="mt-1 text-sm text-ink-muted">{p.specialization}</p>
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <span className="text-xs text-ink-muted">Platform verification</span>

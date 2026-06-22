@@ -126,8 +126,8 @@ export default function LoginPage() {
           <div className="flex h-14 w-14 sm:h-[68px] sm:w-[68px] items-center justify-center rounded-[20px] bg-teal-600 shadow-[0_6px_24px_rgba(13,148,136,0.30)]">
             <svg className="h-7 w-7 sm:h-8 sm:w-8" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">Welcome back</h1>
-          <p className="text-sm leading-relaxed text-slate-500">
+          <h1 className="type-hero">Welcome back</h1>
+          <p className="type-body text-slate-500">
             Sign in with your registered Indian mobile and password.
           </p>
         </div>
@@ -183,7 +183,7 @@ export default function LoginPage() {
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-6">
             <div>
-              <label htmlFor="login-phone" className="mb-2 block text-sm font-medium text-slate-700">
+              <label htmlFor="login-phone" className="type-label mb-2 block text-slate-700">
                 Phone number
               </label>
               <input
@@ -205,11 +205,10 @@ export default function LoginPage() {
                 placeholder="Enter your phone number"
                 disabled={loading}
               />
-              <p className="mt-1.5 text-xs text-slate-500">10-digit Indian mobile (starts with 6–9).</p>
               {fieldErrors.phone ? <p className="mt-1 text-xs text-red-600">{fieldErrors.phone}</p> : null}
             </div>
             <div>
-              <label htmlFor="login-password" className="mb-2 block text-sm font-medium text-slate-700">
+              <label htmlFor="login-password" className="type-label mb-2 block text-slate-700">
                 Password
               </label>
               <PasswordInput
@@ -227,11 +226,12 @@ export default function LoginPage() {
                 }}
                 autoComplete="current-password"
                 className={inputClsErr('password')}
+                placeholder="Enter your password"
                 disabled={loading}
               />
               {fieldErrors.password ? <p className="mt-1 text-xs text-red-600">{fieldErrors.password}</p> : null}
             </div>
-            <Button type="submit" variant="primary" className="h-11 w-full text-[15px]" loading={loading}>
+            <Button type="submit" variant="primary" className="type-button h-11 w-full" loading={loading}>
               Sign in
             </Button>
           </form>

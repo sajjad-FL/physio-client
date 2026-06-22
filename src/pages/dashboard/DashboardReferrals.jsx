@@ -81,7 +81,7 @@ export default function DashboardReferrals() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-bold text-slate-900 sm:text-2xl">Refer &amp; Earn</h1>
+        <h1 className="type-page-title">Refer &amp; Earn</h1>
         <p className="mt-1 text-sm text-slate-500">
           Share your code.
           {friendBonus > 0 ? (
@@ -100,7 +100,7 @@ export default function DashboardReferrals() {
         ) : (
           <>
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Your referral code</p>
-            <p className="mt-2 font-mono text-3xl font-bold tracking-widest text-teal-700">{referralCode || '—'}</p>
+            <p className="type-stat mt-2 font-mono tracking-widest text-teal-700">{referralCode || '—'}</p>
             <div className="mt-4 flex flex-wrap gap-2">
               {friendBonus > 0 ? (
                 <p className="inline-flex rounded-full bg-violet-50 px-3 py-1 text-sm font-semibold text-violet-900 ring-1 ring-violet-200/80">

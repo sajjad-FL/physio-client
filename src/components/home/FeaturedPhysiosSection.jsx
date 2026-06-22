@@ -34,7 +34,7 @@ function FeaturedCard({ p }) {
           {avatarSrc ? (
             <img src={avatarSrc} alt="" className="h-full w-full object-cover" />
           ) : (
-            <div className="flex h-full w-full items-center justify-center text-lg font-semibold text-slate-400">
+            <div className="flex h-full w-full items-center justify-center text-[15px] font-semibold text-slate-400 sm:text-lg">
               {(p.name || '?').slice(0, 1).toUpperCase()}
             </div>
           )}
@@ -123,9 +123,9 @@ export default function FeaturedPhysiosSection() {
     <section id="featured-physios" className="border-b border-slate-200 bg-slate-50 py-12 md:py-20 lg:py-24">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-2xl text-center">
-          <p className="text-xs font-semibold uppercase tracking-wider text-teal-600">Featured professionals</p>
-          <h2 className="mt-3 text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl md:text-4xl">Meet nearby physiotherapists</h2>
-          <p className="mt-4 text-base leading-relaxed text-slate-500 sm:text-lg">
+          <p className="type-section-title text-teal-600 sm:normal-case sm:tracking-wider sm:uppercase">Featured professionals</p>
+          <h2 className="type-hero mt-3 sm:font-semibold">Meet nearby physiotherapists</h2>
+          <p className="type-body mt-4 text-slate-500 sm:text-lg sm:leading-relaxed">
             Verified clinicians in your area — ratings, experience, and transparent pricing. Sign in to book with your exact
             location.
           </p>
