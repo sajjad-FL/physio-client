@@ -64,7 +64,7 @@ import illustrationNeuroRehab from '../assets/illustration_neuro_rehab.png'
 
 /* ─── SEO ──────────────────────────────────────────────────────────────── */
 
-const HOME_TITLE = 'PhysiOkhom | Home Visit Physiotherapy in Assam — Physio Near Me'
+const HOME_TITLE = 'PhysiOkhom — Home Visit Physiotherapy in Assam'
 const HOME_DESCRIPTION =
   'Looking for a physio near you in Assam? PhysiOkhom connects patients with verified home visit physiotherapists in Guwahati, Barpeta, Bongaigaon, Bijni, and Kokrajhar for back pain, knee pain, post-surgery rehab, and stroke recovery.'
 
@@ -516,6 +516,7 @@ export default function HomePage() {
         <meta property="og:type" content="website" />
         <meta property="og:site_name" content="PhysiOkhom" />
         <meta name="application-name" content="PhysiOkhom" />
+        <meta name="keywords" content="PhysiOkhom, physiokhom, home visit physiotherapy, physio near me, physiotherapist at home Assam, back pain physio, knee pain physio" />
         <meta property="og:title" content={HOME_TITLE} />
         <meta property="og:description" content={HOME_DESCRIPTION} />
         <meta property="og:url" content={canonical} />
@@ -573,6 +574,9 @@ export default function HomePage() {
                 </div>
 
                 <h1 className="text-balance text-3xl font-extrabold tracking-tight sm:text-4xl md:text-6xl sm:leading-[1.1] text-transparent bg-clip-text bg-gradient-to-r from-white via-slate-100 to-teal-100">
+                  <span className="block text-2xl font-bold tracking-tight text-teal-200 sm:text-3xl md:text-4xl">
+                    PhysiOkhom
+                  </span>
                   {userName ? (
                     <>
                       Hello, {userName} 👋 <br />

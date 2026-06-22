@@ -55,17 +55,19 @@ Sitemap: ${base}/sitemap.xml
       const cityPaths = SERVICE_CITIES.map((c) => `/physio-in/${c.slug}`)
       const nearMeCityPaths = SERVICE_CITIES.map((c) => `/near-me-physio/${c.slug}`)
 
-      const buildUrlBlock = (loc, priority, changefreq) =>
-        `  <url>\n    <loc>${loc}</loc>\n    <changefreq>${changefreq}</changefreq>\n    <priority>${priority}</priority>\n  </url>`
+      const buildUrlBlock = (loc, priority, changefreq, lastmod) =>
+        `  <url>\n    <loc>${loc}</loc>\n    <lastmod>${lastmod}</lastmod>\n    <changefreq>${changefreq}</changefreq>\n    <priority>${priority}</priority>\n  </url>`
+
+      const lastmod = new Date().toISOString().slice(0, 10)
 
       const urlBlocks = [
         ...staticPaths.map((p) => {
           const loc = p === '/' ? `${base}/` : `${base}${p}`
           const priority = p === '/' ? '1.0' : '0.7'
-          return buildUrlBlock(loc, priority, 'weekly')
+          return buildUrlBlock(loc, priority, 'weekly', lastmod)
         }),
-        ...cityPaths.map((p) => buildUrlBlock(`${base}${p}`, '0.8', 'monthly')),
-        ...nearMeCityPaths.map((p) => buildUrlBlock(`${base}${p}`, '0.75', 'monthly')),
+        ...cityPaths.map((p) => buildUrlBlock(`${base}${p}`, '0.8', 'monthly', lastmod)),
+        ...nearMeCityPaths.map((p) => buildUrlBlock(`${base}${p}`, '0.75', 'monthly', lastmod)),
       ]
       const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
