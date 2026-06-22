@@ -5,6 +5,7 @@ import Button from '../ui/Button'
 import DragSelectCalendar from './DragSelectCalendar'
 import { formatPhysioSessionFeeLabel } from '../../utils/physioSessionFee.js'
 import { paymentAmountLabel } from '../../utils/bookingDisplay.js'
+import { usePricingSettings } from '../../hooks/usePricingSettings'
 
 function round2(n) {
   return Math.round((Number(n) + Number.EPSILON) * 100) / 100
@@ -52,6 +53,22 @@ const fieldInput =
  * @param {(payload: { sessions: number, amountPerSession: number, discountPercent: number, paymentMode: 'online'|'offline', schedule: { date: string, time: string }[] }) => void} props.onSubmit
  */
 export default function HomePlanForm({ booking, busy, onSubmit }) {
+  const { settings: pricingSettings } = usePricingSettings()
+  const allowedSessionCounts = pricingSettings.allowedPlanSessionCounts?.length
+    ? pricingSettings.allowedPlanSessionCounts
+    : [7, 15, 30]
+  const maxDiscountPercent = Number(pricingSettings.homePlanMaxDiscountPercent) || 15
+  const tierBySessions = useMemo(() => {
+    const map = new Map()
+    for (const tier of pricingSettings.planTiers || []) {
+      map.set(Number(tier.sessions), tier)
+    }
+    return map
+  }, [pricingSettings.planTiers])
+
+  const defaultSessionCount = allowedSessionCounts[0] ?? 7
+  const defaultTierDiscount = Number(tierBySessions.get(defaultSessionCount)?.defaultDiscountPercent) || 0
+
   const defaultSlot =
     booking?.timeSlot && DAILY_SLOTS.includes(booking.timeSlot) ? booking.timeSlot : DAILY_SLOTS[0]
   const defaultAmount = booking?.physioId?.pricePerSession != null ? String(booking.physioId.pricePerSession) : ''
@@ -63,9 +80,9 @@ export default function HomePlanForm({ booking, busy, onSubmit }) {
     [booking?.date],
   )
 
-  const [sessions, setSessions] = useState(1)
+  const [sessions, setSessions] = useState(defaultSessionCount)
   const [amountPerSession, setAmountPerSession] = useState(defaultAmount)
-  const [discount, setDiscount] = useState(0)
+  const [discount, setDiscount] = useState(defaultTierDiscount)
   const [sessionTime, setSessionTime] = useState(defaultSlot)
   const [paymentMode, setPaymentMode] = useState('online')
   const [selectedDates, setSelectedDates] = useState(() =>
@@ -78,7 +95,19 @@ export default function HomePlanForm({ booking, busy, onSubmit }) {
     setAmountPerSession(defaultAmount)
     setSessionTime(defaultSlot)
     setSelectedDates(defaultPrimaryDate ? [defaultPrimaryDate] : [])
-  }, [booking._id, defaultAmount, defaultSlot, defaultPrimaryDate, defaultPrimaryDateKey])
+    setSessions(defaultSessionCount)
+    setDiscount(defaultTierDiscount)
+  }, [booking._id, defaultAmount, defaultSlot, defaultPrimaryDate, defaultPrimaryDateKey, defaultSessionCount, defaultTierDiscount])
+
+  function handleSessionsChange(nextRaw) {
+    const next = Number(nextRaw)
+    if (!allowedSessionCounts.includes(next)) return
+    setSessions(next)
+    const tier = tierBySessions.get(next)
+    if (tier != null && tier.defaultDiscountPercent != null) {
+      setDiscount(Math.min(maxDiscountPercent, Math.max(0, Number(tier.defaultDiscountPercent) || 0)))
+    }
+  }
 
   useEffect(() => {
     setSelectedDates((prev) => {
@@ -96,7 +125,7 @@ export default function HomePlanForm({ booking, busy, onSubmit }) {
   const totals = useMemo(() => {
     const n = Number(amountPerSession)
     const s = Number(sessions) || 0
-    const d = Math.min(15, Math.max(0, Number(discount) || 0))
+    const d = Math.min(maxDiscountPercent, Math.max(0, Number(discount) || 0))
     if (!Number.isFinite(n) || n <= 0 || s < 1) {
       return {
         subtotal: 0,
@@ -111,7 +140,7 @@ export default function HomePlanForm({ booking, busy, onSubmit }) {
     const discountAmount = round2(subtotal * (d / 100))
     const patientPays = round2(subtotal - discountAmount)
     return { subtotal, discountAmount, linePerSession, discountPct: d, patientPays }
-  }, [amountPerSession, sessions, discount, perVisitTravel])
+  }, [amountPerSession, sessions, discount, perVisitTravel, maxDiscountPercent])
 
   const showAssignmentPricing = Boolean(
     booking &&
@@ -124,7 +153,7 @@ export default function HomePlanForm({ booking, busy, onSubmit }) {
   const amt = Number(amountPerSession)
   const feeOk = !fixedFee || amt === feeLo
   const canSubmit =
-    Number(sessions) >= 1 &&
+    allowedSessionCounts.includes(Number(sessions)) &&
     Number(amountPerSession) > 0 &&
     feeOk &&
     !dateMismatch &&
@@ -160,14 +189,21 @@ export default function HomePlanForm({ booking, busy, onSubmit }) {
             <div className="sm:col-span-2 sm:grid sm:grid-cols-2 sm:gap-5">
               <div>
                 <label className={fieldLabel}>Number of sessions</label>
-                <input
-                  type="number"
-                  min={1}
-                  max={50}
+                <select
                   value={sessions}
-                  onChange={(e) => setSessions(Math.max(1, Number(e.target.value) || 1))}
-                  className={fieldInput}
-                />
+                  onChange={(e) => handleSessionsChange(e.target.value)}
+                  className={`${fieldInput} cursor-pointer`}
+                >
+                  {allowedSessionCounts.map((count) => {
+                    const tier = tierBySessions.get(count)
+                    const label = tier?.label || `${count} sessions`
+                    return (
+                      <option key={count} value={count}>
+                        {label} ({count} sessions)
+                      </option>
+                    )
+                  })}
+                </select>
               </div>
               <div>
                 <label className={fieldLabel}>Amount per session (₹)</label>
@@ -206,14 +242,16 @@ export default function HomePlanForm({ booking, busy, onSubmit }) {
               </div>
             </div>
             <div>
-              <label className={fieldLabel}>Discount (max 15%)</label>
+              <label className={fieldLabel}>Discount (max {maxDiscountPercent}%)</label>
               <input
                 type="number"
                 min={0}
-                max={15}
+                max={maxDiscountPercent}
                 step={0.5}
                 value={discount}
-                onChange={(e) => setDiscount(Math.min(15, Math.max(0, Number(e.target.value) || 0)))}
+                onChange={(e) =>
+                  setDiscount(Math.min(maxDiscountPercent, Math.max(0, Number(e.target.value) || 0)))
+                }
                 className={fieldInput}
               />
             </div>

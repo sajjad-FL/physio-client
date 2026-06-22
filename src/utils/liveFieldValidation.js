@@ -226,7 +226,7 @@ export function validateLiveField(name, value, ctx = {}) {
     case 'otp': {
       const d = String(str).replace(/\D/g, '')
       if (!d) return ''
-      if (d.length !== 6) return 'Enter the 6-digit code'
+      if (d.length !== 4) return 'Enter the 4-digit code'
       return ''
     }
     case 'avatar':

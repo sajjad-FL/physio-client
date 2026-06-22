@@ -1,11 +1,10 @@
 import { useEffect, useMemo, useRef } from 'react'
 
-export default function OtpInput({ value, onChange, length = 6, disabled = false }) {
+export default function OtpInput({ value, onChange, length = 4, disabled = false }) {
   const refs = useRef([])
   const otp = useMemo(() => String(value || ''), [value])
 
   useEffect(() => {
-    // Focus the first empty box when user clears or changes the OTP externally.
     const firstEmptyIndex = Array.from({ length }).findIndex((_, i) => !otp[i])
     if (!disabled && firstEmptyIndex >= 0) refs.current[firstEmptyIndex]?.focus()
   }, [disabled, length, otp])
@@ -23,13 +22,12 @@ export default function OtpInput({ value, onChange, length = 6, disabled = false
       if (!otp[i] && i > 0) {
         refs.current[i - 1]?.focus()
       }
-      // If there is a digit, clearing is handled by onChange on input event.
       return
     }
   }
 
   return (
-    <div className="flex flex-row gap-2.5 sm:gap-3">
+    <div className="grid grid-cols-4 gap-3">
       {Array.from({ length }, (_, i) => (
         <input
           key={i}
@@ -48,10 +46,9 @@ export default function OtpInput({ value, onChange, length = 6, disabled = false
             const digit = raw.replace(/\D/g, '').slice(0, 1)
             setDigitAt(i, digit)
           }}
-          className="h-12 w-10 rounded-lg border border-border-subtle bg-white text-center text-lg font-semibold tabular-nums text-ink shadow-sm outline-none transition-all duration-200 focus:border-brand focus:ring-2 focus:ring-brand/20"
+          className="box-border h-14 w-full min-w-0 rounded-lg border border-border-subtle bg-white p-0 text-center text-2xl font-semibold tabular-nums leading-14 text-ink shadow-sm outline-none transition-all duration-200 [appearance:textfield] focus:border-brand focus:ring-2 focus:ring-brand/20 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
         />
       ))}
     </div>
   )
 }
-

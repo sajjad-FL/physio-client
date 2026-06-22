@@ -21,17 +21,15 @@ import AdminAssignPhysioModal from '../../components/admin/AdminAssignPhysioModa
 import RescheduleModal from '../../components/physio/RescheduleModal'
 import { resolveFileUrl } from '../../utils/serverOrigin'
 import { distanceKm, parseLatLng } from '../../utils/geoDistance'
-import { DAILY_SLOTS } from '../../constants/slots'
+import { usePricingSettings, computeTravelSurchargePreview } from '../../hooks/usePricingSettings'
 
 const adminHeaders = () => ({
   headers: { Authorization: `Bearer ${import.meta.env.VITE_ADMIN_API_KEY || ''}` },
 })
-const DISTANCE_SURCHARGE_BASE_KM = 5
-const DISTANCE_SURCHARGE_PER_KM = 5
-
 export default function AdminBookingDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const { settings: pricingSettings } = usePricingSettings()
   const [booking, setBooking] = useState(null)
   const [physios, setPhysios] = useState([])
   const [disputes, setDisputes] = useState([])
@@ -102,11 +100,14 @@ export default function AdminBookingDetailPage() {
     const sessions = Math.max(1, Number(b?.sessions) || 1)
     const subtotal = price * sessions
     const floored = selectedPhysioDistanceKm == null ? null : Math.floor(selectedPhysioDistanceKm)
-    const extraKm = floored == null ? 0 : Math.max(0, floored - DISTANCE_SURCHARGE_BASE_KM)
-    const surcharge = extraKm * DISTANCE_SURCHARGE_PER_KM
+    const extraKm =
+      floored == null
+        ? 0
+        : Math.max(0, floored - Number(pricingSettings.distanceSurchargeBaseKm || 0))
+    const surcharge = computeTravelSurchargePreview(selectedPhysioDistanceKm, pricingSettings)
     const total = subtotal + surcharge
     return { sessions, subtotal, extraKm, surcharge, total }
-  }, [assignPrice, selectedPhysioDistanceKm, b?.sessions])
+  }, [assignPrice, selectedPhysioDistanceKm, b?.sessions, pricingSettings])
 
   /**
    * When admin picks a physio (or the booking already has one they are
@@ -819,7 +820,7 @@ export default function AdminBookingDetailPage() {
                     <div className="mt-2 rounded-lg bg-slate-50 px-3 py-2 text-[11px] text-slate-700 ring-1 ring-slate-200">
                       <p>Base total: ₹{assignPreview.subtotal.toFixed(2)}</p>
                       <p className="mt-0.5">
-                        Distance surcharge (₹{DISTANCE_SURCHARGE_PER_KM}/km beyond {DISTANCE_SURCHARGE_BASE_KM} km, floor):
+                        Distance surcharge (₹{pricingSettings.distanceSurchargePerKmRupees}/km beyond {pricingSettings.distanceSurchargeBaseKm} km, floor):
                         {' '}
                         ₹{assignPreview.surcharge.toFixed(2)}
                         {selectedPhysioDistanceKm != null && (

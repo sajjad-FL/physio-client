@@ -514,7 +514,7 @@ export default function RegisterPhysioPage() {
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium text-ink-muted" htmlFor="reg-password">
-                  Password (min 8 characters)
+                  Password (min 6 characters)
                 </label>
                 <PasswordInput
                   id="reg-password"

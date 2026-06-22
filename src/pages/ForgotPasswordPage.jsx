@@ -9,7 +9,7 @@ import PasswordInput from '../components/ui/PasswordInput'
 import { validateIndianMobile } from '../utils/phoneIndia'
 import { validateLiveField } from '../utils/liveFieldValidation'
 import { absoluteUrl } from '../utils/siteMeta'
-import { sendFirebaseOtp, confirmFirebaseOtp, toE164India, friendlyFirebaseError } from '../utils/firebasePhoneAuth'
+import { OTP_LENGTH } from '../constants/otp'
 
 export default function ForgotPasswordPage() {
   const navigate = useNavigate()
@@ -21,7 +21,6 @@ export default function ForgotPasswordPage() {
   const [error, setError] = useState('')
   const [debugOtp, setDebugOtp] = useState('')
   const [fieldErrors, setFieldErrors] = useState({})
-  const [confirmation, setConfirmation] = useState(null)
 
   const inputCls =
     'h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-slate-900 shadow-sm outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20'
@@ -46,13 +45,11 @@ export default function ForgotPasswordPage() {
     setLoading(true)
     try {
       const res = await api.post('/auth/forgot-password', { phone: pv.normalized })
-      const conf = await sendFirebaseOtp(toE164India(phone), 'recaptcha-container')
-      setConfirmation(conf)
       if (res.data?.otp) setDebugOtp(res.data.otp)
       toast.success(res.data?.message || 'Check your phone for the code')
       setStep('otp')
     } catch (err) {
-      setError(friendlyFirebaseError(err) || err.response?.data?.message || err.message || 'Could not send code')
+      setError(err.response?.data?.message || err.message || 'Could not send code')
     } finally {
       setLoading(false)
     }
@@ -73,12 +70,11 @@ export default function ForgotPasswordPage() {
     }
     setLoading(true)
     try {
-      const idToken = await confirmFirebaseOtp(confirmation, otp)
-      await api.post('/auth/verify-otp', { firebaseIdToken: idToken })
+      await api.post('/auth/verify-otp', { phone: pv.normalized, otp })
       toast.success('Code verified — choose a new password')
       setStep('password')
     } catch (err) {
-      setError(friendlyFirebaseError(err) || err.response?.data?.message || err.message || 'Invalid code')
+      setError(err.response?.data?.message || err.message || 'Invalid code')
     } finally {
       setLoading(false)
     }
@@ -121,10 +117,10 @@ export default function ForgotPasswordPage() {
     { key: 'phone', n: 1, title: 'Enter your mobile', sub: "We'll send a verification code to your registered number.", icon: (
       <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg>
     )},
-    { key: 'otp', n: 2, title: 'Enter the code', sub: 'Check your SMS for the 6-digit verification code.', icon: (
+    { key: 'otp', n: 2, title: 'Enter the code', sub: 'Check your SMS for the 4-digit verification code.', icon: (
       <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/><path d="M7 8h.01M12 8h.01M17 8h.01"/></svg>
     )},
-    { key: 'password', n: 3, title: 'New password', sub: 'Choose a strong password with at least 8 characters.', icon: (
+    { key: 'password', n: 3, title: 'New password', sub: 'Choose a strong password with at least 6 characters.', icon: (
       <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
     )},
   ]
@@ -133,7 +129,7 @@ export default function ForgotPasswordPage() {
   const currentStep = STEPS[stepIdx]
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-slate-50">
+    <div className="relative min-h-screen bg-slate-50">
       <Helmet>
         <title>{title}</title>
         <meta name="description" content={description} />
@@ -150,8 +146,8 @@ export default function ForgotPasswordPage() {
       </Helmet>
 
       {/* Ambient teal halo glows — matching mobile ForgotPasswordScreen */}
-      <div className="pointer-events-none absolute left-[-60px] right-[-60px] top-[-120px] h-[380px] rounded-[190px] bg-[rgba(162,240,239,0.15)]" aria-hidden />
-      <div className="pointer-events-none absolute left-[20%] top-[-50px] h-[200px] w-[60%] rounded-[100px] bg-[rgba(13,107,107,0.04)]" aria-hidden />
+      <div className="pointer-events-none absolute inset-x-0 top-[-120px] h-[240px] sm:h-[380px] rounded-[190px] bg-[rgba(162,240,239,0.15)]" aria-hidden />
+      <div className="pointer-events-none absolute left-[20%] top-[-50px] h-[140px] sm:h-[200px] w-[60%] rounded-[100px] bg-[rgba(13,107,107,0.04)]" aria-hidden />
 
       <header className="relative z-10 border-b border-slate-200 bg-white/90 px-4 py-4 shadow-sm backdrop-blur-md">
         <div className="mx-auto max-w-md">
@@ -170,7 +166,7 @@ export default function ForgotPasswordPage() {
         </div>
       </header>
 
-      <div className="relative z-10 mx-auto max-w-md px-4 py-10">
+      <div className="relative z-10 mx-auto max-w-md px-4 py-8 sm:py-10">
 
         {/* Step progress dots — matching mobile */}
         <div className="mb-8 flex items-center">
@@ -215,7 +211,7 @@ export default function ForgotPasswordPage() {
         )}
 
         {/* Form card */}
-        <div className="rounded-2xl border border-slate-100 bg-white p-8 shadow-md shadow-slate-900/5">
+        <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-md shadow-slate-900/5 sm:p-8">
           {step === 'phone' && (
             <form onSubmit={sendCode} className="space-y-5">
               <div>
@@ -233,7 +229,7 @@ export default function ForgotPasswordPage() {
                   className={inputClsErr('phone')}
                   inputMode="tel"
                   autoComplete="tel"
-                  placeholder="+91 or 10-digit mobile"
+                  placeholder="Enter your phone number"
                   disabled={loading}
                 />
                 {fieldErrors.phone ? <p className="mt-1 text-xs text-red-600">{fieldErrors.phone}</p> : null}
@@ -251,6 +247,7 @@ export default function ForgotPasswordPage() {
                 <span className="mb-2 block text-sm font-medium text-slate-700">Verification code</span>
                 <OtpInput
                   value={otp}
+                  length={OTP_LENGTH}
                   onChange={(v) => {
                     setOtp(v)
                     setFieldErrors((prev) => ({ ...prev, otp: validateLiveField('otp', v) }))
@@ -304,7 +301,7 @@ export default function ForgotPasswordPage() {
                   }}
                   className={inputClsErr('newPassword')}
                   autoComplete="new-password"
-                  placeholder="Min. 8 characters"
+                  placeholder="Min. 6 characters"
                   disabled={loading}
                 />
                 {fieldErrors.newPassword ? (
@@ -326,7 +323,6 @@ export default function ForgotPasswordPage() {
           </Link>
         </p>
       </div>
-      <div id="recaptcha-container" />
     </div>
   )
 }

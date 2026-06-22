@@ -35,6 +35,7 @@ export default function PasswordInput({
   onChange,
   disabled,
   autoComplete,
+  placeholder,
   className = '',
 }) {
   const [visible, setVisible] = useState(false)
@@ -49,6 +50,7 @@ export default function PasswordInput({
         onChange={onChange}
         disabled={disabled}
         autoComplete={autoComplete}
+        placeholder={placeholder}
         className={[className, 'pr-11'].filter(Boolean).join(' ')}
       />
       <button

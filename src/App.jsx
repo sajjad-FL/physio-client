@@ -39,6 +39,7 @@ import AdminPhysioDetailPage from './pages/admin/AdminPhysioDetailPage'
 import DisputesAdmin from './pages/admin/DisputesAdmin'
 import AdminFinancePage from './pages/admin/AdminFinancePage'
 import AdminPlatformSettingsPage from './pages/admin/AdminPlatformSettingsPage'
+import AdminPricingSettingsPage from './pages/admin/AdminPricingSettingsPage'
 import RoleProtectedRoute from './components/RoleProtectedRoute'
 import LegacyPhysioDashboardRedirect from './components/LegacyPhysioDashboardRedirect'
 import ProfileCompletionGate from './components/ProfileCompletionGate'
@@ -162,6 +163,7 @@ export default function App() {
           <Route path="withdrawals" element={<Navigate to="/admin/finance" replace />} />
           <Route path="settlements" element={<Navigate to="/admin/finance" replace />} />
           <Route path="platform" element={<AdminPlatformSettingsPage />} />
+          <Route path="pricing" element={<AdminPricingSettingsPage />} />
           <Route path="*" element={<Navigate to="/admin" replace />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />

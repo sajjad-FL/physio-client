@@ -34,6 +34,8 @@ import {
 import { ISSUE_OPTIONS } from '../constants/issues'
 import { SERVICE_CITIES } from '../constants/serviceCities'
 import SiteHeader from '../components/layout/SiteHeader'
+import { usePricingSettings, FALLBACK_PRICING_SETTINGS } from '../hooks/usePricingSettings'
+import { buildPlanTierCards } from '../utils/planTierDisplay'
 import FeaturedPhysiosSection from '../components/home/FeaturedPhysiosSection'
 import { absoluteUrl, primaryServiceAreas, primaryServiceAreasSentence, siteOrigin } from '../utils/siteMeta'
 import { getToken } from '../auth/session'
@@ -62,7 +64,7 @@ import illustrationNeuroRehab from '../assets/illustration_neuro_rehab.png'
 
 /* ─── SEO ──────────────────────────────────────────────────────────────── */
 
-const HOME_TITLE = 'Physio Near Me in Assam | Home Visit Physiotherapy — PhysiOkhom'
+const HOME_TITLE = 'PhysiOkhom | Home Visit Physiotherapy in Assam — Physio Near Me'
 const HOME_DESCRIPTION =
   'Looking for a physio near you in Assam? PhysiOkhom connects patients with verified home visit physiotherapists in Guwahati, Barpeta, Bongaigaon, Bijni, and Kokrajhar for back pain, knee pain, post-surgery rehab, and stroke recovery.'
 
@@ -119,8 +121,10 @@ function homeStructuredData({ siteBase, ogImage, areas }) {
       '@type': 'WebSite',
       '@id': `${siteBase}/#website`,
       name: 'PhysiOkhom',
+      alternateName: ['physiokhom', 'physiokhom.com'],
       url: `${siteBase}/`,
       inLanguage: 'en-IN',
+      publisher: { '@id': `${siteBase}/#organization` },
       potentialAction: {
         '@type': 'SearchAction',
         target: { '@type': 'EntryPoint', urlTemplate: `${siteBase}/book?q={search_term_string}` },
@@ -131,7 +135,9 @@ function homeStructuredData({ siteBase, ogImage, areas }) {
       '@type': 'MedicalBusiness',
       '@id': `${siteBase}/#organization`,
       name: 'PhysiOkhom',
+      alternateName: ['physiokhom', 'Physio Okhom'],
       url: `${siteBase}/`,
+      logo: `${siteBase}/logo.png`,
       description: HOME_DESCRIPTION,
       image: ogImage,
       medicalSpecialty: 'Physiotherapy',
@@ -174,48 +180,6 @@ const TECHNIQUES = [
   { title: 'Kinesio Taping', image: techniqueKinesio,   bg: 'bg-[#e6f4f3]', color: 'text-[#0d6b6b]' },
 ]
 
-const PLAN_TIER_CARDS = [
-  {
-    label: '7-Day Plan',
-    sessions: 7,
-    discountPercent: 0,
-    badge: 'STARTER',
-    saveCallout: null,
-    desc: '7 daily home sessions. Pay 1 session upfront, 100% by session 5.',
-    icon: Calendar,
-    bg: 'bg-white',
-    border: 'border-slate-200',
-    color: 'text-teal-700',
-    titleColor: 'text-slate-900',
-  },
-  {
-    label: '15-Day Plan',
-    sessions: 15,
-    discountPercent: 3.33,
-    badge: 'MOST POPULAR',
-    saveCallout: 'SAVE 3.33%',
-    desc: '15 sessions. Pay 50% by session 5, 100% by session 12.',
-    icon: Activity,
-    bg: 'bg-[#f4fbf7]',
-    border: 'border-emerald-200',
-    color: 'text-emerald-700',
-    titleColor: 'text-emerald-950',
-  },
-  {
-    label: '30-Day Plan',
-    sessions: 30,
-    discountPercent: 4.67,
-    badge: 'BEST VALUE',
-    saveCallout: 'SAVE 4.67%',
-    desc: '30 sessions. Pay 50% by session 10, 75% by session 20, 100% by session 25.',
-    icon: ShieldCheck,
-    bg: 'bg-[#f0f9ff]',
-    border: 'border-sky-200',
-    color: 'text-sky-700',
-    titleColor: 'text-sky-950',
-  },
-]
-
 const FRONT_SPOTS = [
   { id: 'neck', name: 'Neck & Cervical Care', issue: 'Neck Pain', top: '25px', left: '60px', icon: Sparkles, desc: 'Stiffness, cervical spondylosis, nerve strain' },
   { id: 'shoulder_l', name: 'Left Shoulder Care', issue: 'Neck Pain', top: '40px', left: '28px', icon: Sparkles, desc: 'Frozen shoulder, rotatory stiffness, impingement' },
@@ -253,11 +217,11 @@ function SectionHeading({ label, labelIcon, title, subtitle, center = false }) {
           <SectionLabel Icon={labelIcon}>{label}</SectionLabel>
         </div>
       )}
-      <h2 className="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
+      <h2 className="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl md:text-4xl">
         {title}
       </h2>
       {subtitle && (
-        <p className={`mt-4 text-base leading-relaxed text-slate-500 ${center ? 'mx-auto max-w-2xl' : 'max-w-xl'}`}>
+        <p className={`mt-4 text-sm leading-relaxed text-slate-500 sm:text-base ${center ? 'mx-auto max-w-2xl' : 'max-w-xl'}`}>
           {subtitle}
         </p>
       )}
@@ -288,7 +252,7 @@ function FaqItem({ q, a, open, onToggle }) {
         className="overflow-hidden transition-all duration-300 ease-out"
         style={{ maxHeight: open ? (bodyRef.current?.scrollHeight ?? 500) + 'px' : '0px' }}
       >
-        <p className="pb-5 pl-15 pr-5 text-[15px] leading-relaxed text-slate-600">{a}</p>
+        <p className="pb-5 pl-14 pr-5 text-[15px] leading-relaxed text-slate-600">{a}</p>
       </div>
     </div>
   )
@@ -298,6 +262,11 @@ function FaqItem({ q, a, open, onToggle }) {
 
 export default function HomePage() {
   const navigate = useNavigate()
+  const { settings: pricingSettings } = usePricingSettings()
+  const planTierCards = useMemo(() => {
+    const cards = buildPlanTierCards(pricingSettings.planTiers)
+    return cards.length > 0 ? cards : buildPlanTierCards(FALLBACK_PRICING_SETTINGS.planTiers)
+  }, [pricingSettings.planTiers])
   const siteBase = (siteOrigin() || 'http://localhost:5173').replace(/\/$/, '')
   const canonical = absoluteUrl('/')
   const ogImage = absoluteUrl('/og-default.png')
@@ -546,6 +515,7 @@ export default function HomePage() {
         <link rel="canonical" href={canonical} />
         <meta property="og:type" content="website" />
         <meta property="og:site_name" content="PhysiOkhom" />
+        <meta name="application-name" content="PhysiOkhom" />
         <meta property="og:title" content={HOME_TITLE} />
         <meta property="og:description" content={HOME_DESCRIPTION} />
         <meta property="og:url" content={canonical} />
@@ -592,7 +562,7 @@ export default function HomePage() {
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(15,23,42,0.1),rgba(15,23,42,0.9))]" aria-hidden />
 
           <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <div className="grid grid-cols-1 gap-12 lg:grid-cols-12 lg:items-center w-full">
+            <div className="grid grid-cols-1 gap-8 lg:grid-cols-12 lg:items-center lg:gap-12 w-full">
               
               {/* Left: Text content */}
               <div className="space-y-6 lg:col-span-7">
@@ -602,7 +572,7 @@ export default function HomePage() {
                   <span>{demandInsightText}</span>
                 </div>
 
-                <h1 className="text-balance text-4xl font-extrabold tracking-tight sm:text-5xl md:text-6xl sm:leading-[1.1] text-transparent bg-clip-text bg-gradient-to-r from-white via-slate-100 to-teal-100">
+                <h1 className="text-balance text-3xl font-extrabold tracking-tight sm:text-4xl md:text-6xl sm:leading-[1.1] text-transparent bg-clip-text bg-gradient-to-r from-white via-slate-100 to-teal-100">
                   {userName ? (
                     <>
                       Hello, {userName} 👋 <br />
@@ -681,7 +651,7 @@ export default function HomePage() {
                 <div className="absolute inset-0 bg-teal-500/10 blur-[80px] rounded-full" />
                 
                 {/* Dashboard Mockup Card */}
-                <div className="relative glass-card w-full max-w-sm mx-auto rounded-3xl p-6 border border-white/20 shadow-2xl text-slate-900 overflow-hidden bg-white">
+                <div className="relative glass-card w-full max-w-sm mx-auto rounded-3xl p-4 sm:p-6 border border-white/20 shadow-2xl text-slate-900 overflow-hidden bg-white">
                   <div className="flex items-center justify-between mb-5">
                     <div className="flex items-center gap-2">
                       <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-ping" />
@@ -954,7 +924,7 @@ export default function HomePage() {
 {/* ══════════════════════════════════════════════════════════════
     ADVANCED THERAPEUTIC TECHNIQUES
 ══════════════════════════════════════════════════════════════ */}
-<section className="py-20 bg-slate-50 border-b border-slate-200">
+<section className="py-12 md:py-20 bg-slate-50 border-b border-slate-200">
   <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
     <SectionHeading
       labelIcon={Stethoscope}
@@ -964,16 +934,16 @@ export default function HomePage() {
       center
     />
 
-    <div className="mt-14 overflow-x-auto pb-4 no-scrollbar">
-      <div className="flex gap-6 sm:gap-8 min-w-max justify-start md:justify-center px-4">
+    <div className="mt-8 md:mt-14 overflow-x-auto pb-4 no-scrollbar">
+      <div className="flex gap-4 sm:gap-6 md:gap-8 min-w-max justify-start md:justify-center px-4">
         {TECHNIQUES.map((tech) => (
           <Link
             key={tech.title}
             to="/book"
-            className="flex flex-col items-center w-[150px] text-center group cursor-pointer"
+            className="flex flex-col items-center w-[112px] sm:w-[150px] text-center group cursor-pointer"
           >
-            <div className={`w-32 h-32 rounded-full flex items-center justify-center transition-all duration-300 group-hover:scale-105 group-hover:shadow-lg ${tech.bg}`}>
-              <img src={tech.image} alt={tech.title} className="w-[110px] h-[110px] object-contain" />
+            <div className={`w-24 h-24 sm:w-32 sm:h-32 rounded-full flex items-center justify-center transition-all duration-300 group-hover:scale-105 group-hover:shadow-lg ${tech.bg}`}>
+              <img src={tech.image} alt={tech.title} className="w-[80px] h-[80px] sm:w-[110px] sm:h-[110px] object-contain" />
             </div>
             <span className={`text-sm font-bold mt-3 group-hover:opacity-80 transition-opacity ${tech.color}`}>
               {tech.title}
@@ -988,7 +958,7 @@ export default function HomePage() {
         {/* ══════════════════════════════════════════════════════════════
             CLINICAL SPECIALTIES
         ══════════════════════════════════════════════════════════════ */}
-        <section className="py-20 bg-white border-b border-slate-200">
+        <section className="py-12 md:py-20 bg-white border-b border-slate-200">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
             <SectionHeading
               labelIcon={Stethoscope}
@@ -998,17 +968,17 @@ export default function HomePage() {
               center
             />
 
-            <div className="mt-14 overflow-x-auto pb-4 no-scrollbar">
+            <div className="mt-8 md:mt-14 overflow-x-auto pb-4 no-scrollbar">
               <div className="flex gap-4 sm:gap-6 min-w-max justify-start md:justify-center px-4">
                 {SPECIALTIES.map((spec) => (
                   <Link
                     key={spec.title}
                     to={spec.id === 'Many More' ? '/book' : '/book'}
                     state={spec.id !== 'Many More' ? { selectedIssue: spec.id } : undefined}
-                    className="flex flex-col items-center w-[150px] text-center group cursor-pointer"
+                    className="flex flex-col items-center w-[112px] sm:w-[150px] text-center group cursor-pointer"
                   >
-                    <div className={`w-32 h-32 rounded-full flex items-center justify-center transition-all duration-300 group-hover:scale-105 group-hover:shadow-lg ${spec.bg}`}>
-                      <img src={spec.image} alt="" className="w-[96px] h-[96px] object-contain" />
+                    <div className={`w-24 h-24 sm:w-32 sm:h-32 rounded-full flex items-center justify-center transition-all duration-300 group-hover:scale-105 group-hover:shadow-lg ${spec.bg}`}>
+                      <img src={spec.image} alt="" className="w-[72px] h-[72px] sm:w-[96px] sm:h-[96px] object-contain" />
                     </div>
                     <span className="text-sm font-bold text-slate-800 mt-3 group-hover:text-teal-700 transition-colors">
                       {spec.title}
@@ -1023,9 +993,9 @@ export default function HomePage() {
         {/* ══════════════════════════════════════════════════════════════
             PAIN ZONE GRID / ANATOMICAL MAP
         ══════════════════════════════════════════════════════════════ */}
-        <section id="services" className="border-b border-slate-200 bg-slate-50 py-20 lg:py-24">
+        <section id="services" className="border-b border-slate-200 bg-slate-50 py-12 md:py-20 lg:py-24">
           <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-            <div className="flex flex-col md:flex-row md:justify-between md:items-end gap-6 mb-12">
+            <div className="flex flex-col md:flex-row md:justify-between md:items-end gap-6 mb-8 md:mb-12">
               <SectionHeading
                 labelIcon={HeartPulse}
                 label="Interactive diagnosis"
@@ -1070,10 +1040,10 @@ export default function HomePage() {
                   onClick={() => navigate('/book', { state: { selectedIssue: 'Back Pain' } })}
                   className="text-left rounded-3xl border border-slate-200 bg-white hover:border-slate-300 hover:shadow-lg transition-all duration-300 overflow-hidden group cursor-pointer"
                 >
-                  <div className="aspect-4/3 w-full bg-slate-50 overflow-hidden border-b border-slate-100 flex items-center justify-center p-3">
+                  <div className="aspect-4/3 max-h-40 sm:max-h-none w-full bg-slate-50 overflow-hidden border-b border-slate-100 flex items-center justify-center p-3">
                     <img src={illustrationBackPain} alt="" className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-105" />
                   </div>
-                  <div className="px-5 py-4 flex items-center justify-between">
+                  <div className="px-4 py-3 sm:px-5 sm:py-4 flex items-center justify-between">
                     <div>
                       <h4 className="text-sm font-bold text-slate-800">Lower Back</h4>
                       <p className="text-[11px] text-slate-500 font-medium mt-0.5">Stiffness, spasm, sciatica, slip disc</p>
@@ -1087,10 +1057,10 @@ export default function HomePage() {
                   onClick={() => navigate('/book', { state: { selectedIssue: 'Knee Pain' } })}
                   className="text-left rounded-3xl border border-slate-200 bg-white hover:border-slate-300 hover:shadow-lg transition-all duration-300 overflow-hidden group cursor-pointer"
                 >
-                  <div className="aspect-4/3 w-full bg-slate-50 overflow-hidden border-b border-slate-100 flex items-center justify-center p-3">
+                  <div className="aspect-4/3 max-h-40 sm:max-h-none w-full bg-slate-50 overflow-hidden border-b border-slate-100 flex items-center justify-center p-3">
                     <img src={illustrationKneePain} alt="" className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-105" />
                   </div>
-                  <div className="px-5 py-4 flex items-center justify-between">
+                  <div className="px-4 py-3 sm:px-5 sm:py-4 flex items-center justify-between">
                     <div>
                       <h4 className="text-sm font-bold text-slate-800">Knee & Joint</h4>
                       <p className="text-[11px] text-slate-500 font-medium mt-0.5">Arthritis, ligament strain, stiffness</p>
@@ -1104,10 +1074,10 @@ export default function HomePage() {
                   onClick={() => navigate('/book', { state: { selectedIssue: 'Neck Pain' } })}
                   className="text-left rounded-3xl border border-slate-200 bg-white hover:border-slate-300 hover:shadow-lg transition-all duration-300 overflow-hidden group cursor-pointer"
                 >
-                  <div className="aspect-4/3 w-full bg-slate-50 overflow-hidden border-b border-slate-100 flex items-center justify-center p-3">
+                  <div className="aspect-4/3 max-h-40 sm:max-h-none w-full bg-slate-50 overflow-hidden border-b border-slate-100 flex items-center justify-center p-3">
                     <img src={illustrationNeckPain} alt="" className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-105" />
                   </div>
-                  <div className="px-5 py-4 flex items-center justify-between">
+                  <div className="px-4 py-3 sm:px-5 sm:py-4 flex items-center justify-between">
                     <div>
                       <h4 className="text-sm font-bold text-slate-800">Neck & Spine</h4>
                       <p className="text-[11px] text-slate-500 font-medium mt-0.5">Cervical pain, postural neck strain</p>
@@ -1121,10 +1091,10 @@ export default function HomePage() {
                   onClick={() => navigate('/book', { state: { selectedIssue: 'Neuro Rehab' } })}
                   className="text-left rounded-3xl border border-slate-200 bg-white hover:border-slate-300 hover:shadow-lg transition-all duration-300 overflow-hidden group cursor-pointer"
                 >
-                  <div className="aspect-4/3 w-full bg-slate-50 overflow-hidden border-b border-slate-100 flex items-center justify-center p-3">
+                  <div className="aspect-4/3 max-h-40 sm:max-h-none w-full bg-slate-50 overflow-hidden border-b border-slate-100 flex items-center justify-center p-3">
                     <img src={illustrationNeuroRehab} alt="" className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-105" />
                   </div>
-                  <div className="px-5 py-4 flex items-center justify-between">
+                  <div className="px-4 py-3 sm:px-5 sm:py-4 flex items-center justify-between">
                     <div>
                       <h4 className="text-sm font-bold text-slate-800">Stroke/Paralysis</h4>
                       <p className="text-[11px] text-slate-500 font-medium mt-0.5">Stroke recovery, numbness, paralysis</p>
@@ -1138,10 +1108,10 @@ export default function HomePage() {
                   onClick={() => navigate('/book')}
                   className="text-left rounded-3xl border border-slate-200 bg-white hover:border-slate-300 hover:shadow-lg transition-all duration-300 overflow-hidden group cursor-pointer"
                 >
-                  <div className="aspect-4/3 w-full bg-slate-50 overflow-hidden border-b border-slate-100 flex items-center justify-center p-3">
+                  <div className="aspect-4/3 max-h-40 sm:max-h-none w-full bg-slate-50 overflow-hidden border-b border-slate-100 flex items-center justify-center p-3">
                     <img src={illustrationOther} alt="" className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-105" />
                   </div>
-                  <div className="px-5 py-4 flex items-center justify-between">
+                  <div className="px-4 py-3 sm:px-5 sm:py-4 flex items-center justify-between">
                     <div>
                       <h4 className="text-sm font-bold text-slate-800">Others</h4>
                       <p className="text-[11px] text-slate-500 font-medium mt-0.5">Any other physical conditions or post-op care</p>
@@ -1155,7 +1125,7 @@ export default function HomePage() {
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-stretch bg-white border border-slate-200 rounded-3xl p-4 sm:p-6 shadow-sm overflow-hidden">
                 
                 {/* 1. Map Silhouette Box */}
-                <div className="lg:col-span-5 flex flex-col items-center justify-center p-4 sm:p-6 bg-slate-50 border border-slate-100 rounded-2xl relative overflow-hidden h-[360px] w-full">
+                <div className="lg:col-span-5 flex flex-col items-center justify-center p-4 sm:p-6 bg-slate-50 border border-slate-100 rounded-2xl relative overflow-hidden h-[260px] sm:h-[320px] md:h-[360px] w-full">
                   {/* Grid Lines */}
                   <div className="absolute inset-0 grid grid-cols-6 grid-rows-6 opacity-20 pointer-events-none">
                     {Array.from({ length: 36 }).map((_, i) => (
@@ -1167,7 +1137,7 @@ export default function HomePage() {
                   <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-teal-400 to-transparent opacity-80 scan-line-element pointer-events-none" />
 
                   {/* Body graphic block */}
-                  <div className="relative w-[140px] h-[230px]">
+                  <div className="relative w-[120px] h-[200px] sm:w-[140px] sm:h-[230px] scale-90 sm:scale-100 origin-center">
                     {/* Head */}
                     <div className="w-[26px] h-[26px] rounded-full border-[1.5px] border-slate-300 bg-white absolute top-0 left-[57px]" />
                     {/* Neck */}
@@ -1204,7 +1174,7 @@ export default function HomePage() {
                           type="button"
                           onClick={() => handleSpotSelect(spot)}
                           style={{ top: spot.top, left: spot.left }}
-                          className={`absolute w-[20px] h-[20px] rounded-full -ml-[10px] -mt-[10px] z-10 flex items-center justify-center cursor-pointer transition-all duration-300 focus:outline-none ${
+                          className={`absolute w-6 h-6 sm:w-5 sm:h-5 rounded-full -ml-3 -mt-3 sm:-ml-[10px] sm:-mt-[10px] z-10 flex items-center justify-center cursor-pointer transition-all duration-300 focus:outline-none ${
                             active ? 'scale-115 shadow-md' : 'hover:scale-105'
                           }`}
                         >
@@ -1340,7 +1310,7 @@ export default function HomePage() {
                       </Link>
                     </div>
                   ) : (
-                    <div className="border border-dashed border-slate-200 bg-slate-50/50 rounded-2xl p-8 text-center flex flex-col items-center justify-center">
+                    <div className="border border-dashed border-slate-200 bg-slate-50/50 rounded-2xl p-5 sm:p-8 text-center flex flex-col items-center justify-center">
                       <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mb-4">
                         <Activity size={20} className="animate-pulse" />
                       </div>
@@ -1360,7 +1330,7 @@ export default function HomePage() {
         {/* ══════════════════════════════════════════════════════════════
             HOW IT WORKS
         ══════════════════════════════════════════════════════════════ */}
-        <section id="how-it-works" className="border-b border-slate-200 bg-white py-20 lg:py-24">
+        <section id="how-it-works" className="border-b border-slate-200 bg-white py-12 md:py-20 lg:py-24">
           <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
             <SectionHeading
               labelIcon={Sparkles}
@@ -1370,9 +1340,9 @@ export default function HomePage() {
               center
             />
 
-            <div className="mt-16 grid grid-cols-1 gap-8 sm:grid-cols-2 md:grid-cols-3 w-full">
+            <div className="mt-10 md:mt-16 grid grid-cols-1 gap-8 sm:grid-cols-2 md:grid-cols-3 w-full">
               {/* Step 1 */}
-              <div className="glass-card group relative rounded-2xl p-8 border border-slate-100 hover:shadow-lg transition-all">
+              <div className="glass-card group relative rounded-2xl p-5 sm:p-8 border border-slate-100 hover:shadow-lg transition-all">
                 <div className="absolute top-[2.8rem] -right-4 hidden h-0.5 w-8 bg-teal-100 md:block" aria-hidden />
                 <div className="mb-5 flex items-center justify-between">
                   <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-teal-500 to-teal-600 text-sm font-bold text-white shadow-md">
@@ -1390,7 +1360,7 @@ export default function HomePage() {
               </div>
 
               {/* Step 2 */}
-              <div className="glass-card group relative rounded-2xl p-8 border border-slate-100 hover:shadow-lg transition-all">
+              <div className="glass-card group relative rounded-2xl p-5 sm:p-8 border border-slate-100 hover:shadow-lg transition-all">
                 <div className="absolute top-[2.8rem] -right-4 hidden h-0.5 w-8 bg-teal-100 md:block" aria-hidden />
                 <div className="mb-5 flex items-center justify-between">
                   <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-teal-500 to-teal-600 text-sm font-bold text-white shadow-md">
@@ -1408,7 +1378,7 @@ export default function HomePage() {
               </div>
 
               {/* Step 3 */}
-              <div className="glass-card group relative rounded-2xl p-8 border border-slate-100 hover:shadow-lg transition-all">
+              <div className="glass-card group relative rounded-2xl p-5 sm:p-8 border border-slate-100 hover:shadow-lg transition-all">
                 <div className="mb-5 flex items-center justify-between">
                   <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-teal-500 to-teal-600 text-sm font-bold text-white shadow-md">
                     3
@@ -1430,7 +1400,7 @@ export default function HomePage() {
         {/* ══════════════════════════════════════════════════════════════
             HOME CARE PLANS (pricing plans)
         ══════════════════════════════════════════════════════════════ */}
-        <section className="py-20 bg-slate-50 border-b border-slate-200">
+        <section className="py-12 md:py-20 bg-slate-50 border-b border-slate-200">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
             <SectionHeading
               labelIcon={CreditCard}
@@ -1440,13 +1410,13 @@ export default function HomePage() {
               center
             />
 
-            <div className="mt-14 grid grid-cols-1 gap-6 md:grid-cols-3 max-w-4xl mx-auto w-full">
-              {PLAN_TIER_CARDS.map((plan, idx) => {
+            <div className="mt-8 md:mt-14 grid grid-cols-1 gap-6 md:grid-cols-3 max-w-4xl mx-auto w-full">
+              {planTierCards.map((plan, idx) => {
                 const IconComponent = plan.icon
                 return (
                   <div
                     key={idx}
-                    className={`rounded-3xl border p-6 flex flex-col justify-between hover:shadow-md transition-all ${plan.bg} ${plan.border}`}
+                    className={`rounded-3xl border p-5 sm:p-6 flex flex-col justify-between hover:shadow-md transition-all ${plan.bg} ${plan.border}`}
                   >
                     <div>
                       <div className="flex justify-between items-center mb-4">
@@ -1459,7 +1429,7 @@ export default function HomePage() {
                           </span>
                         )}
                       </div>
-                      <h4 className={`text-xl font-extrabold ${plan.titleColor}`}>{plan.label}</h4>
+                      <h4 className={`text-lg sm:text-xl font-extrabold ${plan.titleColor}`}>{plan.label}</h4>
                       <p className="text-slate-500 text-xs mt-2 leading-relaxed">{plan.desc}</p>
                     </div>
 
@@ -1492,7 +1462,7 @@ export default function HomePage() {
         {/* ══════════════════════════════════════════════════════════════
             CARE COMPARISON (Commute vs. Comfort)
         ══════════════════════════════════════════════════════════════ */}
-        <section className="bg-white py-20 lg:py-24 border-b border-slate-200">
+        <section className="bg-white py-12 md:py-20 lg:py-24 border-b border-slate-200">
           <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
             <SectionHeading
               labelIcon={Star}
@@ -1502,9 +1472,9 @@ export default function HomePage() {
               center
             />
 
-            <div className="mt-16 grid grid-cols-1 gap-8 lg:grid-cols-2 w-full">
+            <div className="mt-10 md:mt-16 grid grid-cols-1 gap-8 lg:grid-cols-2 w-full">
               {/* Clinic Commute */}
-              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-8 shadow-sm">
+              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5 sm:p-8 shadow-sm">
                 <div className="flex items-center gap-3 mb-6">
                   <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-50 border border-rose-100 shrink-0">
                     <XCircle className="text-rose-600" size={20} />
@@ -1532,7 +1502,7 @@ export default function HomePage() {
               </div>
 
               {/* PhysiOkhom At-Home Care */}
-              <div className="rounded-3xl border border-teal-500/30 bg-teal-50/20 p-8 shadow-md relative overflow-hidden">
+              <div className="rounded-3xl border border-teal-500/30 bg-teal-50/20 p-5 sm:p-8 shadow-md relative overflow-hidden">
                 <div className="absolute -top-10 -right-10 w-32 h-32 bg-teal-500/10 rounded-full blur-2xl pointer-events-none" />
                 
                 <div className="flex items-center gap-3 mb-6">
@@ -1604,7 +1574,7 @@ export default function HomePage() {
         {/* ══════════════════════════════════════════════════════════════
             TESTIMONIALS
         ══════════════════════════════════════════════════════════════ */}
-        <section className="border-b border-slate-200 bg-white py-20 lg:py-24">
+        <section className="border-b border-slate-200 bg-white py-12 md:py-20 lg:py-24">
           <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
             <SectionHeading
               labelIcon={MessageSquare}
@@ -1613,9 +1583,9 @@ export default function HomePage() {
               center
             />
 
-            <div className="mt-14 relative">
-              <div className="glass-card rounded-3xl p-8 md:p-10 shadow-lg relative border border-slate-100 overflow-hidden bg-white">
-                <span className="absolute top-2 right-6 text-9xl text-teal-600/5 font-serif select-none pointer-events-none">“</span>
+            <div className="mt-8 md:mt-14 relative">
+              <div className="glass-card rounded-3xl p-5 sm:p-8 md:p-10 shadow-lg relative border border-slate-100 overflow-hidden bg-white">
+                <span className="absolute top-2 right-4 sm:right-6 text-7xl sm:text-9xl text-teal-600/5 font-serif select-none pointer-events-none">“</span>
                 
                 {/* Active review content */}
                 <div className="space-y-6">
@@ -1689,7 +1659,7 @@ export default function HomePage() {
         {/* ══════════════════════════════════════════════════════════════
             SAFETY PROMISE & SHIELD
         ══════════════════════════════════════════════════════════════ */}
-        <section className="bg-slate-900 py-20 text-white relative overflow-hidden border-y border-slate-800">
+        <section className="bg-slate-900 py-12 md:py-20 text-white relative overflow-hidden border-y border-slate-800">
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[60%] w-[60%] bg-teal-500/10 rounded-full blur-[100px]" aria-hidden />
 
           <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 relative text-center flex flex-col items-center">
@@ -1819,7 +1789,7 @@ export default function HomePage() {
         {/* ══════════════════════════════════════════════════════════════
             CITIES
         ══════════════════════════════════════════════════════════════ */}
-        <section id="cities" className="border-y border-slate-200 bg-white py-16 lg:py-20">
+        <section id="cities" className="border-y border-slate-200 bg-white py-12 md:py-16 lg:py-20">
           <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
             <SectionHeading
               labelIcon={MapPin}
@@ -1867,7 +1837,7 @@ export default function HomePage() {
         {/* ══════════════════════════════════════════════════════════════
             FINAL CTA
         ══════════════════════════════════════════════════════════════ */}
-        <section className="relative overflow-hidden bg-slate-900 py-20 text-white lg:py-24">
+        <section className="relative overflow-hidden bg-slate-900 py-12 md:py-20 text-white lg:py-24">
           <div className="absolute -top-1/4 -right-1/4 h-[70%] w-[50%] bg-teal-500/10 rounded-full blur-[100px]" />
           <div className="absolute -bottom-1/4 -left-1/4 h-[70%] w-[50%] bg-emerald-500/10 rounded-full blur-[100px]" />
 
@@ -1876,7 +1846,7 @@ export default function HomePage() {
               <MapPin size={12} className="animate-pulse" />
               Available in your region
             </div>
-            <h2 className="mt-6 text-4xl font-extrabold tracking-tight sm:text-5xl text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-200">
+            <h2 className="mt-6 text-3xl font-extrabold tracking-tight sm:text-4xl md:text-5xl text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-200">
               Ready to recover?
             </h2>
             <p className="mx-auto mt-4 max-w-lg text-slate-300 text-sm leading-relaxed">
@@ -1886,14 +1856,14 @@ export default function HomePage() {
             <div className="mt-10 flex flex-col items-stretch gap-4 sm:flex-row sm:justify-center max-w-sm mx-auto sm:max-w-none">
               <Link
                 to="/book"
-                className="inline-flex h-13 items-center justify-center gap-2 rounded-xl bg-teal-600 px-8 text-base font-semibold text-white shadow-lg hover:bg-teal-700"
+                className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-teal-600 px-8 text-base font-semibold text-white shadow-lg hover:bg-teal-700"
               >
                 Find clinicians near me
                 <ArrowRight size={16} />
               </Link>
               <Link
                 to="/register"
-                className="inline-flex h-13 items-center justify-center rounded-xl border border-slate-700 bg-slate-800/60 px-7 text-base font-semibold text-slate-100 backdrop-blur-sm hover:bg-slate-800 hover:border-slate-600"
+                className="inline-flex h-12 items-center justify-center rounded-xl border border-slate-700 bg-slate-800/60 px-7 text-base font-semibold text-slate-100 backdrop-blur-sm hover:bg-slate-800 hover:border-slate-600"
               >
                 Create account
               </Link>

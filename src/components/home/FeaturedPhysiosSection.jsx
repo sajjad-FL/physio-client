@@ -120,18 +120,18 @@ export default function FeaturedPhysiosSection() {
   }, [])
 
   return (
-    <section id="featured-physios" className="border-b border-slate-200 bg-slate-50 py-20 lg:py-24">
+    <section id="featured-physios" className="border-b border-slate-200 bg-slate-50 py-12 md:py-20 lg:py-24">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-2xl text-center">
           <p className="text-xs font-semibold uppercase tracking-wider text-teal-600">Featured professionals</p>
-          <h2 className="mt-3 text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">Meet nearby physiotherapists</h2>
-          <p className="mt-4 text-lg leading-relaxed text-slate-500">
+          <h2 className="mt-3 text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl md:text-4xl">Meet nearby physiotherapists</h2>
+          <p className="mt-4 text-base leading-relaxed text-slate-500 sm:text-lg">
             Verified clinicians in your area — ratings, experience, and transparent pricing. Sign in to book with your exact
             location.
           </p>
         </div>
 
-        <div className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6">
+        <div className="mt-8 md:mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6">
           {loading &&
             [1, 2, 3].map((k) => (
               <div key={k} className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">

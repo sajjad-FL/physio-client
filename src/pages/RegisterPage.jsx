@@ -11,7 +11,7 @@ import { setSession, getToken, getDefaultDashboardPath } from '../auth/session'
 import { validateIndianMobile } from '../utils/phoneIndia'
 import { validateLiveField } from '../utils/liveFieldValidation'
 import { absoluteUrl } from '../utils/siteMeta'
-import { sendFirebaseOtp, confirmFirebaseOtp, toE164India, friendlyFirebaseError } from '../utils/firebasePhoneAuth'
+import { OTP_LENGTH } from '../constants/otp.js'
 
 const STEP_PHONE = 1
 const STEP_OTP = 2
@@ -31,7 +31,6 @@ export default function RegisterPage() {
   const [otpSendBusy, setOtpSendBusy] = useState(false)
   const [loading, setLoading] = useState(false)
   const [fieldErrors, setFieldErrors] = useState({})
-  const [confirmation, setConfirmation] = useState(null)
   const [referralCode, setReferralCode] = useState(() =>
     String(searchParams.get('ref') || '')
       .trim()
@@ -104,13 +103,13 @@ export default function RegisterPage() {
     setOtpSendBusy(true)
     setDevOtpHint('')
     try {
-      const conf = await sendFirebaseOtp(toE164India(phone), 'recaptcha-container')
-      setConfirmation(conf)
+      const res = await api.post('/auth/signup-otp', { phone: pv.normalized })
+      if (res.data?.otp) setDevOtpHint(res.data.otp)
       setOtp('')
-      toast.success('Verification code sent.')
+      toast.success(res.data?.message || 'Verification code sent.')
       setStep(STEP_OTP)
     } catch (err) {
-      const msg = friendlyFirebaseError(err) || err.response?.data?.message || err.message || 'Could not send code'
+      const msg = err.response?.data?.message || err.message || 'Could not send code'
       toast.error(msg)
       if (err.response?.status === 409) {
         setFieldErrors((prev) => ({ ...prev, phone: 'This number is already registered' }))
@@ -122,7 +121,7 @@ export default function RegisterPage() {
 
   function continueFromOtp() {
     const digits = String(otp || '').replace(/\D/g, '')
-    const oe = digits.length !== 6 ? 'Enter the 6-digit code' : ''
+    const oe = digits.length !== OTP_LENGTH ? `Enter the ${OTP_LENGTH}-digit code` : ''
     setFieldErrors((prev) => ({ ...prev, otp: oe }))
     if (oe) return
     setStep(STEP_ACCOUNT)
@@ -134,7 +133,7 @@ export default function RegisterPage() {
     const ne = validateLiveField('name', name)
     const pe = !password ? 'Password is required' : validateLiveField('loginPassword', password)
     const digits = String(otp || '').replace(/\D/g, '')
-    const oe = digits.length !== 6 ? 'Enter the 6-digit code' : ''
+    const oe = digits.length !== OTP_LENGTH ? `Enter the ${OTP_LENGTH}-digit code` : ''
 
     setFieldErrors({
       name: ne,
@@ -146,11 +145,11 @@ export default function RegisterPage() {
 
     setLoading(true)
     try {
-      const idToken = await confirmFirebaseOtp(confirmation, otp)
       const body = {
+        phone: pv.normalized,
+        otp: digits,
         name: name.trim(),
         password,
-        firebaseIdToken: idToken,
         ...(referralCode ? { referralCode } : {}),
       }
       const res = await api.post('/auth/register', body)
@@ -165,7 +164,7 @@ export default function RegisterPage() {
       setSession(res.data.token, role, profileComplete)
       navigate(getDefaultDashboardPath())
     } catch (err) {
-      toast.error(friendlyFirebaseError(err) || err.response?.data?.message || err.message || 'Registration failed')
+      toast.error(err.response?.data?.message || err.message || 'Registration failed')
     } finally {
       setLoading(false)
     }
@@ -188,7 +187,7 @@ export default function RegisterPage() {
     step === STEP_PHONE
       ? 'We will text a one-time code to verify this number.'
       : step === STEP_OTP
-        ? 'Enter the 6-digit code we sent to your phone.'
+        ? 'Enter the 4-digit code we sent to your phone.'
         : 'Your account is created with your name and password. Add date of birth, gender, and address in Profile whenever you like — you will need them before booking.'
 
   return (
@@ -208,8 +207,8 @@ export default function RegisterPage() {
         <meta name="twitter:image" content={ogImage} />
       </Helmet>
       {/* Ambient teal halo glows — matching mobile RegisterScreen */}
-      <div className="pointer-events-none absolute left-[-60px] right-[-60px] top-[-120px] h-[380px] rounded-[190px] bg-[rgba(162,240,239,0.15)]" aria-hidden />
-      <div className="pointer-events-none absolute left-[20%] top-[-50px] h-[200px] w-[60%] rounded-[100px] bg-[rgba(13,107,107,0.04)]" aria-hidden />
+      <div className="pointer-events-none absolute inset-x-0 top-[-120px] h-[240px] sm:h-[380px] rounded-[190px] bg-[rgba(162,240,239,0.15)]" aria-hidden />
+      <div className="pointer-events-none absolute left-[20%] top-[-50px] h-[140px] sm:h-[200px] w-[60%] rounded-[100px] bg-[rgba(13,107,107,0.04)]" aria-hidden />
       <header className="relative z-10 border-b border-slate-200 bg-white/90 shadow-sm backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
           <button
@@ -223,7 +222,7 @@ export default function RegisterPage() {
         </div>
       </header>
 
-      <div className="relative z-10 mx-auto flex min-h-[calc(100vh-61px)] max-w-md flex-col justify-center px-4 py-16 sm:px-6">
+      <div className="relative z-10 mx-auto flex min-h-[calc(100vh-61px)] max-w-md flex-col justify-center px-4 py-8 sm:px-6 sm:py-16">
         {/* Step progress dots — matching mobile SignupPhoneStep */}
         <div className="mb-8 flex items-center">
           {[STEP_PHONE, STEP_OTP, STEP_ACCOUNT].map((s, idx) => {
@@ -255,7 +254,7 @@ export default function RegisterPage() {
           <p className="text-sm leading-relaxed text-slate-500">{stepSub}</p>
         </div>
 
-        <div className="rounded-2xl border border-slate-100 bg-white p-8 shadow-md sm:p-10">
+        <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-md sm:p-8 md:p-10">
           {step === STEP_PHONE ? (
             <div className="flex flex-col gap-5">
               <div>
@@ -273,7 +272,7 @@ export default function RegisterPage() {
                   }}
                   autoComplete="tel"
                   className={inputClsErr('phone')}
-                  placeholder="+91 or 10-digit mobile"
+                  placeholder="Enter your phone number"
                   disabled={loading || otpSendBusy}
                 />
                 {fieldErrors.phone ? <p className="mt-1 text-xs text-red-600">{fieldErrors.phone}</p> : null}
@@ -295,7 +294,7 @@ export default function RegisterPage() {
             <div className="flex flex-col gap-5">
               <div>
                 <span className="mb-2 block text-sm font-medium text-slate-700">Verification code</span>
-                <OtpInput value={otp} onChange={setOtp} disabled={loading || otpSendBusy} />
+                <OtpInput value={otp} onChange={setOtp} length={OTP_LENGTH} disabled={loading || otpSendBusy} />
                 {fieldErrors.otp ? <p className="mt-2 text-xs text-red-600">{fieldErrors.otp}</p> : null}
                 {devOtpHint ? (
                   <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 font-mono text-sm text-amber-950">
@@ -343,6 +342,7 @@ export default function RegisterPage() {
                   }}
                   autoComplete="name"
                   className={inputClsErr('name')}
+                  placeholder="Enter your full name"
                   disabled={loading}
                 />
                 {fieldErrors.name ? <p className="mt-1 text-xs text-red-600">{fieldErrors.name}</p> : null}
@@ -365,9 +365,10 @@ export default function RegisterPage() {
                   }}
                   autoComplete="new-password"
                   className={inputClsErr('password')}
+                  placeholder="Enter your password"
                   disabled={loading}
                 />
-                <p className="mt-1 text-xs text-slate-500">At least 8 characters — this is what you’ll use to sign in.</p>
+                <p className="mt-1 text-xs text-slate-500">At least 6 characters — this is what you’ll use to sign in.</p>
                 {fieldErrors.password ? <p className="mt-1 text-xs text-red-600">{fieldErrors.password}</p> : null}
               </div>
 
@@ -387,7 +388,7 @@ export default function RegisterPage() {
                     )
                   }
                   className={inputCls}
-                  placeholder="e.g. ABC123"
+                  placeholder="Enter referral code"
                   disabled={loading}
                   maxLength={12}
                 />
@@ -426,7 +427,6 @@ export default function RegisterPage() {
           </Link>
         </p>
       </div>
-      <div id="recaptcha-container" />
     </div>
   )
 }

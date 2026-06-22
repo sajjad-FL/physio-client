@@ -101,11 +101,11 @@ export default function LoginPage() {
       </Helmet>
       {/* Ambient teal halo glows — matching mobile LoginScreen */}
       <div
-        className="pointer-events-none absolute left-[-60px] right-[-60px] top-[-120px] h-[380px] rounded-[190px] bg-[rgba(162,240,239,0.15)]"
+        className="pointer-events-none absolute inset-x-0 top-[-120px] h-[240px] sm:h-[380px] rounded-[190px] bg-[rgba(162,240,239,0.15)]"
         aria-hidden
       />
       <div
-        className="pointer-events-none absolute left-[20%] top-[-50px] h-[200px] w-[60%] rounded-[100px] bg-[rgba(13,107,107,0.04)]"
+        className="pointer-events-none absolute left-[20%] top-[-50px] h-[140px] sm:h-[200px] w-[60%] rounded-[100px] bg-[rgba(13,107,107,0.04)]"
         aria-hidden
       />
       <header className="relative z-10 border-b border-slate-200 bg-white/90 shadow-sm backdrop-blur-md">
@@ -120,11 +120,11 @@ export default function LoginPage() {
         </div>
       </header>
 
-      <div className="relative z-10 mx-auto flex min-h-[calc(100vh-61px)] max-w-md flex-col justify-center px-4 py-16 sm:px-6 sm:py-20 lg:py-24">
+      <div className="relative z-10 mx-auto flex min-h-[calc(100vh-61px)] max-w-md flex-col justify-center px-4 py-8 sm:px-6 sm:py-16 lg:py-24">
         {/* Hero icon + title — matching mobile LoginScreen heroSection */}
-        <div className="mb-10 flex flex-col items-center gap-3 text-center sm:mb-12">
-          <div className="flex h-[68px] w-[68px] items-center justify-center rounded-[20px] bg-teal-600 shadow-[0_6px_24px_rgba(13,148,136,0.30)]">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+        <div className="mb-8 flex flex-col items-center gap-3 text-center sm:mb-12">
+          <div className="flex h-14 w-14 sm:h-[68px] sm:w-[68px] items-center justify-center rounded-[20px] bg-teal-600 shadow-[0_6px_24px_rgba(13,148,136,0.30)]">
+            <svg className="h-7 w-7 sm:h-8 sm:w-8" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">Welcome back</h1>
           <p className="text-sm leading-relaxed text-slate-500">
@@ -132,7 +132,7 @@ export default function LoginPage() {
           </p>
         </div>
 
-        <div className="motion-safe:animate-enter-scale rounded-2xl border border-slate-100 bg-white p-8 shadow-md shadow-slate-900/5 transition-shadow duration-300 sm:p-10">
+        <div className="motion-safe:animate-enter-scale rounded-2xl border border-slate-100 bg-white p-5 shadow-md shadow-slate-900/5 transition-shadow duration-300 sm:p-8 md:p-10">
           {loginError ? (
             <div className="motion-safe:animate-enter mb-6" role="alert">
               {loginError.code === 'LOGIN_NO_ACCOUNT' ? (
@@ -202,7 +202,7 @@ export default function LoginPage() {
                 inputMode="tel"
                 autoComplete="tel"
                 className={inputClsErr('phone')}
-                placeholder="+91 or 10-digit mobile"
+                placeholder="Enter your phone number"
                 disabled={loading}
               />
               <p className="mt-1.5 text-xs text-slate-500">10-digit Indian mobile (starts with 6–9).</p>

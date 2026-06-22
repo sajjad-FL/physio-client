@@ -305,7 +305,7 @@ export default function PhysioListPage() {
       const orderIdStr = String(orderId)
       const amountPaise = Number(amount)
       if (!Number.isFinite(amountPaise) || amountPaise <= 0) {
-        toast.error('Invalid payment amount from server. Check DEFAULT_BOOKING_AMOUNT_RUPEES / Razorpay config.')
+        toast.error('Invalid payment amount from server. Check admin pricing settings or Razorpay config.')
         return
       }
 

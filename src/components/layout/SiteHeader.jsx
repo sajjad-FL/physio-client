@@ -26,7 +26,7 @@ export default function SiteHeader() {
           <img
             src="/logo.png"
             alt="PhysiOkhom Logo"
-            className="h-12 w-12 shrink-0 object-contain transition-transform duration-200 motion-safe:hover:scale-105"
+            className="h-9 w-9 shrink-0 object-contain transition-transform duration-200 motion-safe:hover:scale-105 sm:h-12 sm:w-12"
           />
           <span className="truncate">PhysiOkhom</span>
         </Link>
