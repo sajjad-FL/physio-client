@@ -135,7 +135,7 @@ function homeStructuredData({ siteBase, ogImage, areas }) {
       '@type': ['MedicalBusiness', 'Organization'],
       '@id': `${siteBase}/#organization`,
       name: 'PhysiOkhom',
-      alternateName: ['physiokhom', 'Physio Okhom'],
+      alternateName: ['physiokhom'],
       url: `${siteBase}/`,
       logo: `${siteBase}/logo.png`,
       description: HOME_DESCRIPTION,

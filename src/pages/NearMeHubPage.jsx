@@ -136,6 +136,8 @@ export default function NearMeHubPage() {
         <link rel="canonical" href={canonical} />
         <meta name="robots" content="index, follow, max-image-preview:large" />
         <meta property="og:type" content="website" />
+        <meta property="og:site_name" content="PhysiOkhom" />
+        <meta name="application-name" content="PhysiOkhom" />
         <meta property="og:title" content={title} />
         <meta property="og:description" content={description} />
         <meta property="og:url" content={canonical} />
