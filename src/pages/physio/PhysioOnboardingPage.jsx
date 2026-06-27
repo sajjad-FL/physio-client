@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom'
 import { api } from '../../config/api'
 import { resolveFileUrl } from '../../utils/serverOrigin'
 import DocumentUploadPreview from '../../components/physio/DocumentUploadPreview'
-import { toastApiError, toastSaved, toastValidationErrors } from '../../utils/formToast'
+import DocumentMultiUploadPreview from '../../components/physio/DocumentMultiUploadPreview'
+import { toastApiError, toastSaved, toastValidationErrors, firstValidationMessage } from '../../utils/formToast'
 import {
   validateAvatarFile,
   validateBasicSection,
@@ -85,8 +86,7 @@ export default function PhysioOnboardingPage() {
   const [fIdProof, setFIdProof] = useState(null)
   const [fRegCert, setFRegCert] = useState(null)
   const [fSelfie, setFSelfie] = useState(null)
-  const [fInternship, setFInternship] = useState(null)
-  const [fCouncil, setFCouncil] = useState(null)
+  const [fInternships, setFInternships] = useState([])
   const [idProofType, setIdProofType] = useState('')
   const [qualificationAgreed, setQualificationAgreed] = useState(false)
   const [qualificationDeclarationAcceptedAt, setQualificationDeclarationAcceptedAt] = useState(null)
@@ -105,7 +105,7 @@ export default function PhysioOnboardingPage() {
     registration: '',
     selfie: '',
     internship: '',
-    council: '',
+    internships: [],
   })
 
   const [vStatus, setVStatus] = useState('pending')
@@ -182,13 +182,18 @@ export default function PhysioOnboardingPage() {
       )
       setQualificationDeclarationAcceptedAt(data.qualificationDeclarationAcceptedAt || null)
       setQualificationAgreed(Boolean(data.qualificationDeclarationAcceptedAt))
+      const internshipUrls = Array.isArray(data.documentUrls?.internshipCertificates)
+        ? data.documentUrls.internshipCertificates.filter((u) => String(u || '').trim())
+        : data.documentUrls?.internshipCertificate
+          ? [data.documentUrls.internshipCertificate]
+          : []
       setDocUrls({
         certificate: data.qualification?.certificateUrl || '',
         idProof: data.documentUrls?.idProof || '',
         registration: data.documentUrls?.registrationCertificate || '',
         selfie: data.documentUrls?.selfieWithId || '',
-        internship: data.documentUrls?.internshipCertificate || '',
-        council: data.documentUrls?.councilRegistrationCertificate || '',
+        internship: internshipUrls[0] || '',
+        internships: internshipUrls,
       })
       setIdProofType(String(data.documentUrls?.idProofType || '').trim().toLowerCase())
     } catch (e) {
@@ -209,10 +214,12 @@ export default function PhysioOnboardingPage() {
     if (formExtra.idProof) fd.append('idProof', formExtra.idProof)
     if (formExtra.registrationCertificate) fd.append('registrationCertificate', formExtra.registrationCertificate)
     if (formExtra.selfieWithId) fd.append('selfieWithId', formExtra.selfieWithId)
-    if (formExtra.internshipCertificate) fd.append('internshipCertificate', formExtra.internshipCertificate)
-    if (formExtra.councilRegistrationCertificate) {
-      fd.append('councilRegistrationCertificate', formExtra.councilRegistrationCertificate)
-    }
+    const internshipFiles = Array.isArray(formExtra.internshipCertificate)
+      ? formExtra.internshipCertificate
+      : formExtra.internshipCertificate
+        ? [formExtra.internshipCertificate]
+        : []
+    for (const f of internshipFiles) fd.append('internshipCertificate', f)
     if ([...fd.keys()].length === 0) return
     await api.post('/physio/onboarding/upload', fd, {
       headers: { 'Content-Type': 'multipart/form-data' },
@@ -233,19 +240,17 @@ export default function PhysioOnboardingPage() {
           gender,
           address,
         })
-        if (avatarFile) {
+        if (!avatarFile && !avatarUrl) {
+          errors.avatar = 'Profile photo is required'
+        } else if (avatarFile) {
           const av = validateAvatarFile(avatarFile)
-          if (!av.ok) {
-            setFieldErrors({ avatar: av.message })
-            setFormError(av.message)
-            toastValidationErrors({ avatar: av.message }, av.message)
-            return
-          }
+          if (!av.ok) errors.avatar = av.message
         }
         if (Object.keys(errors).length) {
+          const summary = firstValidationMessage(errors, 'Please finish your account and profile details.')
           setFieldErrors(errors)
-          setFormError('Fix the errors below before continuing')
-          toastValidationErrors(errors, 'Fix the errors below before continuing')
+          setFormError(summary)
+          toastValidationErrors(errors, summary)
           return
         }
         if (avatarFile) {
@@ -263,9 +268,10 @@ export default function PhysioOnboardingPage() {
           registrationNumber,
         })
         if (Object.keys(errors).length) {
+          const summary = firstValidationMessage(errors, 'Please complete your qualification details.')
           setFieldErrors(errors)
-          setFormError('Fix the errors below before continuing')
-          toastValidationErrors(errors, 'Fix the errors below before continuing')
+          setFormError(summary)
+          toastValidationErrors(errors, summary)
           return
         }
       }
@@ -279,21 +285,24 @@ export default function PhysioOnboardingPage() {
           feeMin,
         })
         if (Object.keys(errors).length) {
+          const summary = firstValidationMessage(errors, 'Please complete your practice details.')
           setFieldErrors(errors)
-          setFormError('Fix the errors below before continuing')
-          toastValidationErrors(errors, 'Fix the errors below before continuing')
+          setFormError(summary)
+          toastValidationErrors(errors, summary)
           return
         }
       }
 
       if (fromStep === 4) {
         const { errors, ok } = validateDocumentsStep(
-          { fCertificate, fIdProof, fRegCert, fSelfie, fInternship, fCouncil },
+          { fCertificate, fIdProof, fRegCert, fSelfie, fInternships },
           {
             certificate: docUrls.certificate,
             idProof: docUrls.idProof,
             registration: docUrls.registration,
             selfie: docUrls.selfie,
+            internshipCertificates: docUrls.internships,
+            internship: docUrls.internship,
           },
           {
             requireQualificationDeclaration: ndaPolicy.requireQualificationDeclaration,
@@ -302,20 +311,27 @@ export default function PhysioOnboardingPage() {
           },
         )
         if (!ok) {
+          const summary = firstValidationMessage(errors, 'Please upload all required documents.')
           setFieldErrors(errors)
-          setFormError('Upload all required documents before continuing')
-          toastValidationErrors(errors, 'Upload all required documents before continuing')
+          setFormError(summary)
+          toastValidationErrors(errors, summary)
           return
         }
-        const checks = [
+        for (const file of fInternships) {
+          const r = validateFile(file, 'Internship certificate')
+          if (!r.ok) {
+            setFieldErrors({ file: r.message })
+            setFormError(r.message)
+            toastValidationErrors({ file: r.message }, r.message)
+            return
+          }
+        }
+        for (const [file, label] of [
           [fCertificate, 'Qualification certificate'],
           [fIdProof, 'ID proof'],
           [fRegCert, 'Registration certificate'],
           [fSelfie, 'Selfie with ID'],
-          [fInternship, 'Internship certificate'],
-          [fCouncil, 'Council registration certificate'],
-        ]
-        for (const [file, label] of checks) {
+        ]) {
           if (file) {
             const r = validateFile(file, label)
             if (!r.ok) {
@@ -332,15 +348,13 @@ export default function PhysioOnboardingPage() {
           idProof: fIdProof || undefined,
           registrationCertificate: fRegCert || undefined,
           selfieWithId: fSelfie || undefined,
-          internshipCertificate: fInternship || undefined,
-          councilRegistrationCertificate: fCouncil || undefined,
+          internshipCertificate: fInternships.length ? fInternships : undefined,
         })
         setFCertificate(null)
         setFIdProof(null)
         setFRegCert(null)
         setFSelfie(null)
-        setFInternship(null)
-        setFCouncil(null)
+        setFInternships([])
         await load()
       }
 
@@ -417,9 +431,12 @@ export default function PhysioOnboardingPage() {
         areas,
         feeMin,
         docCertificate: docUrls.certificate,
+        docAvatar: avatarUrl,
         docIdProof: docUrls.idProof,
         docRegistration: docUrls.registration,
         docSelfie: docUrls.selfie,
+        docInternship: docUrls.internship,
+        docInternshipCertificates: docUrls.internships,
         idProofType,
         docSignedNda: '',
         requireSignedNda: false,
@@ -429,9 +446,9 @@ export default function PhysioOnboardingPage() {
       const { errors, ok } = validateSubmitForm(submitValues)
       if (!ok) {
         setFieldErrors(errors)
-        const headline = 'Complete every section and upload all documents before submitting'
-        setFormError(headline)
-        toastValidationErrors(errors, headline)
+        const summary = firstValidationMessage(errors, 'Please complete every section before submitting.')
+        setFormError(summary)
+        toastValidationErrors(errors, summary)
         return
       }
 
@@ -668,9 +685,14 @@ export default function PhysioOnboardingPage() {
               {fieldErrors.location ? <p className="mt-1 text-xs text-red-600">{fieldErrors.location}</p> : null}
             </div>
             <div className="sm:col-span-2">
-              <label className="mb-1 block text-xs font-medium text-ink-muted" htmlFor="ob-avatar">
-                Profile photo
-              </label>
+              <div className="mb-1 flex flex-wrap items-center gap-2">
+                <label className="text-xs font-medium text-ink-muted" htmlFor="ob-avatar">
+                  Profile photo
+                </label>
+                <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-600">
+                  Required
+                </span>
+              </div>
               {avatarUrl ? (
                 <img
                   src={resolveFileUrl(avatarUrl)}
@@ -884,8 +906,8 @@ export default function PhysioOnboardingPage() {
         <section className="surface-card rounded-2xl p-6 ring-1 ring-border-subtle">
           <h2 className="type-page-title text-ink">Documents</h2>
           <p className="mt-1 text-sm text-ink-muted">
-            PDF or images (max 2MB each). Required uploads are marked; internship and council registration certificates
-            are optional. Choose your government ID type and agree to the declaration below.
+            PDF or images (max 2MB each). Required uploads are marked; professional registration is optional.
+            Choose your government ID type and agree to the declaration below.
           </p>
           <div className="mt-5 grid gap-4 sm:grid-cols-2">
             <DocumentUploadPreview
@@ -960,6 +982,7 @@ export default function PhysioOnboardingPage() {
               </div>
             </DocumentUploadPreview>
             <DocumentUploadPreview
+              required={false}
               label="Professional / council registration"
               description="State council or equivalent registration document."
               file={fRegCert}
@@ -999,40 +1022,18 @@ export default function PhysioOnboardingPage() {
                 }))
               }}
             />
-            <DocumentUploadPreview
-              required={false}
+            <DocumentMultiUploadPreview
               label="Internship certificate"
-              description="Upload if you have completed a formal internship."
-              file={fInternship}
-              serverUrl={docUrls.internship}
+              description="Upload one or more certificates from your completed internship(s)."
+              files={fInternships}
+              serverUrls={docUrls.internships}
               error={fieldErrors.internshipCertificate}
               inputId="ob-doc-internship"
-              onFileChange={(f) => {
-                setFInternship(f)
+              onFilesChange={(next) => {
+                setFInternships(next)
                 setFieldErrors((prev) => ({
                   ...prev,
-                  internshipCertificate: validateLiveField('internshipCertificate', f, {
-                    mode: 'physio',
-                    isPhysio: true,
-                    requireCoords: false,
-                  }),
-                  file: '',
-                }))
-              }}
-            />
-            <DocumentUploadPreview
-              required={false}
-              label="Council registration certificate"
-              description="Optional — separate council letter or card, if available."
-              file={fCouncil}
-              serverUrl={docUrls.council}
-              error={fieldErrors.councilRegistrationCertificate}
-              inputId="ob-doc-council"
-              onFileChange={(f) => {
-                setFCouncil(f)
-                setFieldErrors((prev) => ({
-                  ...prev,
-                  councilRegistrationCertificate: validateLiveField('councilRegistrationCertificate', f, {
+                  internshipCertificate: validateLiveField('internshipCertificate', next, {
                     mode: 'physio',
                     isPhysio: true,
                     requireCoords: false,

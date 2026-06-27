@@ -281,7 +281,7 @@ export default function ProfilePage() {
 
       <div className="mb-8 text-center">
         <h1 className="type-page-title text-gray-900">Profile</h1>
-        <p className="mt-1 text-sm text-gray-500">Your details, photo, and saved address</p>
+        <p className="mt-1 type-caption text-gray-500">Your details, photo, and saved address</p>
       </div>
 
       <Card hover={false} className="border border-gray-100 p-6 shadow-sm sm:p-8">

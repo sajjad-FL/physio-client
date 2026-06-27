@@ -35,25 +35,33 @@ export function toastApiError(err, fallbackMessage = 'Request failed') {
 }
 
 /**
- * Client-side validation: one clear toast. Use `headline` for a summary, or first field message.
+ * First human-readable validation message for banners and toasts.
  * @param {Record<string, string>} [errors]
- * @param {string} [headline] If set, shown as the toast (summary). Field errors should still be in UI state.
+ * @param {string} [fallback]
+ */
+export function firstValidationMessage(errors = {}, fallback = 'Please check the highlighted fields below.') {
+  const msgs = Object.values(errors).filter((m) => m && String(m).trim())
+  if (msgs.length === 0) return fallback
+  if (msgs.length === 1) return msgs[0]
+  return `${msgs[0]} (${msgs.length - 1} more to fix)`
+}
+
+/**
+ * Client-side validation: show the clearest single message users can act on.
+ * @param {Record<string, string>} [errors]
+ * @param {string} [headline] Fallback when there are no field messages
  */
 export function toastValidationErrors(errors = {}, headline) {
-  if (headline) {
-    toast.error(headline)
-    return
-  }
   const msgs = Object.values(errors).filter((m) => m && String(m).trim())
-  if (msgs.length === 0) {
-    toast.error('Please complete the required fields')
-    return
-  }
   if (msgs.length === 1) {
     toast.error(msgs[0])
     return
   }
-  toast.error(`${msgs.length} fields need attention — ${msgs[0]}`, { duration: 4500 })
+  if (msgs.length > 1) {
+    toast.error(`${msgs[0]} (${msgs.length - 1} more to fix)`, { duration: 5000 })
+    return
+  }
+  toast.error(headline || 'Please complete the required fields')
 }
 
 /**

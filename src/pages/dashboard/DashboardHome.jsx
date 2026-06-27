@@ -6,30 +6,13 @@ import toast from 'react-hot-toast'
 import Skeleton from '../../components/ui/Skeleton'
 import { bookingStatusBadge } from './dashboardUtils'
 import { formatBookingDateAndSlot, formatBookingTimeSlot } from '../../utils/date'
-import { normalizeSessionRows, todayYmd } from '../../components/physio/physioBookingHelpers'
+import { pickNextSession, todayYmd } from '../../components/physio/physioBookingHelpers'
+import ServicesSection from '../../components/dashboard/ServicesSection'
 
 function formatInr(n) {
   const v = Number(n)
   if (!Number.isFinite(v)) return '—'
   return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(v)
-}
-
-function pickNextSession(bookings, today) {
-  const items = []
-  for (const b of bookings || []) {
-    if (b.sessionStatus === 'completed') continue
-    for (const r of normalizeSessionRows(b)) {
-      const d = String(r.date || '')
-      if (d >= today) {
-        items.push({ booking: b, row: r })
-      }
-    }
-  }
-  items.sort(
-    (a, b) =>
-      String(a.row.date).localeCompare(String(b.row.date)) || String(a.row.time).localeCompare(String(b.row.time)),
-  )
-  return items[0] || null
 }
 
 function SectionSkeleton() {
@@ -101,10 +84,8 @@ export default function DashboardHome() {
     [],
   )
 
-  const avatarInitial = (firstName?.[0] ?? '?').toUpperCase()
-
   return (
-    <div className="space-y-4 sm:space-y-5">
+    <div className="space-y-4 md:space-y-5">
       {loading ? (
         <>
           <SectionSkeleton />
@@ -114,17 +95,11 @@ export default function DashboardHome() {
       ) : (
         <>
           {/* ── Dashboard header — matching mobile DashboardHomeScreen ── */}
-          <header className="flex items-center justify-between">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-teal-700">
-                {firstName ? `Hi, ${firstName.toUpperCase()}` : 'DASHBOARD'}
-              </p>
-              <h1 className="type-page-title mt-1">{todayStr}</h1>
-            </div>
-            {/* Avatar circle with initial */}
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-teal-600 text-sm font-bold text-white shadow-[0_4px_12px_rgba(13,148,136,0.22)]">
-              {avatarInitial}
-            </div>
+          <header>
+            <p className="type-section-title text-teal-700">
+              {firstName ? `Hi, ${firstName.toUpperCase()}` : 'DASHBOARD'}
+            </p>
+            <h1 className="type-page-title mt-1">{todayStr}</h1>
           </header>
 
           {openDisputes > 0 && (
@@ -177,25 +152,12 @@ export default function DashboardHome() {
                     {nextSession.booking.physioId?.name || 'Physio TBD'}
                   </p>
                   <p className="text-[9px] text-white/70">
-                    {nextSession.booking.physioId?.specialization || 'Verified Physiotherapist'} · At Home
+                    {nextSession.booking.physioId?.specialization || 'Verified Physiotherapist'} ·{' '}
+                    {nextSession.booking.serviceType === 'online' ? 'Online' : 'At Home'}
                   </p>
                 </div>
               </div>
 
-              <div className="relative z-10 mt-4 flex gap-2">
-                <span className="flex-1 rounded-xl bg-white py-2.5 text-center text-[13px] font-bold text-slate-900">
-                  View details
-                </span>
-                {nextSession.booking.physioId?.phone ? (
-                  <a
-                    href={`tel:${String(nextSession.booking.physioId.phone).replace(/\s/g, '')}`}
-                    onClick={(e) => e.stopPropagation()}
-                    className="flex-1 rounded-xl bg-white/15 py-2.5 text-center text-[13px] font-bold text-white"
-                  >
-                    Call
-                  </a>
-                ) : null}
-              </div>
             </Link>
           ) : (
             /* Book CTA when no upcoming session */
@@ -237,6 +199,13 @@ export default function DashboardHome() {
               <p className="mt-1 text-[11px] text-slate-400">all time</p>
             </div>
           </div>
+        </>
+      )}
+
+      {!loading ? (
+        <>
+          {/* ── Services / Book by Need ── */}
+          <ServicesSection />
 
           {/* ── Recent activity ── */}
           <section aria-labelledby="activity-heading">
@@ -290,7 +259,7 @@ export default function DashboardHome() {
             )}
           </section>
         </>
-      )}
+      ) : null}
     </div>
   )
 }

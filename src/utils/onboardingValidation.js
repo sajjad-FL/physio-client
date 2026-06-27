@@ -123,7 +123,7 @@ function hasUrl(s) {
  *   name: string, email: string, location: string, dob?: string, gender?: string, address?: string,
  *   degree: string, university: string, year: string, registrationNumber: string,
  *   experience: string, specialization: string, serviceType: string, areas: string, feeMin: string,
- *   docCertificate: string, docIdProof: string, docRegistration: string, docSelfie: string,
+ *   docCertificate: string, docAvatar: string, docIdProof: string, docRegistration: string, docSelfie: string,
  *   idProofType?: string,
  *   docSignedNda?: string, requireSignedNda?: boolean
  * }} values
@@ -161,6 +161,7 @@ export function validateSubmitForm(values) {
   )
 
   if (!hasUrl(values.docCertificate)) errors.certificate = 'Upload your BPT/MPT pass certificate'
+  if (!hasUrl(values.docAvatar)) errors.avatar = 'Upload your profile photo'
   if (!hasUrl(values.docIdProof)) errors.idProof = 'Upload your GOVERNMENT ID'
   if (!hasUrl(values.docSelfie)) errors.selfieWithId = 'Upload a selfie with your ID'
   const internshipUrls = Array.isArray(values.docInternshipCertificates)
@@ -238,8 +239,7 @@ export function validateRegistrationAccount({ phone, password }) {
  *   fIdProof?: File | null,
  *   fRegCert?: File | null,
  *   fSelfie?: File | null,
- *   fInternship?: File | null,
- *   fCouncil?: File | null,
+ *   fInternships?: File[],
  *   fSignedNda?: File | null
  * }} files
  * @param {{

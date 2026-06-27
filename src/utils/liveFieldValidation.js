@@ -244,7 +244,16 @@ export function validateLiveField(name, value, ctx = {}) {
     case 'idProof':
     case 'registrationCertificate':
     case 'selfieWithId':
-    case 'internshipCertificate':
+    case 'internshipCertificate': {
+      if (!v) return ''
+      const list = Array.isArray(v) ? v : [v]
+      for (const file of list) {
+        if (!(file instanceof File)) continue
+        const r = validateFile(file, 'File')
+        if (!r.ok) return r.message
+      }
+      return ''
+    }
     case 'councilRegistrationCertificate':
     case 'signedNda': {
       if (!v || !(v instanceof File)) return ''

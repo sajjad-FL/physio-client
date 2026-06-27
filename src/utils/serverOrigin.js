@@ -1,8 +1,8 @@
 /** API base is typically `http://host:5000/api`; static uploads are served from the same origin without `/api`. */
 export function serverOrigin() {
-  const base = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+  const base = String(import.meta.env.VITE_API_URL || '').trim().replace(/\/+$/, '') || 'http://localhost:5001/api'
   const trimmed = base.replace(/\/api\/?$/, '')
-  return trimmed || 'http://localhost:5000'
+  return trimmed || 'http://localhost:5001'
 }
 
 export function resolveFileUrl(url) {

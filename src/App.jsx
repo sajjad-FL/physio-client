@@ -28,6 +28,12 @@ import DashboardBookings from './pages/dashboard/DashboardBookings'
 import DashboardWallet from './pages/dashboard/DashboardWallet'
 import UserBookingDetailPage from './pages/dashboard/UserBookingDetailPage'
 import DashboardDisputes from './pages/dashboard/DashboardDisputes'
+import ShopPage from './pages/dashboard/ShopPage'
+import ShopProductDetailPage from './pages/dashboard/ShopProductDetailPage'
+import ShopCartPage from './pages/dashboard/ShopCartPage'
+import ShopCheckoutPage from './pages/dashboard/ShopCheckoutPage'
+import ShopOrdersPage from './pages/dashboard/ShopOrdersPage'
+import ShopOrderDetailPage from './pages/dashboard/ShopOrderDetailPage'
 import DashboardReferrals from './pages/dashboard/DashboardReferrals'
 import ProfilePage from './pages/dashboard/ProfilePage'
 import AdminLayout from './pages/admin/AdminLayout'
@@ -40,6 +46,10 @@ import DisputesAdmin from './pages/admin/DisputesAdmin'
 import AdminFinancePage from './pages/admin/AdminFinancePage'
 import AdminPlatformSettingsPage from './pages/admin/AdminPlatformSettingsPage'
 import AdminPricingSettingsPage from './pages/admin/AdminPricingSettingsPage'
+import AdminProductsPage from './pages/admin/AdminProductsPage'
+import AdminShopOrdersPage from './pages/admin/AdminShopOrdersPage'
+import AdminShopOrderDetailPage from './pages/admin/AdminShopOrderDetailPage'
+import { ShopCartProvider } from './hooks/useShopCart'
 import RoleProtectedRoute from './components/RoleProtectedRoute'
 import LegacyPhysioDashboardRedirect from './components/LegacyPhysioDashboardRedirect'
 import ProfileCompletionGate from './components/ProfileCompletionGate'
@@ -88,7 +98,9 @@ export default function App() {
           path="/dashboard"
           element={
             <RoleProtectedRoute allowedRoles={['user']}>
-              <UserDashboardLayout />
+              <ShopCartProvider>
+                <UserDashboardLayout />
+              </ShopCartProvider>
             </RoleProtectedRoute>
           }
         >
@@ -98,6 +110,12 @@ export default function App() {
           <Route path="referrals" element={<DashboardReferrals />} />
           <Route path="bookings/:id" element={<UserBookingDetailPage />} />
           <Route path="profile" element={<ProfilePage />} />
+          <Route path="products" element={<ShopPage />} />
+          <Route path="products/:id" element={<ShopProductDetailPage />} />
+          <Route path="cart" element={<ShopCartPage />} />
+          <Route path="checkout" element={<ShopCheckoutPage />} />
+          <Route path="orders" element={<ShopOrdersPage />} />
+          <Route path="orders/:id" element={<ShopOrderDetailPage />} />
           <Route path="disputes" element={<DashboardDisputes />} />
         </Route>
         <Route
@@ -164,6 +182,9 @@ export default function App() {
           <Route path="settlements" element={<Navigate to="/admin/finance" replace />} />
           <Route path="platform" element={<AdminPlatformSettingsPage />} />
           <Route path="pricing" element={<AdminPricingSettingsPage />} />
+          <Route path="products" element={<AdminProductsPage />} />
+          <Route path="shop/orders" element={<AdminShopOrdersPage />} />
+          <Route path="shop/orders/:id" element={<AdminShopOrderDetailPage />} />
           <Route path="*" element={<Navigate to="/admin" replace />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />

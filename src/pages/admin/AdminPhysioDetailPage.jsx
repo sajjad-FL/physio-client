@@ -241,6 +241,15 @@ export default function AdminPhysioDetailPage() {
             <DocLink label="ID proof" url={du.idProof} />
             <DocLink label="Registration certificate" url={du.registrationCertificate} />
             <DocLink label="Selfie with ID" url={du.selfieWithId} />
+            {(Array.isArray(du.internshipCertificates) ? du.internshipCertificates : du.internshipCertificate ? [du.internshipCertificate] : [])
+              .filter(Boolean)
+              .map((url, i, arr) => (
+                <DocLink
+                  key={`${url}-${i}`}
+                  label={arr.length > 1 ? `Internship certificate ${i + 1}` : 'Internship certificate'}
+                  url={url}
+                />
+              ))}
           </div>
           {(p.documents || []).length > 0 && (
             <div className="mt-6 border-t border-border-subtle pt-4">

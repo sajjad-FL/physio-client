@@ -4,8 +4,9 @@ import { Link, useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { api } from '../config/api'
 import DocumentUploadPreview from '../components/physio/DocumentUploadPreview'
+import DocumentMultiUploadPreview from '../components/physio/DocumentMultiUploadPreview'
 import { mapboxReverseGeocode } from '../utils/mapboxGeocode'
-import { toastApiError, toastValidationErrors } from '../utils/formToast'
+import { toastApiError, toastValidationErrors, firstValidationMessage } from '../utils/formToast'
 import PasswordInput from '../components/ui/PasswordInput'
 import MapPickerModal from '../components/location/MapPickerModal'
 import LocationSelectorRow from '../components/location/LocationSelectorRow'
@@ -89,8 +90,7 @@ export default function RegisterPhysioPage() {
   const [fIdProof, setFIdProof] = useState(null)
   const [fRegCert, setFRegCert] = useState(null)
   const [fSelfie, setFSelfie] = useState(null)
-  const [fInternship, setFInternship] = useState(null)
-  const [fCouncil, setFCouncil] = useState(null)
+  const [fInternships, setFInternships] = useState([])
   const [idProofType, setIdProofType] = useState('')
   const [qualificationAgreed, setQualificationAgreed] = useState(false)
 
@@ -227,14 +227,16 @@ export default function RegisterPhysioPage() {
       address,
     }).errors
     const merged = { ...e1, ...e2 }
-    if (avatarFile) {
+    if (!avatarFile) {
+      merged.avatar = 'Profile photo is required'
+    } else {
       const av = validateAvatarFile(avatarFile)
       if (!av.ok) merged.avatar = av.message
     }
     if (locationLat == null || locationLng == null) {
       merged.location =
         merged.location ||
-        'Search with Mapbox or use Pick on map to set your coverage point (needed for bookings).'
+        'Please search for your area or tap “Pick on map” to show where you work.'
     }
     return merged
   }
@@ -245,8 +247,9 @@ export default function RegisterPhysioPage() {
       const merged = computeAccountBasicErrors()
       if (Object.keys(merged).length) {
         setFieldErrors(merged)
-        setFormError('Complete Account & basic before continuing')
-        toastValidationErrors(merged, 'Complete Account & basic before continuing')
+        const summary = firstValidationMessage(merged, 'Please finish your account and profile details.')
+        setFormError(summary)
+        toastValidationErrors(merged, summary)
         return
       }
     }
@@ -262,8 +265,9 @@ export default function RegisterPhysioPage() {
         const merged = computeAccountBasicErrors()
         if (Object.keys(merged).length) {
           setFieldErrors(merged)
-          setFormError('Fix the errors below before continuing')
-          toastValidationErrors(merged, 'Fix the errors below before continuing')
+          const summary = firstValidationMessage(merged, 'Please finish your account and profile details.')
+          setFormError(summary)
+          toastValidationErrors(merged, summary)
           return
         }
       }
@@ -277,8 +281,9 @@ export default function RegisterPhysioPage() {
         })
         if (Object.keys(errors).length) {
           setFieldErrors(errors)
-          setFormError('Fix the errors below before continuing')
-          toastValidationErrors(errors, 'Fix the errors below before continuing')
+          const summary = firstValidationMessage(errors, 'Please complete your qualification details.')
+          setFormError(summary)
+          toastValidationErrors(errors, summary)
           return
         }
       }
@@ -292,15 +297,16 @@ export default function RegisterPhysioPage() {
         })
         if (Object.keys(errors).length) {
           setFieldErrors(errors)
-          setFormError('Fix the errors below before continuing')
-          toastValidationErrors(errors, 'Fix the errors below before continuing')
+          const summary = firstValidationMessage(errors, 'Please complete your practice details.')
+          setFormError(summary)
+          toastValidationErrors(errors, summary)
           return
         }
       }
 
       if (fromStep === 4) {
         const { errors, ok } = validateDocumentsStep(
-          { fCertificate, fIdProof, fRegCert, fSelfie, fInternship },
+          { fCertificate, fIdProof, fRegCert, fSelfie, fInternships },
           { certificate: '', idProof: '', registration: '', selfie: '' },
           {
             requireQualificationDeclaration: ndaPolicy.requireQualificationDeclaration,
@@ -310,19 +316,26 @@ export default function RegisterPhysioPage() {
         )
         if (!ok) {
           setFieldErrors(errors)
-          setFormError('Upload all required documents before continuing')
-          toastValidationErrors(errors, 'Upload all required documents before continuing')
+          const summary = firstValidationMessage(errors, 'Please upload all required documents.')
+          setFormError(summary)
+          toastValidationErrors(errors, summary)
           return
         }
-        const checks = [
+        for (const file of fInternships) {
+          const r = validateFile(file, 'Internship certificate')
+          if (!r.ok) {
+            setFieldErrors({ file: r.message })
+            setFormError(r.message)
+            toastValidationErrors({ file: r.message }, r.message)
+            return
+          }
+        }
+        for (const [file, label] of [
           [fCertificate, 'Qualification certificate'],
           [fIdProof, 'ID proof'],
           [fRegCert, 'Registration certificate'],
           [fSelfie, 'Selfie with ID'],
-          [fInternship, 'Internship certificate'],
-          [fCouncil, 'Council registration certificate'],
-        ]
-        for (const [file, label] of checks) {
+        ]) {
           if (file) {
             const r = validateFile(file, label)
             if (!r.ok) {
@@ -348,13 +361,16 @@ export default function RegisterPhysioPage() {
     try {
       // Guard: required files must be selected before we build FormData
       const missingFiles = {}
+      if (!avatarFile) missingFiles.avatar = 'Profile photo is required'
       if (!fCertificate) missingFiles.certificate = 'BPT/MPT pass certificate is required'
-      if (!fInternship) missingFiles.internshipCertificate = 'Upload at least one internship certificate'
+      if (!fInternships.length) missingFiles.internshipCertificate = 'Upload at least one internship certificate'
       if (!fIdProof) missingFiles.idProof = 'GOVERNMENT ID is required'
       if (!fSelfie) missingFiles.selfieWithId = 'Selfie with ID is required'
       if (Object.keys(missingFiles).length) {
         setFieldErrors(missingFiles)
-        setFormError('Please upload all required documents (step 4)')
+        const summary = firstValidationMessage(missingFiles, 'Please complete all required fields and uploads.')
+        setFormError(summary)
+        toastValidationErrors(missingFiles, summary)
         setSaving(false)
         return
       }
@@ -381,13 +397,13 @@ export default function RegisterPhysioPage() {
       fd.append('serviceType', serviceType)
       fd.append('areas', areas)
 
-      if (avatarFile) fd.append('avatar', avatarFile)
+      fd.append('avatar', avatarFile)
       if (fCertificate) fd.append('certificate', fCertificate)
       if (fIdProof) fd.append('idProof', fIdProof)
       fd.append('idProofType', String(idProofType).trim().toLowerCase())
       if (fRegCert) fd.append('registrationCertificate', fRegCert)
       if (fSelfie) fd.append('selfieWithId', fSelfie)
-      if (fInternship) fd.append('internshipCertificate', fInternship)
+      for (const file of fInternships) fd.append('internshipCertificate', file)
       if (ndaPolicy.requireQualificationDeclaration !== false && !qualificationAgreed) {
         setFormError('Confirm the qualification declaration')
         toast.error('Confirm the qualification declaration')
@@ -450,12 +466,9 @@ export default function RegisterPhysioPage() {
         <meta name="twitter:image" content={ogImage} />
       </Helmet>
       <header className="border-b border-gray-200 bg-white/90 shadow-sm">
-        <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-4">
+        <div className="mx-auto flex max-w-3xl items-center px-4 py-4">
           <Link to="/" className="text-sm font-semibold text-gray-900 hover:opacity-80">
             ← PhysiOkhom
-          </Link>
-          <Link to="/login" className="text-sm text-blue-600 hover:underline">
-            Sign in
           </Link>
         </div>
       </header>
@@ -654,9 +667,14 @@ export default function RegisterPhysioPage() {
                 {fieldErrors.location ? <p className="mt-1 text-xs text-red-600">{fieldErrors.location}</p> : null}
               </div>
               <div className="sm:col-span-2">
-                <label className="mb-1 block text-xs font-medium text-ink-muted" htmlFor="reg-avatar">
-                  Profile photo (optional)
-                </label>
+                <div className="mb-1 flex flex-wrap items-center gap-2">
+                  <label className="text-xs font-medium text-ink-muted" htmlFor="reg-avatar">
+                    Profile photo
+                  </label>
+                  <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-600">
+                    Required
+                  </span>
+                </div>
                 {avatarPreview ? (
                   <img
                     src={avatarPreview}
@@ -846,8 +864,7 @@ export default function RegisterPhysioPage() {
             <h2 className="type-page-title text-ink">Documents</h2>
             <p className="mt-1 text-sm text-ink-muted">
               PDF or images (max 2MB each). Upload the required credentials below, choose your government ID type, and
-              agree to the declaration. Internship and council registration certificates are optional but help
-              verification.
+              agree to the declaration. Professional registration is optional but helps verification.
             </p>
             <div className="mt-5 grid gap-4 sm:grid-cols-2">
               <DocumentUploadPreview
@@ -901,6 +918,7 @@ export default function RegisterPhysioPage() {
                 </div>
               </DocumentUploadPreview>
               <DocumentUploadPreview
+                required={false}
                 label="Professional / council registration"
                 description="State council or equivalent registration document."
                 file={fRegCert}
@@ -926,32 +944,17 @@ export default function RegisterPhysioPage() {
                   patchField('selfieWithId', f)
                 }}
               />
-              <DocumentUploadPreview
-                required={false}
+              <DocumentMultiUploadPreview
                 label="Internship certificate"
-                description="Upload if you have completed a formal internship."
-                file={fInternship}
-                serverUrl=""
+                description="Upload one or more certificates from your completed internship(s)."
+                files={fInternships}
+                serverUrls={[]}
                 error={fieldErrors.internshipCertificate}
                 inputId="reg-doc-internship"
                 showServerHint={false}
-                onFileChange={(f) => {
-                  setFInternship(f)
-                  patchField('internshipCertificate', f)
-                }}
-              />
-              <DocumentUploadPreview
-                required={false}
-                label="Council registration certificate"
-                description="Optional — separate council letter or card, if available."
-                file={fCouncil}
-                serverUrl=""
-                error={fieldErrors.councilRegistrationCertificate}
-                inputId="reg-doc-council"
-                showServerHint={false}
-                onFileChange={(f) => {
-                  setFCouncil(f)
-                  patchField('councilRegistrationCertificate', f)
+                onFilesChange={(next) => {
+                  setFInternships(next)
+                  patchField('internshipCertificate', next)
                 }}
               />
             </div>

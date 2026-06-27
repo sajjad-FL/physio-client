@@ -1,7 +1,12 @@
 import axios from 'axios'
 import { getToken, getRoles } from '../auth/session'
 
-const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+function normalizeApiBase(raw) {
+  const trimmed = String(raw || '').trim().replace(/\/+$/, '')
+  return trimmed || 'http://localhost:5001/api'
+}
+
+const baseURL = normalizeApiBase(import.meta.env.VITE_API_URL)
 
 export const api = axios.create({ baseURL })
 

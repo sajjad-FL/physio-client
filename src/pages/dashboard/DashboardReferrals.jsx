@@ -82,7 +82,7 @@ export default function DashboardReferrals() {
     <div className="space-y-6">
       <div>
         <h1 className="type-page-title">Refer &amp; Earn</h1>
-        <p className="mt-1 text-sm text-slate-500">
+        <p className="mt-1 type-caption text-slate-500">
           Share your code.
           {friendBonus > 0 ? (
             <>

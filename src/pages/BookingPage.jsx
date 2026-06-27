@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { api } from '../config/api'
 import { logout } from '../auth/session'
 import { ISSUE_OPTIONS } from '../constants/issues'
@@ -20,6 +20,7 @@ function todayISO() {
 
 export default function BookingPage() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
 
   const [date, setDate] = useState(todayISO())
   const [slotsLoading, setSlotsLoading] = useState(false)
@@ -28,7 +29,10 @@ export default function BookingPage() {
 
   const [name, setName] = useState('')
   const [location, setLocation] = useState('')
-  const [issue, setIssue] = useState(ISSUE_OPTIONS[0] || '')
+  const [issue, setIssue] = useState(() => {
+    const param = searchParams.get('issue')
+    return param && ISSUE_OPTIONS.includes(param) ? param : (ISSUE_OPTIONS[0] || '')
+  })
   const [lat, setLat] = useState(null)
   const [lng, setLng] = useState(null)
   const [geoStatus, setGeoStatus] = useState('')

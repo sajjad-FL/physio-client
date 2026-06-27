@@ -43,7 +43,7 @@ export default function DashboardDisputes() {
     <div className="space-y-6">
       <div>
         <h2 className="type-page-title text-ink">Disputes</h2>
-        <p className="mt-1 text-sm text-ink-muted">
+        <p className="mt-1 type-caption text-ink-muted">
           Disputes on bookings you are involved in (including those raised by your physiotherapist).
         </p>
       </div>
@@ -71,7 +71,7 @@ export default function DashboardDisputes() {
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <p className="font-semibold text-ink">{d.reason}</p>
-                    <p className="mt-1 text-sm text-ink-muted">
+                    <p className="mt-1 type-caption text-ink-muted">
                       Booking <span className="font-mono text-xs">{idTail(b?._id)}</span> ·{' '}
                       {d.raisedBy === 'physio' ? 'Raised by physiotherapist' : 'Raised by you'} ·{' '}
                       {b?.date} {formatBookingTimeSlot(b?.timeSlot)}

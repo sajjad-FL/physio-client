@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { Link, Outlet, useLocation } from 'react-router-dom'
 import AppShell from '../../components/layout/AppShell'
 import SeoNoIndex from '../../components/seo/SeoNoIndex'
+import { useShopCart } from '../../hooks/useShopCart'
 
 const iconHome = (
   <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24" aria-hidden>
@@ -58,10 +59,21 @@ const iconDispute = (
   </svg>
 )
 
+const iconShop = (
+  <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24" aria-hidden>
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"
+    />
+  </svg>
+)
+
 const navItems = [
   { to: '/dashboard', label: 'Home', end: true, icon: iconHome },
   { to: '/dashboard/bookings', label: 'Bookings', icon: iconCalendar },
   { to: '/dashboard/wallet', label: 'Wallet', icon: iconWallet },
+  { to: '/dashboard/products', label: 'Shop', icon: iconShop },
   { to: '/dashboard/referrals', label: 'Refer & Earn', icon: iconGift },
   { to: '/dashboard/profile', label: 'Profile', icon: iconUser },
   { to: '/dashboard/disputes', label: 'Disputes', icon: iconDispute },
@@ -71,7 +83,7 @@ const bottomNavItems = [
   { to: '/dashboard', label: 'Home', end: true, icon: iconHome },
   { to: '/dashboard/bookings', label: 'Bookings', icon: iconCalendar },
   { to: '/dashboard/wallet', label: 'Wallet', icon: iconWallet },
-  { to: '/dashboard/referrals', label: 'Refer & Earn', icon: iconGift },
+  { to: '/dashboard/products', label: 'Shop', icon: iconShop },
   { to: '/dashboard/profile', label: 'Profile', icon: iconUser },
 ]
 
@@ -81,6 +93,10 @@ function titleForPath(pathname) {
   if (pathname === '/dashboard/bookings') return 'Bookings'
   if (pathname === '/dashboard/wallet') return 'Wallet'
   if (pathname === '/dashboard/referrals') return 'Refer & Earn'
+  if (pathname === '/dashboard/products' || pathname.startsWith('/dashboard/products/')) return 'Shop'
+  if (pathname === '/dashboard/cart') return 'Cart'
+  if (pathname === '/dashboard/checkout') return 'Checkout'
+  if (pathname === '/dashboard/orders' || pathname.startsWith('/dashboard/orders/')) return 'Orders'
   if (pathname === '/dashboard/disputes') return 'Disputes'
   if (pathname === '/dashboard/profile') return 'Profile'
   return 'Dashboard'
@@ -89,6 +105,7 @@ function titleForPath(pathname) {
 export default function UserDashboardLayout() {
   const { pathname } = useLocation()
   const topBarTitle = useMemo(() => titleForPath(pathname), [pathname])
+  const { itemCount } = useShopCart()
 
   return (
     <>
@@ -103,6 +120,18 @@ export default function UserDashboardLayout() {
       headerActions={
         <>
           <Link
+            to="/dashboard/cart"
+            className="relative inline-flex h-10 w-10 items-center justify-center rounded-xl ring-1 ring-border-subtle hover:bg-slate-50"
+            aria-label="Cart"
+          >
+            {iconShop}
+            {itemCount > 0 ? (
+              <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-teal-600 px-1 text-[10px] font-bold text-white">
+                {itemCount > 99 ? '99+' : itemCount}
+              </span>
+            ) : null}
+          </Link>
+          <Link
             to="/book"
             className="hidden cursor-pointer items-center justify-center rounded-xl bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md shadow-teal-600/25 transition-all duration-200 hover:bg-teal-700 motion-safe:active:scale-[0.98] sm:inline-flex"
           >
@@ -110,13 +139,14 @@ export default function UserDashboardLayout() {
           </Link>
           <Link
             to="/book"
-            className="tap-feedback inline-flex cursor-pointer items-center justify-center rounded-xl bg-teal-600 px-3 py-2 text-xs font-semibold text-white shadow-md shadow-teal-600/25 transition hover:bg-teal-700 sm:hidden"
+            className="tap-feedback inline-flex cursor-pointer items-center justify-center rounded-xl bg-teal-600 px-3 py-2 type-button text-white shadow-md shadow-teal-600/25 transition hover:bg-teal-700 md:hidden"
           >
             Book
           </Link>
         </>
       }
-      sidebarFooter={<p className="text-center text-xs text-slate-400">Disputes and more in this menu — bottom tabs for quick access.</p>}
+      sidebarFooter={<p className="text-center type-caption text-slate-400">Disputes and more in this menu — bottom tabs for quick access.</p>}
+      contentClassName="patient-app-mobile"
     >
       <Outlet />
     </AppShell>

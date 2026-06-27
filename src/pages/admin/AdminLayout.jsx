@@ -88,6 +88,8 @@ const baseNavItems = [
   },
   { section: 'Finance', to: '/admin/finance', label: 'Wallets & payouts', icon: iconWithdraw, countKey: 'finance' },
   { section: 'Settings', to: '/admin/pricing', label: 'Pricing & rates', icon: iconPricing },
+  { section: 'Content', to: '/admin/products', label: 'Shop products', icon: iconDoc },
+  { section: 'Content', to: '/admin/shop/orders', label: 'Shop orders', icon: iconDoc },
   { section: 'Settings', to: '/admin/platform', label: 'Platform', icon: iconDoc },
 ]
 

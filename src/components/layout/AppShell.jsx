@@ -20,7 +20,7 @@ function CloseIcon() {
 
 const navLinkClass = ({ isActive }) =>
   [
-    'group relative flex w-full items-center justify-between gap-2 rounded-r-xl py-2.5 pl-4 pr-3 text-[13px] font-medium sm:text-sm transition-all duration-200 ease-out',
+    'group relative flex w-full items-center justify-between gap-2 rounded-r-xl py-2.5 pl-4 pr-3 text-[13px] font-medium md:text-sm transition-all duration-200 ease-out',
     isActive
       ? 'bg-gradient-to-r from-teal-50/95 to-teal-50/30 text-teal-950 shadow-sm before:absolute before:left-0 before:top-1/2 before:h-9 before:w-[3px] before:-translate-y-1/2 before:rounded-full before:bg-teal-600 before:shadow-[0_0_12px_rgba(13,148,136,0.35)]'
       : 'text-slate-600 hover:bg-slate-50/90 hover:text-slate-900',
@@ -53,6 +53,7 @@ export default function AppShell({
   headerActions,
   sidebarFooter,
   children,
+  contentClassName = '',
 }) {
   const [mobileOpen, setMobileOpen] = useState(false)
 
@@ -88,7 +89,7 @@ export default function AppShell({
               )}
               {disabled ? (
                 <span
-                  className="group relative flex w-full cursor-not-allowed items-center justify-between gap-2 rounded-r-xl py-2.5 pl-4 pr-3 text-[13px] font-medium text-slate-400 sm:text-sm"
+                  className="group relative flex w-full cursor-not-allowed items-center justify-between gap-2 rounded-r-xl py-2.5 pl-4 pr-3 text-[13px] font-medium text-slate-400 md:text-sm"
                   title="Available after your profile is approved"
                 >
                   <span className="flex min-w-0 flex-1 items-center gap-3">
@@ -152,7 +153,7 @@ export default function AppShell({
             </button>
             <div className="min-w-0">
               {topBarTitle && <h1 className="type-page-title truncate">{topBarTitle}</h1>}
-              {topBarSubtitle && <p className="type-caption truncate sm:text-sm">{topBarSubtitle}</p>}
+              {topBarSubtitle && <p className="type-caption truncate md:text-sm">{topBarSubtitle}</p>}
             </div>
           </div>
           <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 sm:gap-3">
@@ -163,8 +164,9 @@ export default function AppShell({
 
         <main
           className={[
-            'mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 lg:px-8',
+            'mx-auto w-full max-w-7xl flex-1 px-4 py-4 md:px-6 md:py-6 lg:px-8',
             bottomNavItems?.length ? 'pb-[calc(5.5rem+env(safe-area-inset-bottom))] lg:pb-6' : '',
+            contentClassName,
           ]
             .filter(Boolean)
             .join(' ')}
@@ -187,7 +189,7 @@ export default function AppShell({
                   to={to}
                   end={end}
                   onClick={() => setMobileOpen(false)}
-                  className="tap-feedback flex min-h-12 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1.5 text-[10px] font-semibold transition-colors duration-200"
+                  className="tap-feedback flex min-h-12 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1.5 text-[10px] font-semibold leading-tight transition-colors duration-200"
                 >
                   {({ isActive }) => (
                     <>
