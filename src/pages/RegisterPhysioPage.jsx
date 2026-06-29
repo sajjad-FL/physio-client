@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { Link, useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
@@ -8,8 +8,9 @@ import DocumentMultiUploadPreview from '../components/physio/DocumentMultiUpload
 import { mapboxReverseGeocode } from '../utils/mapboxGeocode'
 import { toastApiError, toastValidationErrors, firstValidationMessage } from '../utils/formToast'
 import PasswordInput from '../components/ui/PasswordInput'
+import AffixInput from '../components/ui/AffixInput'
 import MapPickerModal from '../components/location/MapPickerModal'
-import LocationSelectorRow from '../components/location/LocationSelectorRow'
+import { getCurrentCoords } from '../utils/geolocation'
 import {
   validateAvatarFile,
   validateBasicSection,
@@ -26,7 +27,7 @@ import { ID_PROOF_TYPE_OPTIONS } from '../constants/idProofTypes.js'
 import { absoluteUrl } from '../utils/siteMeta'
 
 const baseInputClass =
-  'h-11 w-full rounded-lg border bg-white px-3 text-sm text-ink shadow-sm outline-none focus:ring-2 focus:ring-brand/20'
+  'h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm text-slate-900 shadow-sm outline-none transition-all duration-200 placeholder:text-slate-400 focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20'
 
 const steps = [
   { n: 1, title: 'Account & basic', desc: 'Sign-in, contact, profile' },
@@ -35,6 +36,29 @@ const steps = [
   { n: 4, title: 'Documents', desc: 'Required uploads' },
   { n: 5, title: 'Review', desc: 'Submit application' },
 ]
+
+/** Per-step hero copy — mirrors the create-account flow (kicker + title + subtitle). */
+const STEP_HERO = {
+  1: { title: 'Create your account', sub: 'Your sign-in, contact and basic profile.' },
+  2: { title: 'Your qualification', sub: 'Education and registration details.' },
+  3: { title: 'Your practice', sub: 'Services you offer and your fees.' },
+  4: { title: 'Upload documents', sub: 'Attach your certificates and ID proof.' },
+  5: { title: 'Review & submit', sub: 'Check everything before you submit.' },
+}
+
+function FieldLabel({ htmlFor, children, required = false }) {
+  return (
+    <label className="mb-1 block text-xs font-medium text-ink-muted" htmlFor={htmlFor}>
+      {children}
+      {required ? (
+        <span className="text-red-500" aria-hidden="true">
+          {' '}
+          *
+        </span>
+      ) : null}
+    </label>
+  )
+}
 
 function ErrorBanner({ formError, fieldErrors }) {
   const entries = Object.entries(fieldErrors || {}).filter(([, v]) => Boolean(v))
@@ -68,11 +92,12 @@ export default function RegisterPhysioPage() {
   const [email, setEmail] = useState('')
   const [dob, setDob] = useState('')
   const [gender, setGender] = useState('')
-  const [address, setAddress] = useState('')
   const [location, setLocation] = useState('')
   const [locationLat, setLocationLat] = useState(null)
   const [locationLng, setLocationLng] = useState(null)
   const [coverageMapOpen, setCoverageMapOpen] = useState(false)
+  const [geoBusy, setGeoBusy] = useState(false)
+  const avatarInputRef = useRef(null)
   const [avatarFile, setAvatarFile] = useState(null)
   const [avatarPreview, setAvatarPreview] = useState('')
 
@@ -118,6 +143,8 @@ export default function RegisterPhysioPage() {
           mode: 'physio',
           isPhysio: true,
           requireCoords: true,
+          requiredGender: true,
+          optionalSpecialization: true,
           locationLat,
           locationLng,
           ...extra,
@@ -163,33 +190,17 @@ export default function RegisterPhysioPage() {
     }
   }, [])
 
-  function onCoveragePlaceResolved(place) {
-    if (place && Number.isFinite(place.lat) && Number.isFinite(place.lng)) {
-      setLocationLat(place.lat)
-      setLocationLng(place.lng)
-      if (place.label) setLocation(place.label)
-      setFieldErrors((prev) => ({
-        ...prev,
-        location: validateLiveField('location', place.label || '', {
-          mode: 'physio',
-          requireCoords: true,
-          locationLat: place.lat,
-          locationLng: place.lng,
-        }),
-      }))
-      return
+  async function useDeviceCoverageLocation() {
+    setGeoBusy(true)
+    try {
+      const coords = await getCurrentCoords()
+      await applyCoverageMapCoords(coords)
+      toast.success('Coverage location set from GPS')
+    } catch (err) {
+      toast.error(err?.userMessage || 'Could not read your location.')
+    } finally {
+      setGeoBusy(false)
     }
-    setLocationLat(null)
-    setLocationLng(null)
-    setFieldErrors((prev) => ({
-      ...prev,
-      location: validateLiveField('location', location, {
-        mode: 'physio',
-        requireCoords: true,
-        locationLat: null,
-        locationLng: null,
-      }),
-    }))
   }
 
   async function applyCoverageMapCoords(coords) {
@@ -222,9 +233,8 @@ export default function RegisterPhysioPage() {
       name,
       email,
       location,
-      dob: dob || undefined,
+      dob,
       gender,
-      address,
     }).errors
     const merged = { ...e1, ...e2 }
     if (!avatarFile) {
@@ -236,7 +246,7 @@ export default function RegisterPhysioPage() {
     if (locationLat == null || locationLng == null) {
       merged.location =
         merged.location ||
-        'Please search for your area or tap “Pick on map” to show where you work.'
+        'Please tap “Pick on map” or “Use GPS” to set where you work.'
     }
     return merged
   }
@@ -289,12 +299,15 @@ export default function RegisterPhysioPage() {
       }
 
       if (fromStep === 3) {
-        const { errors } = validatePracticeSection({
-          experience,
-          specialization,
-          serviceType,
-          areas,
-        })
+        const { errors } = validatePracticeSection(
+          {
+            experience,
+            specialization,
+            serviceType,
+            areas,
+          },
+          { specializationOptional: true },
+        )
         if (Object.keys(errors).length) {
           setFieldErrors(errors)
           const summary = firstValidationMessage(errors, 'Please complete your practice details.')
@@ -380,9 +393,8 @@ export default function RegisterPhysioPage() {
       fd.append('password', password)
       fd.append('name', name.trim())
       fd.append('email', email.trim().toLowerCase())
-      if (dob) fd.append('dob', dob)
-      if (gender) fd.append('gender', gender)
-      if (address.trim()) fd.append('address', address.trim())
+      fd.append('dob', dob)
+      fd.append('gender', gender)
       fd.append('location', location.trim())
       if (Number.isFinite(locationLat) && Number.isFinite(locationLng)) {
         fd.append('lat', String(locationLat))
@@ -450,7 +462,7 @@ export default function RegisterPhysioPage() {
   const ogImage = absoluteUrl('/og-default.png')
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="relative min-h-screen bg-slate-50">
       <Helmet>
         <title>{title}</title>
         <meta name="description" content={description} />
@@ -465,52 +477,101 @@ export default function RegisterPhysioPage() {
         <meta name="twitter:description" content={description} />
         <meta name="twitter:image" content={ogImage} />
       </Helmet>
-      <header className="border-b border-gray-200 bg-white/90 shadow-sm">
-        <div className="mx-auto flex max-w-3xl items-center px-4 py-4">
-          <Link to="/" className="text-sm font-semibold text-gray-900 hover:opacity-80">
-            ← PhysiOkhom
+      {/* Ambient teal halo glows — matching the create-account flow */}
+      <div className="pointer-events-none absolute inset-x-0 top-[-120px] h-[240px] sm:h-[380px] rounded-[190px] bg-[rgba(162,240,239,0.15)]" aria-hidden />
+      <div className="pointer-events-none absolute left-[20%] top-[-50px] h-[140px] sm:h-[200px] w-[60%] rounded-[100px] bg-[rgba(13,107,107,0.04)]" aria-hidden />
+      <header className="relative z-10 border-b border-slate-200 bg-white/90 shadow-sm backdrop-blur-md">
+        <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-4">
+          <button
+            type="button"
+            onClick={() => {
+              if (step > 1) {
+                setStep((s) => Math.max(1, s - 1))
+                clearErrors()
+              } else {
+                navigate('/')
+              }
+            }}
+            className="flex items-center gap-1.5 text-[15px] font-semibold text-teal-700 hover:opacity-80"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M15 18l-6-6 6-6"/></svg>
+            {step > 1 ? 'Back' : 'PhysiOkhom'}
+          </button>
+          <Link to="/login" className="text-sm font-medium text-teal-700 hover:underline">
+            Sign in
           </Link>
         </div>
       </header>
 
-      <div className="mx-auto max-w-3xl space-y-8 px-4 py-10">
-        <div>
-          <h1 className="type-page-title text-ink">Register as a physiotherapist</h1>
-          <p className="mt-1 text-sm text-ink-muted">
-            Same details as workspace onboarding. After submit, an admin reviews your application before you can work
-            on the platform.
-          </p>
-        </div>
-
-        <ol className="flex flex-wrap gap-2">
-          {steps.map((s) => (
-            <li key={s.n}>
-              <button
-                type="button"
-                onClick={() => tryGoToStep(s.n)}
-                className={[
-                  'rounded-full px-3 py-1 text-xs font-medium ring-1 ring-inset transition',
-                  step === s.n
-                    ? 'bg-brand text-white ring-brand'
-                    : 'bg-white text-ink-muted ring-border-subtle hover:bg-canvas',
-                ].join(' ')}
-              >
-                {s.n}. {s.title}
-              </button>
-            </li>
-          ))}
+      <div className="relative z-10 mx-auto max-w-3xl space-y-8 px-4 py-10">
+        {/* Step progress dots — matching the create-account flow */}
+        <ol className="flex items-center">
+          {steps.map((s, idx) => {
+            const isDone = step > s.n
+            const isActive = step === s.n
+            return (
+              <li key={s.n} className="flex flex-1 items-center">
+                <button
+                  type="button"
+                  onClick={() => tryGoToStep(s.n)}
+                  className={[
+                    'flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-[1.5px] text-[10px] font-bold transition-all',
+                    isDone
+                      ? 'border-teal-600 bg-teal-600 text-white'
+                      : isActive
+                        ? 'border-teal-600 bg-teal-600/10 text-teal-700 shadow-[0_0_0_4px_rgba(13,148,136,0.10)]'
+                        : 'border-slate-200 bg-white text-slate-400',
+                  ].join(' ')}
+                  aria-label={`Step ${s.n}: ${s.title}`}
+                >
+                  {isDone ? (
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M20 6L9 17l-5-5"/></svg>
+                  ) : (
+                    s.n
+                  )}
+                </button>
+                {idx < steps.length - 1 && (
+                  <div className={`mx-1.5 h-[1.5px] flex-1 transition-colors ${isDone ? 'bg-teal-600' : 'bg-slate-200'}`} />
+                )}
+              </li>
+            )
+          })}
         </ol>
+
+        <div className="space-y-2 text-center">
+          <p className="text-xs font-semibold uppercase tracking-wider text-teal-600">Physio registration</p>
+          <h1 className="type-hero text-slate-900">{STEP_HERO[step].title}</h1>
+          <p className="text-sm leading-relaxed text-slate-500">{STEP_HERO[step].sub}</p>
+        </div>
 
         <ErrorBanner formError={formError} fieldErrors={fieldErrors} />
 
         {step === 1 && (
-          <section className="surface-card rounded-2xl p-6 ring-1 ring-border-subtle">
+          <section className="rounded-2xl border border-slate-100 bg-white p-6 shadow-md sm:p-8">
             <h2 className="type-page-title text-ink">Account & basic info</h2>
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <div className="sm:col-span-2">
+                <FieldLabel htmlFor="reg-name" required>
+                  Full name
+                </FieldLabel>
+                <AffixInput
+                  id="reg-name"
+                  error={Boolean(fieldErrors.name)}
+                  value={name}
+                  onChange={(e) => {
+                    const v = e.target.value
+                    setName(v)
+                    patchField('name', v)
+                  }}
+                  placeholder="Your name"
+                  autoComplete="name"
+                />
+                {fieldErrors.name ? <p className="mt-1 text-xs text-red-600">{fieldErrors.name}</p> : null}
+              </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-ink-muted" htmlFor="reg-phone">
+                <FieldLabel htmlFor="reg-phone" required>
                   Phone (for account)
-                </label>
+                </FieldLabel>
                 <input
                   id="reg-phone"
                   className={inputClass('phone')}
@@ -520,15 +581,16 @@ export default function RegisterPhysioPage() {
                     setPhone(v)
                     patchField('phone', v)
                   }}
+                  placeholder="Enter mobile number"
                   inputMode="tel"
                   autoComplete="tel"
                 />
                 {fieldErrors.phone ? <p className="mt-1 text-xs text-red-600">{fieldErrors.phone}</p> : null}
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-ink-muted" htmlFor="reg-password">
-                  Password (min 6 characters)
-                </label>
+                <FieldLabel htmlFor="reg-password" required>
+                  Password (min 6)
+                </FieldLabel>
                 <PasswordInput
                   id="reg-password"
                   className={inputClass('password')}
@@ -538,31 +600,15 @@ export default function RegisterPhysioPage() {
                     setPassword(v)
                     patchField('password', v)
                   }}
+                  placeholder="Enter password"
                   autoComplete="new-password"
                 />
                 {fieldErrors.password ? <p className="mt-1 text-xs text-red-600">{fieldErrors.password}</p> : null}
               </div>
-              <div className="sm:col-span-2">
-                <label className="mb-1 block text-xs font-medium text-ink-muted" htmlFor="reg-name">
-                  Full name
-                </label>
-                <input
-                  id="reg-name"
-                  className={inputClass('name')}
-                  value={name}
-                  onChange={(e) => {
-                    const v = e.target.value
-                    setName(v)
-                    patchField('name', v)
-                  }}
-                  autoComplete="name"
-                />
-                {fieldErrors.name ? <p className="mt-1 text-xs text-red-600">{fieldErrors.name}</p> : null}
-              </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-ink-muted" htmlFor="reg-email">
+                <FieldLabel htmlFor="reg-email" required>
                   Email
-                </label>
+                </FieldLabel>
                 <input
                   id="reg-email"
                   type="email"
@@ -573,14 +619,15 @@ export default function RegisterPhysioPage() {
                     setEmail(v)
                     patchField('email', v)
                   }}
+                  placeholder="Enter email address"
                   autoComplete="email"
                 />
                 {fieldErrors.email ? <p className="mt-1 text-xs text-red-600">{fieldErrors.email}</p> : null}
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-ink-muted" htmlFor="reg-dob">
+                <FieldLabel htmlFor="reg-dob" required>
                   Date of birth
-                </label>
+                </FieldLabel>
                 <input
                   id="reg-dob"
                   type="date"
@@ -595,9 +642,9 @@ export default function RegisterPhysioPage() {
                 {fieldErrors.dob ? <p className="mt-1 text-xs text-red-600">{fieldErrors.dob}</p> : null}
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-ink-muted" htmlFor="reg-gender">
+                <FieldLabel htmlFor="reg-gender" required>
                   Gender
-                </label>
+                </FieldLabel>
                 <select
                   id="reg-gender"
                   className={inputClass('gender')}
@@ -608,7 +655,7 @@ export default function RegisterPhysioPage() {
                     patchField('gender', v)
                   }}
                 >
-                  <option value="">—</option>
+                  <option value="">Select gender</option>
                   <option value="female">Female</option>
                   <option value="male">Male</option>
                   <option value="other">Other</option>
@@ -617,85 +664,84 @@ export default function RegisterPhysioPage() {
                 {fieldErrors.gender ? <p className="mt-1 text-xs text-red-600">{fieldErrors.gender}</p> : null}
               </div>
               <div className="sm:col-span-2">
-                <label className="mb-1 block text-xs font-medium text-ink-muted" htmlFor="reg-address">
-                  Address
-                </label>
-                <textarea
-                  id="reg-address"
-                  className={`${inputClass('address')} min-h-[88px] py-2`}
-                  value={address}
-                  onChange={(e) => {
-                    const v = e.target.value
-                    setAddress(v)
-                    patchField('address', v)
-                  }}
-                  rows={3}
-                />
-                {fieldErrors.address ? <p className="mt-1 text-xs text-red-600">{fieldErrors.address}</p> : null}
-              </div>
-              <div className="sm:col-span-2">
-                <label className="mb-1 block text-xs font-medium text-ink-muted" htmlFor="reg-coverage-search">
-                  Coverage / location (required for bookings)
-                </label>
+                <FieldLabel required>Coverage / location (required for bookings)</FieldLabel>
                 <p className="mb-2 text-xs text-ink-muted">
-                  Same as profile address: search with Mapbox or open the map to drop a pin. Coordinates are saved so
-                  patients can find you nearby.
+                  Set your work area using the map or GPS — you cannot type a location manually. Coordinates are saved
+                  so patients can find you nearby.
                 </p>
-                {location.trim() || locationLat != null ? (
-                  <p className="mb-2 rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-600 ring-1 ring-gray-100">
-                    <span className="font-medium text-gray-800">Selected: </span>
-                    {location.trim() || '—'}
-                    {locationLat != null && locationLng != null ? (
-                      <span className="mt-1 block text-gray-500 tabular-nums">
-                        {locationLat.toFixed(5)}, {locationLng.toFixed(5)}
-                      </span>
-                    ) : null}
+                <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                  <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Selected coverage area</p>
+                  <p className="mt-1 font-medium text-slate-900">
+                    {location.trim() || (locationLat != null ? 'Location pinned' : 'None selected yet')}
                   </p>
-                ) : null}
-                <LocationSelectorRow
-                  id="reg-coverage-search"
-                  value={location}
-                  onChange={(v) => {
-                    setLocation(v)
-                    patchField('location', v)
-                  }}
-                  onPlaceResolved={onCoveragePlaceResolved}
-                  onOpenMap={() => setCoverageMapOpen(true)}
-                  placeholder="Type to search (Mapbox) or enter then pick on map"
-                  mapButtonLabel="Pick on map"
-                />
+                  {locationLat != null && locationLng != null ? (
+                    <p className="mt-0.5 text-xs tabular-nums text-slate-500">
+                      {locationLat.toFixed(5)}, {locationLng.toFixed(5)}
+                    </p>
+                  ) : null}
+                </div>
+                <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                  <button
+                    type="button"
+                    onClick={() => setCoverageMapOpen(true)}
+                    disabled={geoBusy}
+                    className="flex h-11 flex-1 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:opacity-50"
+                  >
+                    Pick on map
+                  </button>
+                  <button
+                    type="button"
+                    onClick={useDeviceCoverageLocation}
+                    disabled={geoBusy}
+                    className="flex h-11 flex-1 items-center justify-center rounded-xl border border-teal-200 bg-teal-50 px-4 text-sm font-medium text-teal-700 shadow-sm transition hover:bg-teal-100 disabled:opacity-50"
+                  >
+                    {geoBusy ? 'Locating…' : 'Use GPS'}
+                  </button>
+                </div>
                 {fieldErrors.location ? <p className="mt-1 text-xs text-red-600">{fieldErrors.location}</p> : null}
               </div>
               <div className="sm:col-span-2">
-                <div className="mb-1 flex flex-wrap items-center gap-2">
-                  <label className="text-xs font-medium text-ink-muted" htmlFor="reg-avatar">
-                    Profile photo
-                  </label>
-                  <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-600">
-                    Required
-                  </span>
-                </div>
+                <FieldLabel htmlFor="reg-avatar" required>
+                  Passport size photo with clear background
+                </FieldLabel>
+                <p className="mb-2 text-xs text-ink-muted">JPEG, PNG, or WebP · max 2MB</p>
                 {avatarPreview ? (
                   <img
                     src={avatarPreview}
                     alt=""
-                    className="mb-2 h-20 w-20 rounded-full object-cover ring-2 ring-border-subtle"
+                    className="mb-3 h-20 w-20 rounded-full object-cover ring-2 ring-border-subtle"
                   />
                 ) : null}
                 <input
+                  ref={avatarInputRef}
                   id="reg-avatar"
                   type="file"
                   accept="image/*"
+                  className="sr-only"
                   onChange={(e) => {
                     const f = e.target.files?.[0] || null
+                    e.target.value = ''
+                    if (!f) return
+                    const r = validateAvatarFile(f)
+                    if (!r.ok) {
+                      toast.error(r.message)
+                      return
+                    }
                     setAvatarFile(f)
                     patchField('avatar', f)
                     setAvatarPreview((prev) => {
                       if (prev) URL.revokeObjectURL(prev)
-                      return f ? URL.createObjectURL(f) : ''
+                      return URL.createObjectURL(f)
                     })
                   }}
                 />
+                <button
+                  type="button"
+                  onClick={() => avatarInputRef.current?.click()}
+                  className="flex h-11 w-full items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
+                >
+                  Choose photo
+                </button>
                 {fieldErrors.avatar ? <p className="mt-1 text-xs text-red-600">{fieldErrors.avatar}</p> : null}
               </div>
             </div>
@@ -703,13 +749,13 @@ export default function RegisterPhysioPage() {
         )}
 
         {step === 2 && (
-          <section className="surface-card rounded-2xl p-6 ring-1 ring-border-subtle">
+          <section className="rounded-2xl border border-slate-100 bg-white p-6 shadow-md sm:p-8">
             <h2 className="type-page-title text-ink">Qualification</h2>
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
               <div className="sm:col-span-2">
-                <label className="mb-1 block text-xs font-medium text-ink-muted" htmlFor="reg-degree">
+                <FieldLabel htmlFor="reg-degree" required>
                   Degree
-                </label>
+                </FieldLabel>
                 <select
                   id="reg-degree"
                   className={inputClass('degree')}
@@ -720,7 +766,7 @@ export default function RegisterPhysioPage() {
                     patchField('degree', v)
                   }}
                 >
-                  <option value="">—</option>
+                  <option value="">Select degree</option>
                   {PHYSIO_DEGREE_OPTIONS.map((d) => (
                     <option key={d} value={d}>
                       {d}
@@ -733,8 +779,11 @@ export default function RegisterPhysioPage() {
                 {fieldErrors.degree ? <p className="mt-1 text-xs text-red-600">{fieldErrors.degree}</p> : null}
               </div>
               <div className="sm:col-span-2">
-                <label className="mb-1 block text-xs font-medium text-ink-muted">University</label>
+                <FieldLabel htmlFor="reg-university" required>
+                  University
+                </FieldLabel>
                 <input
+                  id="reg-university"
                   className={inputClass('university')}
                   value={university}
                   onChange={(e) => {
@@ -742,15 +791,16 @@ export default function RegisterPhysioPage() {
                     setUniversity(v)
                     patchField('university', v)
                   }}
+                  placeholder="Enter university name"
                 />
                 {fieldErrors.university ? (
                   <p className="mt-1 text-xs text-red-600">{fieldErrors.university}</p>
                 ) : null}
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-ink-muted" htmlFor="reg-passing-year">
+                <FieldLabel htmlFor="reg-passing-year" required>
                   Passing Year
-                </label>
+                </FieldLabel>
                 <input
                   id="reg-passing-year"
                   className={inputClass('year')}
@@ -761,13 +811,12 @@ export default function RegisterPhysioPage() {
                     setYear(v)
                     patchField('year', v)
                   }}
+                  placeholder="e.g. 2020"
                 />
                 {fieldErrors.year ? <p className="mt-1 text-xs text-red-600">{fieldErrors.year}</p> : null}
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-ink-muted" htmlFor="reg-council-reg">
-                  Council Registration No (if applicable)
-                </label>
+                <FieldLabel htmlFor="reg-council-reg">Council Registration No (if applicable)</FieldLabel>
                 <input
                   id="reg-council-reg"
                   className={inputClass('registrationNumber')}
@@ -777,6 +826,7 @@ export default function RegisterPhysioPage() {
                     setRegistrationNumber(v)
                     patchField('registrationNumber', v)
                   }}
+                  placeholder="Enter council registration number"
                 />
                 {fieldErrors.registrationNumber ? (
                   <p className="mt-1 text-xs text-red-600">{fieldErrors.registrationNumber}</p>
@@ -787,12 +837,15 @@ export default function RegisterPhysioPage() {
         )}
 
         {step === 3 && (
-          <section className="surface-card rounded-2xl p-6 ring-1 ring-border-subtle">
+          <section className="rounded-2xl border border-slate-100 bg-white p-6 shadow-md sm:p-8">
             <h2 className="type-page-title text-ink">Practice details</h2>
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              <div>
-                <label className="mb-1 block text-xs font-medium text-ink-muted">Experience (years)</label>
+              <div className="sm:col-span-2">
+                <FieldLabel htmlFor="reg-experience" required>
+                  Experience (years)
+                </FieldLabel>
                 <input
+                  id="reg-experience"
                   className={inputClass('experience')}
                   type="number"
                   min="0"
@@ -802,29 +855,18 @@ export default function RegisterPhysioPage() {
                     setExperience(v)
                     patchField('experience', v)
                   }}
+                  placeholder="Years of experience"
                 />
                 {fieldErrors.experience ? (
                   <p className="mt-1 text-xs text-red-600">{fieldErrors.experience}</p>
                 ) : null}
               </div>
-              <div>
-                <label className="mb-1 block text-xs font-medium text-ink-muted">Specialization</label>
-                <input
-                  className={inputClass('specialization')}
-                  value={specialization}
-                  onChange={(e) => {
-                    const v = e.target.value
-                    setSpecialization(v)
-                    patchField('specialization', v)
-                  }}
-                />
-                {fieldErrors.specialization ? (
-                  <p className="mt-1 text-xs text-red-600">{fieldErrors.specialization}</p>
-                ) : null}
-              </div>
               <div className="sm:col-span-2">
-                <label className="mb-1 block text-xs font-medium text-ink-muted">Service type</label>
+                <FieldLabel htmlFor="reg-service-type" required>
+                  Service type
+                </FieldLabel>
                 <select
+                  id="reg-service-type"
                   className={inputClass('serviceType')}
                   value={serviceType}
                   onChange={(e) => {
@@ -842,8 +884,11 @@ export default function RegisterPhysioPage() {
                 ) : null}
               </div>
               <div className="sm:col-span-2">
-                <label className="mb-1 block text-xs font-medium text-ink-muted">Areas (comma-separated)</label>
+                <FieldLabel htmlFor="reg-areas" required>
+                  Areas (comma-separated)
+                </FieldLabel>
                 <input
+                  id="reg-areas"
                   className={inputClass('areas')}
                   value={areas}
                   onChange={(e) => {
@@ -855,16 +900,33 @@ export default function RegisterPhysioPage() {
                 />
                 {fieldErrors.areas ? <p className="mt-1 text-xs text-red-600">{fieldErrors.areas}</p> : null}
               </div>
+              <div className="sm:col-span-2">
+                <FieldLabel htmlFor="reg-specialization">Specialization (if any)</FieldLabel>
+                <input
+                  id="reg-specialization"
+                  className={inputClass('specialization')}
+                  value={specialization}
+                  onChange={(e) => {
+                    const v = e.target.value
+                    setSpecialization(v)
+                    patchField('specialization', v)
+                  }}
+                  placeholder="e.g. Sports rehab, Orthopaedic"
+                />
+                {fieldErrors.specialization ? (
+                  <p className="mt-1 text-xs text-red-600">{fieldErrors.specialization}</p>
+                ) : null}
+              </div>
             </div>
           </section>
         )}
 
         {step === 4 && (
-          <section className="surface-card rounded-2xl p-6 ring-1 ring-border-subtle">
+          <section className="rounded-2xl border border-slate-100 bg-white p-6 shadow-md sm:p-8">
             <h2 className="type-page-title text-ink">Documents</h2>
             <p className="mt-1 text-sm text-ink-muted">
-              PDF or images (max 2MB each). Upload the required credentials below, choose your government ID type, and
-              agree to the declaration. Professional registration is optional but helps verification.
+              PDF or images (max 2MB each). Fields marked with <span className="text-red-500">*</span> are required.
+              Professional registration is optional but helps verification.
             </p>
             <div className="mt-5 grid gap-4 sm:grid-cols-2">
               <DocumentUploadPreview
@@ -894,9 +956,9 @@ export default function RegisterPhysioPage() {
                 }}
               >
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-ink-muted" htmlFor="reg-id-proof-type">
+                  <FieldLabel htmlFor="reg-id-proof-type" required>
                     ID type
-                  </label>
+                  </FieldLabel>
                   <select
                     id="reg-id-proof-type"
                     className={inputClass('idProofType')}
@@ -974,7 +1036,13 @@ export default function RegisterPhysioPage() {
                   }}
                   className="mt-1 h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
                 />
-                <span>I have read and agree to the declaration above.</span>
+                <span>
+                  I have read and agree to the declaration above.
+                  <span className="text-red-500" aria-hidden="true">
+                    {' '}
+                    *
+                  </span>
+                </span>
               </label>
               {fieldErrors.qualificationDeclaration ? (
                 <p className="mt-2 text-xs text-red-600">{fieldErrors.qualificationDeclaration}</p>
@@ -985,7 +1053,7 @@ export default function RegisterPhysioPage() {
         )}
 
         {step === 5 && (
-          <section className="surface-card rounded-2xl p-6 ring-1 ring-border-subtle">
+          <section className="rounded-2xl border border-slate-100 bg-white p-6 shadow-md sm:p-8">
             <h2 className="type-page-title text-ink">Review & submit</h2>
             <dl className="mt-4 grid gap-2 text-sm">
               <div className="flex justify-between gap-4 border-b border-border-subtle py-2">
@@ -1002,7 +1070,7 @@ export default function RegisterPhysioPage() {
               </div>
               <div className="flex justify-between gap-4 border-b border-border-subtle py-2">
                 <dt className="text-ink-muted">Specialization</dt>
-                <dd className="text-right font-medium text-ink">{specialization}</dd>
+                <dd className="text-right font-medium text-ink">{specialization || '—'}</dd>
               </div>
               <div className="flex justify-between gap-4 border-b border-border-subtle py-2">
                 <dt className="text-ink-muted">Experience</dt>
@@ -1020,14 +1088,26 @@ export default function RegisterPhysioPage() {
             <p className="mt-4 text-sm text-ink-muted">
               Submitting creates your account in <strong>pending</strong> status until an admin approves you.
             </p>
-            <button
-              type="button"
-              disabled={saving}
-              onClick={handleSubmit}
-              className="mt-6 rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-brand-hover disabled:opacity-50"
-            >
-              {saving ? 'Submitting…' : 'Submit application'}
-            </button>
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
+                onClick={() => {
+                  setStep(4)
+                  clearErrors()
+                }}
+              >
+                Back
+              </button>
+              <button
+                type="button"
+                disabled={saving}
+                onClick={handleSubmit}
+                className="rounded-xl bg-teal-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-teal-700 disabled:opacity-50"
+              >
+                {saving ? 'Submitting…' : 'Submit application'}
+              </button>
+            </div>
           </section>
         )}
 
@@ -1048,7 +1128,7 @@ export default function RegisterPhysioPage() {
             {step > 1 && (
               <button
                 type="button"
-                className="rounded-xl border border-border-subtle px-4 py-2 text-sm font-medium text-ink-muted hover:bg-canvas"
+                className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
                 onClick={() => {
                   setStep((s) => Math.max(1, s - 1))
                   clearErrors()
@@ -1061,7 +1141,7 @@ export default function RegisterPhysioPage() {
               type="button"
               disabled={saving}
               onClick={() => goNext(step)}
-              className="rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-brand-hover disabled:opacity-50"
+              className="rounded-xl bg-teal-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-teal-700 disabled:opacity-50"
             >
               {saving ? 'Checking…' : step === 4 ? 'Continue to review' : 'Save & continue'}
             </button>

@@ -145,7 +145,7 @@ export function validateLiveField(name, value, ctx = {}) {
     case 'specialization': {
       const t = str.trim()
       if (!ctx.isPhysio) return ''
-      if (!t) return 'Specialization is required for physiotherapists'
+      if (!t) return ctx.optionalSpecialization ? '' : 'Specialization is required for physiotherapists'
       if (t.length < 2) return 'Specialization must be at least 2 characters'
       if (t.length > 120) return 'Specialization is too long'
       return ''

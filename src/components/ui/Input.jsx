@@ -1,7 +1,7 @@
 import { forwardRef, useId } from 'react'
 
 const base =
-  'w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-sm transition duration-200 placeholder:text-slate-400 focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/25 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:opacity-70'
+  'w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-[16px] md:text-sm text-slate-900 shadow-sm transition duration-200 placeholder:text-slate-400 focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/25 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:opacity-70'
 
 const Input = forwardRef(function Input({ className = '', error, ...props }, ref) {
   return (

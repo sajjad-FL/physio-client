@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import toast from 'react-hot-toast'
 import { resolveFileUrl } from '../../utils/serverOrigin'
+import { validateFile } from '../../utils/onboardingValidation'
 
 function looksLikePdf(path) {
   return /\.pdf(\?|#|$)/i.test(String(path || ''))
@@ -53,9 +55,18 @@ export default function DocumentUploadPreview({
 
   const pickFile = useCallback(
     (f) => {
-      onFileChange(f || null)
+      if (!f) {
+        onFileChange(null)
+        return
+      }
+      const r = validateFile(f, label || 'File')
+      if (!r.ok) {
+        toast.error(r.message)
+        return
+      }
+      onFileChange(f)
     },
-    [onFileChange],
+    [onFileChange, label],
   )
 
   const onInputChange = (e) => {
@@ -85,16 +96,18 @@ export default function DocumentUploadPreview({
           <div className="flex flex-wrap items-center gap-2">
             <label className="text-sm font-semibold text-ink" htmlFor={inputId}>
               {label}
+              {required ? (
+                <span className="text-red-500" aria-hidden="true">
+                  {' '}
+                  *
+                </span>
+              ) : null}
             </label>
-            {required ? (
-              <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-600">
-                Required
-              </span>
-            ) : (
+            {!required ? (
               <span className="rounded-md bg-slate-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500 ring-1 ring-inset ring-slate-200/80">
                 Optional
               </span>
-            )}
+            ) : null}
           </div>
           {description ? <p className="mt-1 text-xs leading-relaxed text-ink-muted">{description}</p> : null}
         </div>

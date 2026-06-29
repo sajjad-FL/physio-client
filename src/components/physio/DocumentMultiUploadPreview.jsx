@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from 'react'
+import toast from 'react-hot-toast'
 import { resolveFileUrl } from '../../utils/serverOrigin'
 import { validateFile } from '../../utils/onboardingValidation'
 
@@ -48,6 +49,7 @@ export default function DocumentMultiUploadPreview({
         const r = validateFile(file, label || 'File')
         if (!r.ok) {
           setPickError(r.message)
+          toast.error(r.message)
           return
         }
         next.push(file)
@@ -93,16 +95,18 @@ export default function DocumentMultiUploadPreview({
           <div className="flex flex-wrap items-center gap-2">
             <label className="text-sm font-semibold text-ink" htmlFor={inputId}>
               {label}
+              {required ? (
+                <span className="text-red-500" aria-hidden="true">
+                  {' '}
+                  *
+                </span>
+              ) : null}
             </label>
-            {required ? (
-              <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-600">
-                Required
-              </span>
-            ) : (
+            {!required ? (
               <span className="rounded-md bg-slate-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500 ring-1 ring-inset ring-slate-200/80">
                 Optional
               </span>
-            )}
+            ) : null}
           </div>
           {description ? <p className="mt-1 text-xs leading-relaxed text-ink-muted">{description}</p> : null}
           <p className="mt-1 text-xs text-ink-muted">Up to {maxFiles} files · PDF, JPEG, PNG, or WebP · max 2MB each</p>
