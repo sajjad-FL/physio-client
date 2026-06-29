@@ -16,3 +16,6 @@ export const ISSUE_OPTIONS = [
 
 /** Select value when user chooses "Other"; final `issue` text comes from a separate text field. */
 export const ISSUE_OTHER_VALUE = '__other__'
+
+/** Pass as `location.state.selectedIssue` from home/dashboard to pre-select “Other” on /book. */
+export const ISSUE_OTHER_SENTINEL = 'Other condition'

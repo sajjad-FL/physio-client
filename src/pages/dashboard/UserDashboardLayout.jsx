@@ -135,7 +135,7 @@ export default function UserDashboardLayout() {
             to="/book"
             className="hidden cursor-pointer items-center justify-center rounded-xl bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md shadow-teal-600/25 transition-all duration-200 hover:bg-teal-700 motion-safe:active:scale-[0.98] sm:inline-flex"
           >
-            Book session
+            Book appointment
           </Link>
           <Link
             to="/book"

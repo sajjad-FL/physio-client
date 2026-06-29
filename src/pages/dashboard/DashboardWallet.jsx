@@ -73,7 +73,7 @@ export default function DashboardWallet() {
               to="/book"
               className="tap-feedback mt-6 flex min-h-11 w-full items-center justify-center rounded-xl bg-teal-600 px-4 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-teal-700 sm:w-auto sm:px-6"
             >
-              Book a session
+              Book an appointment
             </Link>
           </section>
         </>
@@ -93,7 +93,7 @@ export default function DashboardWallet() {
                   >
                     <div className="min-w-0">
                       <p className="truncate text-sm font-semibold text-slate-900">{formatBookingDateAndSlot(b.date, b.timeSlot)}</p>
-                      <p className="truncate text-xs text-slate-500">{b.physioId?.name ?? 'Physio'}</p>
+                      <p className="truncate text-xs text-slate-500">{b.physioId?.name ?? 'Physiotherapist'}</p>
                     </div>
                     <div className="flex shrink-0 flex-col items-end gap-1">
                       <span className="text-sm font-bold tabular-nums text-slate-900">{formatInr(b.totalAmount)}</span>

@@ -184,9 +184,9 @@ export default function AdminPaymentsPage() {
       <AdminFlowGuide
         title="Payment flow (offline)"
         steps={[
-          'Patient pays physio in cash → physio marks installment as collected in their app.',
+          'Patient pays physiotherapist in cash → physiotherapist marks installment as collected in their app.',
           'You verify the collection here (or on the booking detail page under Installments).',
-          'Verified amounts update physio wallets — commission due appears under Finance.',
+          'Verified amounts update physiotherapist wallets — commission due appears under Finance.',
           'After sessions complete, release escrow from the booking detail page when appropriate.',
         ]}
       />
@@ -224,7 +224,7 @@ export default function AdminPaymentsPage() {
             <label className="text-xs font-medium text-gray-500">Search</label>
             <Input
               className="mt-1"
-              placeholder="Physio, patient, booking id, payment id"
+              placeholder="Physiotherapist, patient, booking id, payment id"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && applyFilters()}
@@ -287,7 +287,7 @@ export default function AdminPaymentsPage() {
             <table className="w-full min-w-[920px] text-left text-sm">
               <thead className="sticky top-0 z-10 border-b border-gray-200 bg-gray-50/95 text-xs font-semibold uppercase tracking-wide text-gray-500 backdrop-blur">
                 <tr>
-                  <th className="px-4 py-3">Physio</th>
+                  <th className="px-4 py-3">Physiotherapist</th>
                   <th className="px-4 py-3">Patient</th>
                   <th className="px-4 py-3">Amount</th>
                   <th className="px-4 py-3">Mode</th>
@@ -392,7 +392,7 @@ export default function AdminPaymentsPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog">
           <Card hover={false} className="max-w-md shadow-xl">
             <h3 className="type-page-title text-gray-900">Reject collection</h3>
-            <p className="mt-1 text-sm text-gray-600">The physio can record a fresh collection after this.</p>
+            <p className="mt-1 text-sm text-gray-600">The physiotherapist can record a fresh collection after this.</p>
             <label className="mt-4 block text-xs font-medium text-gray-500">Reason</label>
             <textarea
               className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 shadow-sm"

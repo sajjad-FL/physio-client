@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { api } from '../config/api'
-import { ISSUE_OPTIONS, ISSUE_OTHER_VALUE } from '../constants/issues'
+import { ISSUE_OPTIONS, ISSUE_OTHER_SENTINEL, ISSUE_OTHER_VALUE } from '../constants/issues'
 import Button from '../components/ui/Button'
 import Card from '../components/ui/Card'
 import Input from '../components/ui/Input'
@@ -158,7 +158,7 @@ export default function PhysioListPage() {
     if (selectedIssue) {
       if (ISSUE_OPTIONS.includes(selectedIssue)) {
         setIssue(selectedIssue)
-      } else if (selectedIssue === 'Other condition') {
+      } else if (selectedIssue === ISSUE_OTHER_SENTINEL) {
         setIssue(ISSUE_OTHER_VALUE)
       } else {
         setIssue(ISSUE_OTHER_VALUE)
@@ -278,7 +278,7 @@ export default function PhysioListPage() {
 
       if (serviceType === 'home') {
         const homeRes = await api.post('/bookings/request-home', body)
-        toast.success('Home request received. Our team will assign a physiotherapist and your physio will propose a plan.')
+        toast.success('Home request received. Our team will assign a physiotherapist and your physiotherapist will propose a plan.')
         const homeId = homeRes.data?._id
         if (homeId) {
           navigate(`/dashboard/bookings/${homeId}`, { replace: true })
@@ -382,7 +382,7 @@ export default function PhysioListPage() {
       <header className="border-b border-gray-200/80 bg-white/90 backdrop-blur-md">
         <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-4 px-4 py-6 sm:px-6">
           <div>
-            <h1 className="type-page-title text-gray-900">Book a session</h1>
+            <h1 className="type-page-title text-gray-900">Book an appointment</h1>
             <p className="mt-1 text-sm text-gray-500">
               Choose when and where — our team will pick a physiotherapist for you after booking.
             </p>
@@ -667,7 +667,7 @@ export default function PhysioListPage() {
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <h3 className="text-base font-semibold text-gray-900">Select physiotherapist</h3>
-                  <p className="mt-1 text-sm text-gray-500">Choose a registered physio for online consultation.</p>
+                  <p className="mt-1 text-sm text-gray-500">Choose a registered physiotherapist for online consultation.</p>
                 </div>
                 <button
                   type="button"

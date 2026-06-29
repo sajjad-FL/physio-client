@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Helmet } from 'react-helmet-async'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { api } from '../config/api'
 import DocumentUploadPreview from '../components/physio/DocumentUploadPreview'
@@ -82,7 +82,8 @@ function ErrorBanner({ formError, fieldErrors }) {
 
 export default function RegisterPhysioPage() {
   const navigate = useNavigate()
-  const [step, setStep] = useState(1)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const step = Math.min(5, Math.max(1, Number(searchParams.get('step')) || 1))
   const [saving, setSaving] = useState(false)
 
   const [phone, setPhone] = useState('')
@@ -130,10 +131,28 @@ export default function RegisterPhysioPage() {
   const [fieldErrors, setFieldErrors] = useState({})
   const [formError, setFormError] = useState('')
 
-  const clearErrors = () => {
+  const clearErrors = useCallback(() => {
     setFieldErrors({})
     setFormError('')
-  }
+  }, [])
+
+  const pushStep = useCallback(
+    (n) => {
+      const next = Math.min(5, Math.max(1, n))
+      if (next <= 1) setSearchParams({}, { replace: false })
+      else setSearchParams({ step: String(next) }, { replace: false })
+    },
+    [setSearchParams],
+  )
+
+  const goBackStep = useCallback(() => {
+    if (step > 1) navigate(-1)
+    else navigate('/')
+  }, [step, navigate])
+
+  useEffect(() => {
+    clearErrors()
+  }, [step, clearErrors])
 
   const patchField = useCallback(
     (name, value, extra = {}) => {
@@ -263,8 +282,7 @@ export default function RegisterPhysioPage() {
         return
       }
     }
-    setStep(targetStep)
-    clearErrors()
+    pushStep(targetStep)
   }
 
   async function goNext(fromStep) {
@@ -361,8 +379,7 @@ export default function RegisterPhysioPage() {
         }
       }
 
-      setStep(Math.min(5, fromStep + 1))
-      clearErrors()
+      pushStep(Math.min(5, fromStep + 1))
     } finally {
       setSaving(false)
     }
@@ -448,7 +465,8 @@ export default function RegisterPhysioPage() {
           toast.error('Production server still requires fee per session — deploy the latest physio-server.')
         }
       } else {
-        toastApiError(e, data?.message || 'Registration failed')
+        const { message } = toastApiError(e, data?.message || 'Registration failed')
+        setFormError(message)
       }
     } finally {
       setSaving(false)
@@ -484,14 +502,7 @@ export default function RegisterPhysioPage() {
         <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-4">
           <button
             type="button"
-            onClick={() => {
-              if (step > 1) {
-                setStep((s) => Math.max(1, s - 1))
-                clearErrors()
-              } else {
-                navigate('/')
-              }
-            }}
+            onClick={goBackStep}
             className="flex items-center gap-1.5 text-[15px] font-semibold text-teal-700 hover:opacity-80"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M15 18l-6-6 6-6"/></svg>
@@ -539,7 +550,7 @@ export default function RegisterPhysioPage() {
         </ol>
 
         <div className="space-y-2 text-center">
-          <p className="text-xs font-semibold uppercase tracking-wider text-teal-600">Physio registration</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-teal-600">Physiotherapist registration</p>
           <h1 className="type-hero text-slate-900">{STEP_HERO[step].title}</h1>
           <p className="text-sm leading-relaxed text-slate-500">{STEP_HERO[step].sub}</p>
         </div>
@@ -1092,10 +1103,7 @@ export default function RegisterPhysioPage() {
               <button
                 type="button"
                 className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
-                onClick={() => {
-                  setStep(4)
-                  clearErrors()
-                }}
+                onClick={goBackStep}
               >
                 Back
               </button>
@@ -1129,10 +1137,7 @@ export default function RegisterPhysioPage() {
               <button
                 type="button"
                 className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
-                onClick={() => {
-                  setStep((s) => Math.max(1, s - 1))
-                  clearErrors()
-                }}
+                onClick={goBackStep}
               >
                 Back
               </button>

@@ -181,7 +181,7 @@ export default function FeaturedPhysiosSection() {
             <Link to="/login" className="font-semibold text-teal-700 hover:underline">
               Sign in
             </Link>{' '}
-            to see physios matched to your exact address.
+            to see physiotherapists matched to your exact address.
           </p>
         )}
       </div>

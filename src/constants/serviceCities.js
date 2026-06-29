@@ -33,7 +33,7 @@ export const SERVICE_CITIES = [
       'Maligaon',
     ],
     seoHighlights: [
-      'physio in Guwahati',
+      'physiotherapist in Guwahati',
       'physiotherapist in Guwahati Assam',
       'home physiotherapy near me in Guwahati',
     ],
@@ -48,7 +48,7 @@ export const SERVICE_CITIES = [
     lat: 26.3221,
     lng: 91.0069,
     tagline:
-      'Verified home visit physios serving Barpeta town, Barpeta Road, Howly, Sarthebari, Pathsala and other Barpeta district localities.',
+      'Verified home visit physiotherapists serving Barpeta town, Barpeta Road, Howly, Sarthebari, Pathsala and other Barpeta district localities.',
     neighborhoods: [
       'Barpeta Town',
       'Barpeta Road',
@@ -60,9 +60,9 @@ export const SERVICE_CITIES = [
       'Bhawanipur',
     ],
     seoHighlights: [
-      'physio in Barpeta',
+      'physiotherapist in Barpeta',
       'physiotherapist in Barpeta Assam',
-      'home visit physio in Barpeta Road',
+      'home visit physiotherapist in Barpeta Road',
     ],
     seoIntro:
       'PhysiOkhom supports families across Barpeta district with scheduled home sessions for pain relief, post-surgery recovery, and mobility care.',
@@ -77,7 +77,7 @@ export const SERVICE_CITIES = [
     tagline:
       'Book a physiotherapist at home in New Bongaigaon, Chapaguri Road, Barpara, Abhayapuri, Boitamari and more.',
     seoHighlights: [
-      'physio in Bongaigaon',
+      'physiotherapist in Bongaigaon',
       'physiotherapist in Bongaigaon Assam',
       'home visit physiotherapy in New Bongaigaon',
     ],
@@ -104,7 +104,7 @@ export const SERVICE_CITIES = [
     lat: 26.4883,
     lng: 90.6906,
     tagline:
-      'Home visit physios across Bijni town, Dhaligaon, Runikhata, Amguri, Panbari and other Chirang localities around Bijni.',
+      'Home visit physiotherapists across Bijni town, Dhaligaon, Runikhata, Amguri, Panbari and other Chirang localities around Bijni.',
     neighborhoods: [
       'Bijni Town',
       'Dhaligaon',
@@ -116,7 +116,7 @@ export const SERVICE_CITIES = [
       'NH-31',
     ],
     seoHighlights: [
-      'physio in Bijni',
+      'physiotherapist in Bijni',
       'physiotherapist in Bijni Assam',
       'home visit physiotherapy near Bijni town',
     ],
@@ -131,9 +131,9 @@ export const SERVICE_CITIES = [
     lat: 26.4008,
     lng: 90.2711,
     tagline:
-      'Verified home visit physios serving Kokrajhar town, Gossaigaon, Dotma, Salakati, Fakiragram and other Kokrajhar localities.',
+      'Verified home visit physiotherapists serving Kokrajhar town, Gossaigaon, Dotma, Salakati, Fakiragram and other Kokrajhar localities.',
     seoHighlights: [
-      'physio in Kokrajhar',
+      'physiotherapist in Kokrajhar',
       'physiotherapist in Kokrajhar Assam',
       'home physiotherapy near me in Kokrajhar district',
     ],

@@ -409,7 +409,7 @@ export default function AdminFinancePage() {
     () => [
       { label: 'Total revenue', value: summary?.totalRevenue, sub: 'Gross from paid bookings' },
       { label: 'Platform fee collected', value: summary?.totalCommission, sub: 'Platform share' },
-      { label: 'Platform fee due', value: summary?.pendingSettlements, sub: 'Owed by physios' },
+      { label: 'Platform fee due', value: summary?.pendingSettlements, sub: 'Owed by physiotherapists' },
       {
         label: 'Pending payouts',
         value: summary?.pendingPayoutsAmount,
@@ -429,7 +429,7 @@ export default function AdminFinancePage() {
     <div className="space-y-6">
       <AdminPageHeader
         title="Wallets & payouts"
-        subtitle="Track physio earnings, record commission settlements, and approve withdrawal requests."
+        subtitle="Track physiotherapist earnings, record commission settlements, and approve withdrawal requests."
         breadcrumbs={[{ label: 'Admin', to: '/admin' }, { label: 'Wallets & payouts' }]}
         actions={
           <>
@@ -442,10 +442,10 @@ export default function AdminFinancePage() {
       <AdminFlowGuide
         title="Finance flow"
         steps={[
-          'Verified payments (from Payment queue) credit physio wallets and accrue platform commission.',
-          'Use Commission due filter to find physios who owe the platform — record settlement when they pay back.',
+          'Verified payments (from Payment queue) credit physiotherapist wallets and accrue platform commission.',
+          'Use Commission due filter to find physiotherapists who owe the platform — record settlement when they pay back.',
           'Approve pending payout requests to debit withdrawable balance after you transfer funds externally.',
-          'Open a physio row for full wallet history, settlements, and recent ledger activity.',
+          'Open a physiotherapist row for full wallet history, settlements, and recent ledger activity.',
         ]}
       />
 
@@ -472,7 +472,7 @@ export default function AdminFinancePage() {
       <div className="border-b border-gray-200 bg-white px-4 py-1 rounded-xl shadow-sm">
         <nav className="-mb-px flex space-x-6" aria-label="Tabs">
           {[
-            { id: 'wallets', label: 'Physio Wallets' },
+            { id: 'wallets', label: 'Physiotherapist wallets' },
             { id: 'queue', label: 'Payment Queue' + (queuePendingVerification > 0 ? ` (${queuePendingVerification})` : '') },
             { id: 'withdrawals', label: 'Withdrawal Requests' + (summary?.pendingPayoutsCount > 0 ? ` (${summary.pendingPayoutsCount})` : '') },
           ].map((tab) => {
@@ -523,7 +523,7 @@ export default function AdminFinancePage() {
             </div>
             <div className="mt-4 flex flex-wrap gap-3">
               <div className="min-w-[200px] flex-1">
-                <label className="text-xs font-medium text-gray-500">Search physio</label>
+                <label className="text-xs font-medium text-gray-500">Search physiotherapist</label>
                 <Input
                   className="mt-1"
                   placeholder="Name or phone"
@@ -557,14 +557,14 @@ export default function AdminFinancePage() {
               <div className="p-12 text-center text-sm text-gray-500">Loading…</div>
             ) : walletRows.length === 0 ? (
               <div className="p-12 text-center">
-                <p className="text-sm font-medium text-gray-900">No physio wallets found</p>
+                <p className="text-sm font-medium text-gray-900">No physiotherapist wallets found</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[960px] text-left text-sm">
                   <thead className="sticky top-0 z-10 border-b border-gray-200 bg-gray-50/95 text-xs font-semibold uppercase tracking-wide text-gray-500 backdrop-blur">
                     <tr>
-                      <th className="px-4 py-3">Physio</th>
+                      <th className="px-4 py-3">Physiotherapist</th>
                       <th className="px-4 py-3">Total Earned</th>
                       <th className="px-4 py-3">Withdrawable</th>
                       <th className="px-4 py-3">Platform Fee Owed</th>
@@ -670,7 +670,7 @@ export default function AdminFinancePage() {
                 <label className="text-xs font-medium text-gray-500">Search</label>
                 <Input
                   className="mt-1"
-                  placeholder="Physio, patient, booking id, payment id"
+                  placeholder="Physiotherapist, patient, booking id, payment id"
                   value={queueSearch}
                   onChange={(e) => setQueueSearch(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && applyQueueFilters()}
@@ -732,7 +732,7 @@ export default function AdminFinancePage() {
                 <table className="w-full min-w-[920px] text-left text-sm">
                   <thead className="sticky top-0 z-10 border-b border-gray-200 bg-gray-50/95 text-xs font-semibold uppercase tracking-wide text-gray-500 backdrop-blur">
                     <tr>
-                      <th className="px-4 py-3">Physio</th>
+                      <th className="px-4 py-3">Physiotherapist</th>
                       <th className="px-4 py-3">Patient</th>
                       <th className="px-4 py-3">Amount</th>
                       <th className="px-4 py-3">Mode</th>
@@ -822,7 +822,7 @@ export default function AdminFinancePage() {
           <Card hover={false} className="p-4 sm:p-5">
             <div className="flex flex-wrap gap-3">
               <div className="min-w-[200px] flex-1">
-                <label className="text-xs font-medium text-gray-500">Search physio</label>
+                <label className="text-xs font-medium text-gray-500">Search physiotherapist</label>
                 <Input
                   className="mt-1"
                   placeholder="Name or phone"
@@ -862,7 +862,7 @@ export default function AdminFinancePage() {
                 <table className="w-full min-w-[960px] text-left text-sm">
                   <thead className="sticky top-0 z-10 border-b border-gray-200 bg-gray-50/95 text-xs font-semibold uppercase tracking-wide text-gray-500 backdrop-blur">
                     <tr>
-                      <th className="px-4 py-3">Physio</th>
+                      <th className="px-4 py-3">Physiotherapist</th>
                       <th className="px-4 py-3">Withdrawable Balance</th>
                       <th className="px-4 py-3">Requested Amount</th>
                       <th className="px-4 py-3">Date Requested</th>
@@ -1015,7 +1015,7 @@ export default function AdminFinancePage() {
                   and record a withdrawal transaction.
                 </>
               ) : (
-                <>This leaves the physio&apos;s balance unchanged. They can submit a new request later.</>
+                <>This leaves the physiotherapist&apos;s balance unchanged. They can submit a new request later.</>
               )}
             </p>
             <label className="mt-4 block text-xs font-medium text-gray-600">
@@ -1079,7 +1079,7 @@ export default function AdminFinancePage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog">
           <Card hover={false} className="max-w-md shadow-xl">
             <h3 className="type-page-title text-gray-900">Reject collection</h3>
-            <p className="mt-1 text-sm text-gray-600">The physio can record a fresh collection after this.</p>
+            <p className="mt-1 text-sm text-gray-600">The physiotherapist can record a fresh collection after this.</p>
             <label className="mt-4 block text-xs font-medium text-gray-500">Reason</label>
             <textarea
               className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 shadow-sm"

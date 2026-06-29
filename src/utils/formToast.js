@@ -8,6 +8,15 @@ export function parseApiError(err) {
   if (!err) {
     return { message: 'Unknown error', errors: null, status: undefined }
   }
+  const status = err.response?.status
+  if (status === 413) {
+    return {
+      message:
+        'Upload too large for the server. Each file must be under 2MB; try fewer or smaller files, or contact support if this persists.',
+      errors: null,
+      status: 413,
+    }
+  }
   const data = err.response?.data
   const message =
     (typeof data?.message === 'string' && data.message.trim()) ||
@@ -15,7 +24,6 @@ export function parseApiError(err) {
     'Something went wrong'
   const errors =
     data?.errors && typeof data.errors === 'object' && !Array.isArray(data.errors) ? data.errors : null
-  const status = err.response?.status
   return { message, errors, status }
 }
 

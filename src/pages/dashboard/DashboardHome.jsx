@@ -149,7 +149,7 @@ export default function DashboardHome() {
                 </div>
                 <div className="min-w-0">
                   <p className="truncate text-[11px] font-bold text-white">
-                    {nextSession.booking.physioId?.name || 'Physio TBD'}
+                    {nextSession.booking.physioId?.name || 'Physiotherapist TBD'}
                   </p>
                   <p className="text-[9px] text-white/70">
                     {nextSession.booking.physioId?.specialization || 'Verified Physiotherapist'} ·{' '}
@@ -169,8 +169,8 @@ export default function DashboardHome() {
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0d9488" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg>
               </div>
               <div className="flex-1">
-                <p className="text-[15px] font-bold text-teal-700">Book a session</p>
-                <p className="text-xs text-slate-500">Find a verified physio near you</p>
+                <p className="text-[15px] font-bold text-teal-700">Book an appointment</p>
+                <p className="text-xs text-slate-500">Find a verified physiotherapist near you</p>
               </div>
               <svg className="h-4 w-4 text-slate-300" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden><path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>
             </Link>
@@ -245,7 +245,7 @@ export default function DashboardHome() {
                           <p className="truncate text-sm font-bold text-slate-900">
                             {formatBookingDateAndSlot(b.date, b.timeSlot)}
                           </p>
-                          <p className="truncate text-xs text-slate-500">{b.physioId?.name ?? 'Physio'}</p>
+                          <p className="truncate text-xs text-slate-500">{b.physioId?.name ?? 'Physiotherapist'}</p>
                         </div>
                         <div className="flex shrink-0 items-center gap-2">
                           <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ${st.cls}`}>{st.label}</span>

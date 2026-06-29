@@ -138,7 +138,7 @@ export default function AdminDirectoryPage() {
     <div className="space-y-6">
       <AdminPageHeader
         title="Users"
-        subtitle="Browse registered patient and physio accounts. To manage physio profiles, verification, or payouts, use the links below."
+        subtitle="Browse registered patient and physiotherapist accounts. To manage physiotherapist profiles, verification, or payouts, use the links below."
         breadcrumbs={[{ label: 'Admin', to: '/admin' }, { label: 'Users' }]}
         actions={
           <>
@@ -165,15 +165,15 @@ export default function AdminDirectoryPage() {
             <Select className="mt-1" value={userRole} onChange={(e) => setUserRole(e.target.value)}>
               <option value="">All roles</option>
               <option value="user">User</option>
-              <option value="physio">Physio</option>
+              <option value="physio">Physiotherapist</option>
               <option value="admin">Admin</option>
             </Select>
           </div>
           <div>
-            <label className="text-xs font-medium text-slate-500">Physio link</label>
+            <label className="text-xs font-medium text-slate-500">Physiotherapist link</label>
             <Select className="mt-1" value={userLinked} onChange={(e) => setUserLinked(e.target.value)}>
               <option value="">All</option>
-              <option value="true">Linked to physio profile</option>
+              <option value="true">Linked to physiotherapist profile</option>
               <option value="false">Not linked</option>
             </Select>
           </div>
@@ -217,14 +217,14 @@ export default function AdminDirectoryPage() {
                       <div className="text-xs text-slate-500">{u.email || u._id}</div>
                       {u.isLinkedPhysio && (
                         <Link to="/admin/physios" className="mt-1 inline-block text-xs font-medium text-teal-700 hover:underline">
-                          Has physio profile
+                          Has physiotherapist profile
                         </Link>
                       )}
                     </td>
                     <td className="px-4 py-3 text-slate-700">{u.phone || '-'}</td>
                     <td className="px-4 py-3">
                       <Badge tone={u.role === 'admin' ? 'blue' : u.role === 'physio' ? 'green' : 'slate'}>
-                        {u.role || 'user'}
+                        {u.role === 'physio' ? 'Physiotherapist' : u.role === 'admin' ? 'Admin' : u.role || 'User'}
                       </Badge>
                     </td>
                     <td className="px-4 py-3 text-slate-600">{u.location || '-'}</td>

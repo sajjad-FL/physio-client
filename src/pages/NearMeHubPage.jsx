@@ -51,7 +51,7 @@ function buildFaq(city, localities) {
   const localityLine = localities.slice(0, 3).join(', ')
   return [
     {
-      q: `How do I book a physio near me in ${city.name}?`,
+      q: `How do I book a physiotherapist near me in ${city.name}?`,
       a: `Open the ${city.name} near-me guide, select your locality, and proceed to booking. PhysiOkhom matches you with a verified home visit physiotherapist.`,
     },
     {
@@ -69,7 +69,7 @@ function buildFaq(city, localities) {
 
 function buildStructuredData({ city, canonical, faq, citySlug }) {
   const siteBase = (siteOrigin() || 'https://physiokhom.com').replace(/\/$/, '')
-  const pageName = city ? `Physio Near Me in ${city.name}` : 'Physio Near Me in Assam'
+  const pageName = city ? `Physiotherapist Near Me in ${city.name}` : 'Physiotherapist Near Me in Assam'
   const cityItem = city ? `${siteBase}/near-me-physio/${citySlug}` : canonical
 
   return {
@@ -80,7 +80,7 @@ function buildStructuredData({ city, canonical, faq, citySlug }) {
         '@id': `${canonical}#breadcrumbs`,
         itemListElement: [
           { '@type': 'ListItem', position: 1, name: 'Home', item: `${siteBase}/` },
-          { '@type': 'ListItem', position: 2, name: 'Near Me Physio', item: `${siteBase}/near-me-physio` },
+          { '@type': 'ListItem', position: 2, name: 'Physiotherapist Near Me', item: `${siteBase}/near-me-physio` },
           ...(city ? [{ '@type': 'ListItem', position: 3, name: `Near Me in ${city.name}`, item: cityItem }] : []),
         ],
       },
@@ -120,8 +120,8 @@ export default function NearMeHubPage() {
   const canonical = absoluteUrl(canonicalPath)
   const ogImage = absoluteUrl('/og-default.png')
   const title = city
-    ? `Physio Near Me in ${city.name} | PhysiOkhom`
-    : 'Physio Near Me in Assam | PhysiOkhom Locality Hub'
+    ? `Physiotherapist Near Me in ${city.name} | PhysiOkhom`
+    : 'Physiotherapist Near Me in Assam | PhysiOkhom Locality Hub'
   const description = city
     ? `Find a home visit physiotherapist near you in ${city.name}, ${city.state}. PhysiOkhom covers local areas like ${localities.slice(0, 3).join(', ')} with verified clinicians.`
     : 'Explore city and locality pages to find a verified home visit physiotherapist near you in Assam.'
@@ -151,7 +151,7 @@ export default function NearMeHubPage() {
         <section className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Near me search hub</p>
           <h1 className="type-hero mt-3">
-            {city ? `Physio near me in ${city.name}` : 'Find a physio near me in Assam'}
+            {city ? `Physiotherapist near me in ${city.name}` : 'Find a physiotherapist near me in Assam'}
           </h1>
           <p className="mt-4 max-w-3xl text-base leading-relaxed text-slate-600">
             {city
@@ -191,7 +191,7 @@ export default function NearMeHubPage() {
                     to={`/near-me-physio/${entry.slug}`}
                     className="block rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700 transition hover:border-teal-300 hover:text-teal-700"
                   >
-                    Physio near me in {entry.name}
+                    Physiotherapist near me in {entry.name}
                   </Link>
                 </li>
               ))}
@@ -201,7 +201,7 @@ export default function NearMeHubPage() {
 
         <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
           <h2 className="type-page-title">
-            {city ? `FAQ: physio near me in ${city.name}` : 'FAQ: physio near me in Assam'}
+            {city ? `FAQ: physiotherapist near me in ${city.name}` : 'FAQ: physiotherapist near me in Assam'}
           </h2>
           <dl className="mt-6 space-y-6">
             {faq.map(({ q, a }) => (

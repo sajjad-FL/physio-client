@@ -101,7 +101,7 @@ export default function MapView() {
           const res = await api.get('/physios/nearby', { params: { lat, lng, limit: 30 } })
           setPhysios(res.data?.physios || [])
           if (res.data?.fallbackUsed) {
-            setNotice('No nearby physios, showing closest available')
+            setNotice('No nearby physiotherapists, showing closest available')
           }
         } catch (e) {
           setError(e.response?.data?.message || 'Could not load nearby physiotherapists')
@@ -129,7 +129,7 @@ export default function MapView() {
         <p style="margin:0 0 2px;color:#4b5563">${p.experience || 0} years experience</p>
         <p style="margin:0 0 8px;color:#111827">INR ${formatPhysioSessionFeeLabel(p).replace(/^₹/, '')}/session</p>
         <button data-action="select" data-physio-id="${p._id}" style="width:100%;background:#2563eb;color:#fff;border:none;border-radius:8px;padding:7px 10px;cursor:pointer;font-size:12px;font-weight:600">
-          Select Physio
+          Select physiotherapist
         </button>
       </div>
     `
@@ -261,7 +261,7 @@ export default function MapView() {
       })
       .catch(() => {
         if (!cancelled) {
-          setRouteError('Could not load driving directions. Try again or pick another physio.')
+          setRouteError('Could not load driving directions. Try again or pick another physiotherapist.')
           removeRouteLayer(map)
           setRouteInfo(null)
         }
@@ -298,7 +298,7 @@ export default function MapView() {
       <div className="mx-auto max-w-[1600px] px-4 py-6 sm:px-6 lg:px-8">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h1 className="type-page-title text-gray-900">Map &amp; nearby physios</h1>
+            <h1 className="type-page-title text-gray-900">Map &amp; nearby physiotherapists</h1>
             <p className="mt-1 text-sm text-gray-500">
               Explore nearby therapists on the map (optional). Booking does not require a selection — our team assigns a
               physiotherapist after you submit.

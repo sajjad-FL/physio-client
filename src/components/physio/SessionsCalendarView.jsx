@@ -75,7 +75,7 @@ export default function SessionsCalendarView({ bookings, basePath = '/physio/boo
                       <p className="mt-0.5 truncate text-sm text-gray-700">{b.userId?.name ?? '—'}</p>
                       {showPhysio && (
                         <p className="mt-0.5 truncate text-xs text-gray-500">
-                          Physio: {b.physioId?.name ?? 'Unassigned'}
+                          Physiotherapist: {b.physioId?.name ?? 'Unassigned'}
                         </p>
                       )}
                     </div>

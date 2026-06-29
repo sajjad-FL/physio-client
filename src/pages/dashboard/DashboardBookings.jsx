@@ -79,7 +79,7 @@ export default function DashboardBookings() {
       ) : totalLoaded === 0 ? (
         <EmptyState
           title="No bookings yet"
-          description="Book a session to see it here."
+          description="Book an appointment to see it here."
           icon={
             <svg className="mx-auto h-12 w-12 text-slate-400" fill="none" stroke="currentColor" strokeWidth={1} viewBox="0 0 24 24">
               <path
@@ -94,7 +94,7 @@ export default function DashboardBookings() {
             to="/book"
             className="tap-feedback flex min-h-11 w-full items-center justify-center rounded-xl bg-teal-600 px-5 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-teal-700 sm:w-auto"
           >
-            Book your first session
+            Book your first appointment
           </Link>
         </EmptyState>
       ) : (
@@ -137,7 +137,7 @@ export default function DashboardBookings() {
               <p className="mt-2 text-sm text-slate-500">
                 {filter === 'range' && (!dateRange?.[0] || !dateRange?.[1])
                   ? 'Pick a start and end date in filters.'
-                  : 'Try another filter or book a new session.'}
+                  : 'Try another filter or book a new appointment.'}
               </p>
               <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-center sm:gap-3">
                 <button
@@ -151,7 +151,7 @@ export default function DashboardBookings() {
                   to="/book"
                   className="tap-feedback flex min-h-11 items-center justify-center rounded-xl bg-teal-600 px-4 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-teal-700"
                 >
-                  Book session
+                  Book appointment
                 </Link>
               </div>
             </div>
@@ -170,7 +170,7 @@ export default function DashboardBookings() {
                         <p className="truncate text-sm font-semibold text-slate-900">
                           {formatBookingDateAndSlot(b.date, b.timeSlot)}
                         </p>
-                        <p className="truncate text-xs text-slate-500">{b.physioId?.name ?? 'Physio'}</p>
+                        <p className="truncate text-xs text-slate-500">{b.physioId?.name ?? 'Physiotherapist'}</p>
                         <div className="mt-1 flex flex-wrap gap-1 sm:hidden">
                           <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ${st.cls}`}>{st.label}</span>
                           <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ${pay.cls}`}>{pay.label}</span>

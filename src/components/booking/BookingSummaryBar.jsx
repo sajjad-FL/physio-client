@@ -31,17 +31,17 @@ export default function BookingSummaryBar({
             <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 text-sm text-gray-800">
               {onlineNeedsPhysio ? (
                 <span className="font-semibold text-amber-800">
-                  <span className="text-gray-500">Physio · </span>
+                  <span className="text-gray-500">Physiotherapist · </span>
                   Not selected — choose in step 4
                 </span>
               ) : teamAssigns ? (
                 <span className="font-semibold text-gray-900">
-                  <span className="text-gray-500">Physio · </span>
+                  <span className="text-gray-500">Physiotherapist · </span>
                   Picked by our team
                 </span>
               ) : (
                 <span className="font-semibold text-gray-900">
-                  <span className="text-gray-500">Physio · </span>
+                  <span className="text-gray-500">Physiotherapist · </span>
                   {selectedPhysio.name}
                 </span>
               )}
@@ -54,7 +54,7 @@ export default function BookingSummaryBar({
             </div>
             <p className="text-xs text-gray-500">
               {serviceType === 'home'
-                ? 'Home visit — our team will pick a physio after you confirm.'
+                ? 'Home visit — our team will pick a physiotherapist after you confirm.'
                 : onlineNeedsPhysio
                   ? 'Select a physiotherapist above before you can confirm.'
                   : teamAssigns

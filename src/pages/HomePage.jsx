@@ -31,12 +31,14 @@ import {
   AlertCircle,
   CheckCircle2,
 } from 'lucide-react'
-import { ISSUE_OPTIONS } from '../constants/issues'
+import { ISSUE_OPTIONS, ISSUE_OTHER_SENTINEL } from '../constants/issues'
 import { SERVICE_CITIES } from '../constants/serviceCities'
 import SiteHeader from '../components/layout/SiteHeader'
 import { usePricingSettings, FALLBACK_PRICING_SETTINGS } from '../hooks/usePricingSettings'
 import { buildPlanTierCards } from '../utils/planTierDisplay'
 import FeaturedPhysiosSection from '../components/home/FeaturedPhysiosSection'
+import PainBodyMapPanel from '../components/booking/PainBodyMapPanel'
+import PainViewModeToggle from '../components/booking/PainViewModeToggle'
 import { absoluteUrl, primaryServiceAreas, primaryServiceAreasSentence, siteOrigin } from '../utils/siteMeta'
 import { getToken } from '../auth/session'
 import { api } from '../config/api'
@@ -66,7 +68,7 @@ import illustrationNeuroRehab from '../assets/illustration_neuro_rehab.png'
 
 const HOME_TITLE = 'PhysiOkhom — Home Visit Physiotherapy in Assam'
 const HOME_DESCRIPTION =
-  'Looking for a physio near you in Assam? PhysiOkhom connects patients with verified home visit physiotherapists in Guwahati, Barpeta, Bongaigaon, Bijni, and Kokrajhar for back pain, knee pain, post-surgery rehab, and stroke recovery.'
+  'Looking for a physiotherapist near you in Assam? PhysiOkhom connects patients with verified home visit physiotherapists in Guwahati, Barpeta, Bongaigaon, Bijni, and Kokrajhar for back pain, knee pain, post-surgery rehab, and stroke recovery.'
 
 const HOME_FAQ = [
   {
@@ -75,7 +77,7 @@ const HOME_FAQ = [
     cat: 'Booking',
   },
   {
-    q: 'Is this physio at home or in a clinic?',
+    q: 'Is this physiotherapist at home or in a clinic?',
     a: 'Our focus is home visit physiotherapy so you can recover where you are comfortable, without the clinic commute.',
     cat: 'Booking',
   },
@@ -161,7 +163,7 @@ function homeStructuredData({ siteBase, ogImage, areas }) {
 
 const STAT_PILLS = [
   { Icon: CheckCircle2, label: '500+ Sessions' },
-  { Icon: BadgeCheck, label: 'Verified Physios' },
+  { Icon: BadgeCheck, label: 'Verified Physiotherapists' },
   { Icon: MapPin, label: 'Across Assam' },
 ]
 
@@ -178,20 +180,6 @@ const TECHNIQUES = [
   { title: 'Cupping Therapy', image: techniqueCupping,   bg: 'bg-[#fff7ed]', color: 'text-[#c2410c]' },
   { title: 'Dry Needling',   image: techniqueNeedling,  bg: 'bg-[#f5f3ff]', color: 'text-[#6d28d9]' },
   { title: 'Kinesio Taping', image: techniqueKinesio,   bg: 'bg-[#e6f4f3]', color: 'text-[#0d6b6b]' },
-]
-
-const FRONT_SPOTS = [
-  { id: 'neck', name: 'Neck & Cervical Care', issue: 'Neck Pain', top: '25px', left: '60px', icon: Sparkles, desc: 'Stiffness, cervical spondylosis, nerve strain' },
-  { id: 'shoulder_l', name: 'Left Shoulder Care', issue: 'Neck Pain', top: '40px', left: '28px', icon: Sparkles, desc: 'Frozen shoulder, rotatory stiffness, impingement' },
-  { id: 'shoulder_r', name: 'Right Shoulder Care', issue: 'Neck Pain', top: '40px', left: '92px', icon: Sparkles, desc: 'Frozen shoulder, rotatory stiffness, impingement' },
-  { id: 'knee_l', name: 'Left Knee Joint', issue: 'Knee Pain', top: '162px', left: '41px', icon: Activity, desc: 'Arthritis, ligament tear, meniscus injury' },
-  { id: 'knee_r', name: 'Right Knee Joint', issue: 'Knee Pain', top: '162px', left: '79px', icon: Activity, desc: 'Arthritis, ligament tear, meniscus injury' },
-]
-
-const BACK_SPOTS = [
-  { id: 'upper_back', name: 'Upper Spine & Posture', issue: 'Neck Pain', top: '45px', left: '60px', icon: Sparkles, desc: 'Upper back postural strain, thoracic stiffness' },
-  { id: 'lower_back', name: 'Lower Back Care', issue: 'Back Pain', top: '85px', left: '60px', icon: Home, desc: 'Sciatica, slip disc, lumbar muscle spasms' },
-  { id: 'neuro_rehab', name: 'Stroke Rehabilitation', issue: 'Neuro Rehab', top: '15px', left: '78px', icon: HeartPulse, desc: 'Hemiplegia, neural weakness, balance issues' },
 ]
 
 const FAQ_CATEGORIES = ['All', 'Booking', 'Therapists', 'Payments']
@@ -290,9 +278,6 @@ export default function HomePage() {
 
   // Body Map & Interactive state
   const [painViewMode, setPainViewMode] = useState('grid') // 'grid' | 'map'
-  const [bodyViewSide, setBodyViewSide] = useState('front') // 'front' | 'back'
-  const [selectedSpot, setSelectedSpot] = useState(null)
-  const [selectedPainScale, setSelectedPainScale] = useState(5)
 
   // FAQs
   const [activeFaqCat, setActiveFaqCat] = useState('All')
@@ -402,57 +387,6 @@ export default function HomePage() {
     return `⚡ ${count} active specialist${count === 1 ? '' : 's'} in ${serviceAreaLabel}${ratePart}`
   }, [homeStats.loading, homeStats.activeSpecialists, homeStats.bookingRateToday, serviceAreaLabel])
 
-  const getPainColor = (val) => {
-    if (val <= 3) return '#10b981'
-    if (val <= 6) return '#f59e0b'
-    if (val <= 8) return '#f97316'
-    return '#ef4444'
-  }
-
-  const getPainBgColor = (val) => {
-    if (val <= 3) return 'rgba(16, 185, 129, 0.15)'
-    if (val <= 6) return 'rgba(245, 158, 11, 0.15)'
-    if (val <= 8) return 'rgba(249, 115, 22, 0.15)'
-    return 'rgba(239, 68, 68, 0.15)'
-  }
-
-  const getPainLabel = (val) => {
-    if (val <= 3) return 'Mild'
-    if (val <= 6) return 'Moderate'
-    if (val <= 8) return 'Severe'
-    return 'Extreme'
-  }
-
-  const getPainEmoji = (val) => {
-    if (val <= 3) return '😊'
-    if (val <= 6) return '😐'
-    if (val <= 8) return '😟'
-    return '😫'
-  }
-
-  const getClinicalGuideTitle = (val) => {
-    if (val <= 3) return 'Mild Discomfort'
-    if (val <= 6) return 'Moderate Pain'
-    if (val <= 8) return 'Severe Pain'
-    return 'Extreme Pain'
-  }
-
-  const getClinicalGuideDesc = (val) => {
-    if (val <= 3) return 'Rehab focus: gentle mobility exercises and light active stretching to recover joint range of motion. Safe for home routines.'
-    if (val <= 6) return 'Rehab focus: progressive load management, active stabilization, and customized strength routines.'
-    if (val <= 8) return 'Rehab focus: passive pain-relief modalities, gentle manual therapy, and joint mobilization. Avoid loading.'
-    return 'Rehab focus: strict pain control, postural unloading, and emergency-safe gentle manual care under direct senior oversight.'
-  }
-
-  const handleSpotSelect = (spot) => {
-    setSelectedSpot(spot)
-    setSelectedPainScale(5)
-  }
-
-  const handlePainScaleChange = (num) => {
-    setSelectedPainScale(num)
-  }
-
   const handleClaimConsultation = () => {
     setConsultationClaimed(true)
     alert(
@@ -483,7 +417,7 @@ export default function HomePage() {
     {
       name: 'Priya Bora',
       location: 'Beltola, Kokrajhar',
-      text: 'My recovery after knee surgery was much faster thanks to regular home physio sessions. The physiotherapist was professional, punctual, and very caring. Highly recommended!',
+      text: 'My recovery after knee surgery was much faster thanks to regular home physiotherapy sessions. The physiotherapist was professional, punctual, and very caring. Highly recommended!',
       initials: 'PB',
       rating: 5,
       sessions: '12 sessions completed',
@@ -516,7 +450,7 @@ export default function HomePage() {
         <meta property="og:type" content="website" />
         <meta property="og:site_name" content="PhysiOkhom" />
         <meta name="application-name" content="PhysiOkhom" />
-        <meta name="keywords" content="PhysiOkhom, physiokhom, home visit physiotherapy, physio near me, physiotherapist at home Assam, back pain physio, knee pain physio" />
+        <meta name="keywords" content="PhysiOkhom, physiokhom, home visit physiotherapy, physiotherapist near me, physiotherapist at home Assam, back pain physiotherapy, knee pain physiotherapy" />
         <meta property="og:title" content={HOME_TITLE} />
         <meta property="og:description" content={HOME_DESCRIPTION} />
         <meta property="og:url" content={canonical} />
@@ -917,7 +851,7 @@ export default function HomePage() {
                   to="/book"
                   className="inline-flex h-11 items-center justify-center gap-1 rounded-xl bg-teal-600 px-6 text-sm font-semibold text-white shadow hover:bg-teal-700 shrink-0 w-full sm:w-auto"
                 >
-                  Book a Session
+                  Book an Appointment
                   <ArrowRight size={14} />
                 </Link>
               </div>
@@ -977,8 +911,10 @@ export default function HomePage() {
                 {SPECIALTIES.map((spec) => (
                   <Link
                     key={spec.title}
-                    to={spec.id === 'Many More' ? '/book' : '/book'}
-                    state={spec.id !== 'Many More' ? { selectedIssue: spec.id } : undefined}
+                    to="/book"
+                    state={{
+                      selectedIssue: spec.id === 'Many More' ? ISSUE_OTHER_SENTINEL : spec.id,
+                    }}
                     className="flex flex-col items-center w-[112px] sm:w-[150px] text-center group cursor-pointer"
                   >
                     <div className={`w-24 h-24 sm:w-32 sm:h-32 rounded-full flex items-center justify-center transition-all duration-300 group-hover:scale-105 group-hover:shadow-lg ${spec.bg}`}>
@@ -1007,33 +943,11 @@ export default function HomePage() {
                 subtitle="Select your symptoms directly on our anatomical blueprint or choose from common categories."
               />
               
-              {/* Grid / Body Map toggle pills */}
-              <div className="flex bg-slate-200/60 p-1.5 rounded-2xl shadow-inner shrink-0 self-start md:self-auto">
-                <button
-                  type="button"
-                  onClick={() => { setPainViewMode('grid'); setSelectedSpot(null); }}
-                  className={`flex items-center gap-1.5 px-5 py-2 rounded-xl text-sm font-bold transition-all cursor-pointer ${
-                    painViewMode === 'grid'
-                      ? 'bg-white text-teal-800 shadow-md'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  <Activity size={14} className={painViewMode === 'grid' ? 'text-teal-600' : ''} />
-                  Grid
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setPainViewMode('map'); setSelectedSpot(null); }}
-                  className={`flex items-center gap-1.5 px-5 py-2 rounded-xl text-sm font-bold transition-all cursor-pointer ${
-                    painViewMode === 'map'
-                      ? 'bg-white text-teal-800 shadow-md'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  <ShieldCheck size={14} className={painViewMode === 'map' ? 'text-teal-600' : ''} />
-                  Body Map
-                </button>
-              </div>
+              <PainViewModeToggle
+                mode={painViewMode}
+                onChange={setPainViewMode}
+                className="self-start md:self-auto"
+              />
             </div>
 
             {painViewMode === 'grid' ? (
@@ -1109,7 +1023,7 @@ export default function HomePage() {
 
                 {/* Others */}
                 <button
-                  onClick={() => navigate('/book')}
+                  onClick={() => navigate('/book', { state: { selectedIssue: ISSUE_OTHER_SENTINEL } })}
                   className="text-left rounded-3xl border border-slate-200 bg-white hover:border-slate-300 hover:shadow-lg transition-all duration-300 overflow-hidden group cursor-pointer"
                 >
                   <div className="aspect-4/3 max-h-40 sm:max-h-none w-full bg-slate-50 overflow-hidden border-b border-slate-100 flex items-center justify-center p-3">
@@ -1125,208 +1039,7 @@ export default function HomePage() {
                 </button>
               </div>
             ) : (
-              /* DUAL VIEWPORT BODY MAP SPLIT SCREEN */
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-stretch bg-white border border-slate-200 rounded-3xl p-4 sm:p-6 shadow-sm overflow-hidden">
-                
-                {/* 1. Map Silhouette Box */}
-                <div className="lg:col-span-5 flex flex-col items-center justify-center p-4 sm:p-6 bg-slate-50 border border-slate-100 rounded-2xl relative overflow-hidden h-[260px] sm:h-[320px] md:h-[360px] w-full">
-                  {/* Grid Lines */}
-                  <div className="absolute inset-0 grid grid-cols-6 grid-rows-6 opacity-20 pointer-events-none">
-                    {Array.from({ length: 36 }).map((_, i) => (
-                      <div key={i} className="border-t border-l border-slate-400" />
-                    ))}
-                  </div>
-
-                  {/* Sweep scan bar overlay */}
-                  <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-teal-400 to-transparent opacity-80 scan-line-element pointer-events-none" />
-
-                  {/* Body graphic block */}
-                  <div className="relative w-[120px] h-[200px] sm:w-[140px] sm:h-[230px] scale-90 sm:scale-100 origin-center">
-                    {/* Head */}
-                    <div className="w-[26px] h-[26px] rounded-full border-[1.5px] border-slate-300 bg-white absolute top-0 left-[57px]" />
-                    {/* Neck */}
-                    <div className="w-[6px] h-[12px] border-x-[1.5px] border-slate-300 bg-white absolute top-[26px] left-[67px] border-t-0 border-b-0" />
-                    {/* Shoulders */}
-                    <div className="w-[76px] h-[12px] rounded border-[1.5px] border-slate-300 bg-white absolute top-[36px] left-[32px]" />
-                    {/* Torso */}
-                    <div className="w-[56px] h-[72px] rounded-[10px] border-[1.5px] border-slate-300 bg-white absolute top-[46px] left-[42px]" />
-                    {/* Arm Left */}
-                    <div className="w-[10px] h-[60px] rounded-full border-[1.5px] border-slate-300 bg-white absolute top-[46px] left-[20px]" />
-                    {/* Arm Right */}
-                    <div className="w-[10px] h-[60px] rounded-full border-[1.5px] border-slate-300 bg-white absolute top-[46px] left-[110px]" />
-                    {/* Hips */}
-                    <div className="w-[52px] h-[16px] rounded border-[1.5px] border-slate-300 bg-white absolute top-[116px] left-[44px]" />
-                    {/* Leg Left */}
-                    <div className="w-[15px] h-[86px] rounded-full border-[1.5px] border-slate-300 bg-white absolute top-[130px] left-[48px]" />
-                    {/* Leg Right */}
-                    <div className="w-[15px] h-[86px] rounded-full border-[1.5px] border-slate-300 bg-white absolute top-[130px] left-[77px]" />
-                    {/* Spine Line (Back view only) */}
-                    {bodyViewSide === 'back' && (
-                      <div className="w-[2px] h-[64px] bg-slate-200 absolute top-[50px] left-[69px]" />
-                    )}
-
-                    {/* Glowing hotspots */}
-                    {(bodyViewSide === 'front' ? FRONT_SPOTS : BACK_SPOTS).map((spot) => {
-                      const active = selectedSpot?.id === spot.id
-                      const borderColorVal = active ? getPainColor(selectedPainScale) : '#0d6b6b'
-                      const bgColorVal = active ? getPainBgColor(selectedPainScale) : 'rgba(13, 107, 107, 0.15)'
-                      const innerBgColorVal = active ? getPainColor(selectedPainScale) : '#0d6b6b'
-
-                      return (
-                        <button
-                          key={spot.id}
-                          type="button"
-                          onClick={() => handleSpotSelect(spot)}
-                          style={{ top: spot.top, left: spot.left }}
-                          className={`absolute w-6 h-6 sm:w-5 sm:h-5 rounded-full -ml-3 -mt-3 sm:-ml-[10px] sm:-mt-[10px] z-10 flex items-center justify-center cursor-pointer transition-all duration-300 focus:outline-none ${
-                            active ? 'scale-115 shadow-md' : 'hover:scale-105'
-                          }`}
-                        >
-                          <div
-                            style={{ borderColor: borderColorVal, backgroundColor: bgColorVal }}
-                            className="w-full h-full rounded-full border-[1.5px] flex items-center justify-center transition-all duration-300"
-                          >
-                            <div
-                              style={{ backgroundColor: innerBgColorVal }}
-                              className="w-[6px] h-[6px] rounded-full transition-all duration-300"
-                            />
-                          </div>
-                        </button>
-                      )
-                    })}
-                  </div>
-
-                  {/* Front / Back selection toggle */}
-                  <div className="flex bg-slate-200/60 p-1 rounded-xl shadow-inner mt-6 shrink-0 relative z-20">
-                    <button
-                      type="button"
-                      onClick={() => { setBodyViewSide('front'); setSelectedSpot(null); }}
-                      className={`px-5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                        bodyViewSide === 'front' ? 'bg-white text-teal-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-                      }`}
-                    >
-                      Front View
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => { setBodyViewSide('back'); setSelectedSpot(null); }}
-                      className={`px-5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                        bodyViewSide === 'back' ? 'bg-white text-teal-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-                      }`}
-                    >
-                      Back View
-                    </button>
-                  </div>
-                </div>
-
-                {/* 2. Interactive Details Panel */}
-                <div className="lg:col-span-7 flex flex-col justify-center">
-                  {selectedSpot ? (
-                    <div className="border border-teal-100 bg-teal-50/10 rounded-2xl p-5 md:p-6 space-y-6">
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-xl bg-white border border-teal-100/50 text-teal-700 flex items-center justify-center shadow-sm shrink-0">
-                          <selectedSpot.icon size={18} />
-                        </div>
-                        <div>
-                          <h4 className="font-extrabold text-slate-900 text-base">{selectedSpot.name}</h4>
-                          <p className="text-xs text-slate-500 font-semibold">{selectedSpot.desc}</p>
-                        </div>
-                      </div>
-
-                      {/* Pain Slider */}
-                      <div className="space-y-3">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <h5 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Pain Intensity Scale</h5>
-                            <p className="text-[11px] text-slate-400 font-semibold">Select level 1 (mild) to 10 (extreme)</p>
-                          </div>
-                          
-                          {/* Reactive bubble */}
-                          <div
-                            style={{ borderColor: getPainColor(selectedPainScale) + '40', backgroundColor: getPainBgColor(selectedPainScale) }}
-                            className="flex items-center gap-2 border px-3 py-1 rounded-xl shadow-sm transition-all duration-300"
-                          >
-                            <span className="text-xl">{getPainEmoji(selectedPainScale)}</span>
-                            <div>
-                              <p className="text-[10px] font-bold text-slate-500 leading-none">Intensity</p>
-                              <p style={{ color: getPainColor(selectedPainScale) }} className="text-xs font-extrabold mt-0.5 leading-none">
-                                {selectedPainScale} - {getPainLabel(selectedPainScale)}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Slider buttons */}
-                        <div className="grid grid-cols-5 sm:grid-cols-10 gap-1.5 pt-2">
-                          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => {
-                            const isSelected = selectedPainScale === num
-                            const activeColor = getPainColor(num)
-                            return (
-                              <button
-                                key={num}
-                                type="button"
-                                onClick={() => handlePainScaleChange(num)}
-                                style={isSelected ? { backgroundColor: activeColor, borderColor: activeColor, boxShadow: `0 4px 6px ${activeColor}30` } : {}}
-                                className={`h-9 rounded-lg border text-xs font-bold transition-all duration-200 cursor-pointer ${
-                                  isSelected
-                                    ? 'text-white scale-105 shadow'
-                                    : 'bg-slate-50 border-slate-100 text-slate-500 hover:bg-slate-100 hover:border-slate-200'
-                                }`}
-                              >
-                                {num}
-                              </button>
-                            )
-                          })}
-                        </div>
-                        <div className="flex justify-between text-[10px] font-bold text-slate-400 px-1 pt-1">
-                          <span>MILD</span>
-                          <span>MODERATE</span>
-                          <span>SEVERE</span>
-                          <span>EXTREME</span>
-                        </div>
-                      </div>
-
-                      {/* Clinical guidelines */}
-                      <div
-                        style={{ backgroundColor: getPainBgColor(selectedPainScale) }}
-                        className="flex items-start gap-3 p-4 rounded-xl border border-slate-100 shadow-sm"
-                      >
-                        <Shield className="w-4 h-4 shrink-0 mt-0.5" style={{ color: getPainColor(selectedPainScale) }} />
-                        <div>
-                          <h6 style={{ color: getPainColor(selectedPainScale) }} className="text-xs font-extrabold uppercase tracking-wider">
-                            Rehab Guide: {getClinicalGuideTitle(selectedPainScale)}
-                          </h6>
-                          <p className="text-xs leading-relaxed text-slate-600 font-medium mt-1">
-                            {getClinicalGuideDesc(selectedPainScale)}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* CTA Redirection */}
-                      <Link
-                        to="/book"
-                        state={{ selectedIssue: selectedSpot.issue, painRating: selectedPainScale }}
-                        style={{ backgroundColor: getPainColor(selectedPainScale) }}
-                        className="flex w-full items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold text-white shadow-md hover:opacity-90 active:scale-[0.98] transition-all cursor-pointer"
-                      >
-                        Find Doctors for {selectedSpot.issue}
-                        <ArrowRight size={14} />
-                      </Link>
-                    </div>
-                  ) : (
-                    <div className="border border-dashed border-slate-200 bg-slate-50/50 rounded-2xl p-5 sm:p-8 text-center flex flex-col items-center justify-center">
-                      <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mb-4">
-                        <Activity size={20} className="animate-pulse" />
-                      </div>
-                      <h4 className="font-bold text-slate-700 text-sm">Select body joint coordinates</h4>
-                      <p className="text-xs text-slate-500 mt-1 max-w-xs mx-auto">
-                        Click on any pulsing joint hotspot on the silhouette outline to view customized pain metrics.
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-              </div>
+              <PainBodyMapPanel bookCtaLabel={(issue) => `Find Doctors for ${issue}`} />
             )}
           </div>
         </section>
@@ -1810,7 +1523,7 @@ export default function HomePage() {
                     to={`/physio-in/${c.slug}`}
                     className="interactive-lift flex h-full items-center justify-between rounded-2xl border border-slate-200 bg-white px-5 py-4 text-sm font-bold text-slate-800 shadow-sm transition hover:border-teal-300 hover:text-teal-700"
                   >
-                    <span>Physio in {c.name}</span>
+                    <span>Physiotherapist in {c.name}</span>
                     <ChevronRight size={15} className="text-teal-500" />
                   </Link>
                 </li>
@@ -1822,7 +1535,7 @@ export default function HomePage() {
               <p className="mt-2 text-sm leading-relaxed text-slate-600 font-semibold">
                 People often search for{' '}
                 <Link to="/physio-in/bongaigaon" className="font-bold text-teal-700 hover:underline">
-                  physio in Bongaigaon
+                  physiotherapist in Bongaigaon
                 </Link>{' '}
                 and{' '}
                 <Link to="/physio-in/kokrajhar" className="font-bold text-teal-700 hover:underline">
@@ -1902,20 +1615,20 @@ export default function HomePage() {
             <div>
               <p className="mb-4 text-xs font-bold uppercase tracking-wider text-slate-500">For Patients</p>
               <nav className="flex flex-col gap-2.5 text-xs font-semibold text-slate-400">
-                <Link to="/book" className="transition-colors hover:text-white">Book a physio</Link>
+                <Link to="/book" className="transition-colors hover:text-white">Book a physiotherapist</Link>
                 <Link to="/register" className="transition-colors hover:text-white">Create account</Link>
                 <Link to="/login" className="transition-colors hover:text-white">Sign in</Link>
                 <a href="#services" className="transition-colors hover:text-white">Conditions we treat</a>
-                <Link to="/near-me-physio" className="transition-colors hover:text-white">Find physio near me</Link>
+                <Link to="/near-me-physio" className="transition-colors hover:text-white">Find physiotherapist near me</Link>
               </nav>
             </div>
 
-            {/* For physios & Legal */}
+            {/* For physiotherapists & Legal */}
             <div>
               <p className="mb-4 text-xs font-bold uppercase tracking-wider text-slate-500">For Clinicians</p>
               <nav className="flex flex-col gap-2.5 text-xs font-semibold text-slate-400 mb-5">
                 <Link to="/register-physio" className="transition-colors hover:text-white">Join as physiotherapist</Link>
-                <Link to="/login" className="transition-colors hover:text-white">Physio sign in</Link>
+                <Link to="/login" className="transition-colors hover:text-white">Physiotherapist sign in</Link>
               </nav>
               <p className="mb-4 text-xs font-bold uppercase tracking-wider text-slate-500">Legal</p>
               <nav className="flex flex-col gap-2.5 text-xs font-semibold text-slate-400">
@@ -1929,7 +1642,7 @@ export default function HomePage() {
               <nav className="flex flex-col gap-2.5 text-xs font-semibold text-slate-400">
                 {SERVICE_CITIES.slice(0, 5).map((c) => (
                   <Link key={c.slug} to={`/physio-in/${c.slug}`} className="transition-colors hover:text-white">
-                    Physio in {c.name}
+                    Physiotherapist in {c.name}
                   </Link>
                 ))}
               </nav>

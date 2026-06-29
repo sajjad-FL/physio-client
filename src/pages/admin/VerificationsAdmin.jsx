@@ -189,7 +189,7 @@ export default function VerificationsAdmin({ embedded = false }) {
         <>
           <h1 className="type-page-title text-slate-900">Verification queue</h1>
           <p className="mt-2 text-sm text-slate-500">
-            Review new physio applications with submitted documents. Approved physios can accept bookings.
+            Review new physiotherapist applications with submitted documents. Approved physiotherapists can accept bookings.
           </p>
         </>
       )}
@@ -296,7 +296,7 @@ export default function VerificationsAdmin({ embedded = false }) {
                 to={`/admin/physios/${viewing._id}`}
                 className="text-sm font-medium text-brand hover:underline"
               >
-                Open full physio page (tier &amp; rejection reason) →
+                Open full physiotherapist page (tier &amp; rejection reason) →
               </Link>
               <div className="flex flex-wrap gap-2">
                 <button

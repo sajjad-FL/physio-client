@@ -170,7 +170,7 @@ export default function AdminPricingSettingsPage() {
                 value={defaultBookingAmountRupees}
                 onChange={(e) => setDefaultBookingAmountRupees(e.target.value)}
               />
-              <span className="mt-1 block text-[11px] text-slate-500">Home bookings before physio assign; online fallback</span>
+              <span className="mt-1 block text-[11px] text-slate-500">Home bookings before physiotherapist assign; online fallback</span>
             </label>
             <label className="block text-xs font-medium text-slate-600">
               Platform commission (%)
@@ -185,7 +185,7 @@ export default function AdminPricingSettingsPage() {
               />
             </label>
             <label className="block text-xs font-medium text-slate-600">
-              Suggested physio rate (₹)
+              Suggested physiotherapist rate (₹)
               <input
                 type="number"
                 min={0}
@@ -212,7 +212,7 @@ export default function AdminPricingSettingsPage() {
 
         <Card>
           <h2 className="type-page-title text-slate-900">Travel surcharge</h2>
-          <p className="mt-1 text-sm text-slate-600">Applied per home visit when admin assigns a physio.</p>
+          <p className="mt-1 text-sm text-slate-600">Applied per home visit when admin assigns a physiotherapist.</p>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <label className="block text-xs font-medium text-slate-600">
               Free km included

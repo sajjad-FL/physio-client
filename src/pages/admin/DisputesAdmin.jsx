@@ -200,7 +200,7 @@ export default function DisputesAdmin() {
                 <dd>
                   Patient: {detail.bookingId?.userId?.name || '—'}
                   <br />
-                  Physio: {detail.bookingId?.physioId?.name || '—'}
+                  Physiotherapist: {detail.bookingId?.physioId?.name || '—'}
                 </dd>
               </div>
               <div>

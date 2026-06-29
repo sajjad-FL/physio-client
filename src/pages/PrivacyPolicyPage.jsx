@@ -170,7 +170,7 @@ export default function PrivacyPolicyPage() {
           </div>
           <nav className="flex gap-x-6 text-sm font-medium text-white/90" aria-label="Footer Navigation">
             <Link to="/" className="hover:text-white">Home</Link>
-            <Link to="/book" className="hover:text-white">Book Physio</Link>
+            <Link to="/book" className="hover:text-white">Book physiotherapist</Link>
           </nav>
         </div>
       </footer>

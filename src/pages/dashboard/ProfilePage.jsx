@@ -143,7 +143,7 @@ export default function ProfilePage() {
       return { to: '/admin', label: '← Admin' }
     }
     if (isPhysio) {
-      return { to: '/physio/bookings', label: '← Physio workspace' }
+      return { to: '/physio/bookings', label: '← Physiotherapist workspace' }
     }
     return { to: '/dashboard', label: '← Dashboard' }
   }

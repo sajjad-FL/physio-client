@@ -814,7 +814,7 @@ export default function AdminBookingDetailPage() {
                   <p className="mt-1.5 text-[11px] text-ink-muted">
                     The patient will be charged this amount
                     {b?.sessions > 1 ? ` × ${b.sessions} session${b.sessions === 1 ? '' : 's'}` : ''}.
-                    Physio earning and platform commission are recalculated automatically.
+                    Physiotherapist earning and platform commission are recalculated automatically.
                   </p>
                   {assignPreview && (
                     <div className="mt-2 rounded-lg bg-slate-50 px-3 py-2 text-[11px] text-slate-700 ring-1 ring-slate-200">
@@ -907,7 +907,7 @@ export default function AdminBookingDetailPage() {
           <Card hover={false} className="w-full max-w-md shadow-xl">
             <h3 className="type-page-title text-ink">Reject installment</h3>
             <p className="mt-2 text-sm text-ink-muted">
-              This will mark the collection as rejected; the physio can record a corrected one.
+              This will mark the collection as rejected; the physiotherapist can record a corrected one.
             </p>
             <label htmlFor="reject-reason" className="mt-4 block text-sm font-medium text-ink">
               Reason

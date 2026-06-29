@@ -167,7 +167,7 @@ export default function PhysiosAdmin() {
         }
       }
       await api.post('/admin/physios/from-user', body)
-      toast.success('Physio profile created and linked to user')
+      toast.success('Physiotherapist profile created and linked to user')
       setSelectedUserId('')
       setFuSpec('')
       setFuName('')
@@ -179,7 +179,7 @@ export default function PhysiosAdmin() {
     } catch (err) {
       const msg = err.response?.data?.message || err.message || 'Could not create from user'
       setError(msg)
-      toastApiError(err, 'Could not create physio from user')
+      toastApiError(err, 'Could not create physiotherapist from user')
     } finally {
       setSubmittingFromUser(false)
     }
@@ -257,7 +257,7 @@ export default function PhysiosAdmin() {
     try {
       await api.patch(`/admin/physios/${id}/verify`, { status, ...extra })
       const ok = status === 'verified' || status === 'approved'
-      toast.success(ok ? 'Physio approved' : 'Physio rejected')
+      toast.success(ok ? 'Physiotherapist approved' : 'Physiotherapist rejected')
       await load()
     } catch (err) {
       const msg = err.response?.data?.message || err.message || 'Verification update failed'
@@ -348,7 +348,7 @@ export default function PhysiosAdmin() {
 
       <AdminPageHeader
         title="Physiotherapists"
-        subtitle="Manage the physio directory, approve new applications, and create profiles."
+        subtitle="Manage the physiotherapist directory, approve new applications, and create profiles."
         breadcrumbs={[{ label: 'Admin', to: '/admin' }, { label: 'Physiotherapists' }]}
         actions={
           activeTab === 'directory' ? (
@@ -406,7 +406,7 @@ export default function PhysiosAdmin() {
       >
         <h2 className="type-page-title text-ink">Add from patient account</h2>
         <p className="mt-1 text-sm text-ink-muted">
-          Pick an existing user (no physio profile yet). Their phone is used for OTP login. Add specialization and
+          Pick an existing user (no physiotherapist profile yet). Their phone is used for OTP login. Add specialization and
           optional overrides.
         </p>
         <div className="mt-8 grid gap-5 sm:grid-cols-2">
@@ -430,7 +430,7 @@ export default function PhysiosAdmin() {
               ))}
             </select>
             {candidates.length === 0 && (
-              <p className="mt-2 text-xs text-ink-muted">No users without a physio link, or list is empty.</p>
+              <p className="mt-2 text-xs text-ink-muted">No users without a physiotherapist link, or list is empty.</p>
             )}
           </div>
           <div className="sm:col-span-2">
@@ -516,7 +516,7 @@ export default function PhysiosAdmin() {
           disabled={submittingFromUser || !selectedUserId}
           className="mt-6 flex h-11 cursor-pointer items-center justify-center rounded-lg bg-brand px-5 text-sm font-medium text-white shadow-sm transition duration-200 ease-in-out hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {submittingFromUser ? 'Creating…' : 'Create physio profile & link user'}
+          {submittingFromUser ? 'Creating…' : 'Create physiotherapist profile & link user'}
         </button>
       </form>
 
@@ -564,7 +564,7 @@ export default function PhysiosAdmin() {
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               className={inputClass}
-              placeholder="10-digit, same as physio app login"
+              placeholder="10-digit, same as physiotherapist app login"
               disabled={submitting}
             />
           </div>

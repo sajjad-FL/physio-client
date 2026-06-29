@@ -146,7 +146,7 @@ export default function ProfileCompletionModal({ initial, onComplete }) {
             <h1 className="type-page-title mt-2 text-center text-gray-900">Complete your profile</h1>
             <p className="mt-2 text-center text-sm text-gray-500">
               Your account is already created. Add date of birth, gender, and address here — or any time under Profile — so
-              you can book sessions and use your dashboard.
+              you can book appointments and use your dashboard.
             </p>
 
             <form onSubmit={submit} className="mt-8 space-y-5">

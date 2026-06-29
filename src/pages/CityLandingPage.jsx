@@ -17,7 +17,7 @@ const TREATMENTS = [
 function buildFaq(city) {
   return [
     {
-      q: `How do I book a physio near me in ${city.name}?`,
+      q: `How do I book a physiotherapist near me in ${city.name}?`,
       a: `Open PhysiOkhom, pick your slot and share your address in ${city.name}. We match you with a verified physiotherapist who does home visits in your locality and confirm the appointment after payment.`,
     },
     {
@@ -25,7 +25,7 @@ function buildFaq(city) {
       a: `We actively serve most major neighborhoods including ${city.neighborhoods.slice(0, 5).join(', ')}${city.neighborhoods.length > 5 ? ' and more' : ''}. If you are searching for a physiotherapist in ${city.name}, ${city.state}, share your exact address and we assign the nearest available clinician.`,
     },
     {
-      q: `How much does a home visit physio cost in ${city.name}?`,
+      q: `How much does a home visit physiotherapist cost in ${city.name}?`,
       a: `Fees vary by physiotherapist, experience level, and session length. You see the per-session price before you confirm the booking — no hidden charges and secure online payment.`,
     },
     {
@@ -33,7 +33,7 @@ function buildFaq(city) {
       a: `Yes. Every clinician marked as verified has completed our platform checks, including qualification and ID verification. You can read reviews on each physiotherapist's public profile before you book.`,
     },
     {
-      q: `Can I get physio at home the same day in ${city.name}?`,
+      q: `Can I get a physiotherapist at home the same day in ${city.name}?`,
       a: `Same-day or next-day home visits are often available depending on slot availability in your area. Check open slots in your preferred ${city.name} neighborhood after logging in.`,
     },
   ]
@@ -50,7 +50,7 @@ function cityStructuredData({ city, canonical, ogImage, faq }) {
         name: `PhysiOkhom — Home Visit Physiotherapy in ${city.name}`,
         url: canonical,
         image: ogImage,
-        description: `Book verified home visit physiotherapists in ${city.name}, ${city.state}. Physio at home for back pain, knee pain, post-surgery rehab and more.`,
+        description: `Book verified home visit physiotherapists in ${city.name}, ${city.state}. Physiotherapist at home for back pain, knee pain, post-surgery rehab and more.`,
         medicalSpecialty: 'Physiotherapy',
         priceRange: '₹₹',
         address: {
@@ -112,8 +112,8 @@ export default function CityLandingPage() {
 
   const canonical = absoluteUrl(`/physio-in/${city.slug}`)
   const ogImage = absoluteUrl('/og-default.png')
-  const title = `Physio in ${city.name}, ${city.state} — Home Visit Physiotherapist | PhysiOkhom`
-  const description = `Looking for a physiotherapist in ${city.name}, ${city.state}? PhysiOkhom helps you book a verified home visit physio near you for back pain, knee pain, post-surgery rehab and stroke recovery — including ${city.neighborhoods.slice(0, 3).join(', ')} and nearby areas.`
+  const title = `Physiotherapist in ${city.name}, ${city.state} — Home Visit | PhysiOkhom`
+  const description = `Looking for a physiotherapist in ${city.name}, ${city.state}? PhysiOkhom helps you book a verified home visit physiotherapist near you for back pain, knee pain, post-surgery rehab and stroke recovery — including ${city.neighborhoods.slice(0, 3).join(', ')} and nearby areas.`
   const faq = buildFaq(city)
   const ldJson = JSON.stringify(cityStructuredData({ city, canonical, ogImage, faq }))
   const otherCities = SERVICE_CITIES.filter((c) => c.slug !== city.slug)
@@ -163,7 +163,7 @@ export default function CityLandingPage() {
                   <Link to="/" className="hover:text-slate-700">Home</Link>
                 </li>
                 <li aria-hidden>/</li>
-                <li className="text-slate-700">Physio in {city.name}</li>
+                <li className="text-slate-700">Physiotherapist in {city.name}</li>
               </ol>
             </nav>
             <div className="max-w-3xl">
@@ -171,10 +171,10 @@ export default function CityLandingPage() {
                 Home visits in {city.name}
               </p>
               <h1 className="type-hero mt-6 text-balance sm:leading-[1.08]">
-                Physiotherapist in {city.name} — home visit physio near you
+                Physiotherapist in {city.name} — home visit physiotherapist near you
               </h1>
               <p className="mt-6 max-w-2xl text-lg leading-relaxed text-slate-500">
-                {city.tagline} PhysiOkhom matches you with a licensed, verified physio who does home visits in {city.name}, {city.state}, for back pain, knee pain, post-surgery rehab, stroke recovery and more.
+                {city.tagline} PhysiOkhom matches you with a licensed, verified physiotherapist who does home visits in {city.name}, {city.state}, for back pain, knee pain, post-surgery rehab, stroke recovery and more.
               </p>
               <p className="mt-3 max-w-2xl text-base leading-relaxed text-slate-600">{cityIntro}</p>
               <div className="mt-10 flex flex-wrap gap-3">
@@ -182,7 +182,7 @@ export default function CityLandingPage() {
                   to="/book"
                   className="interactive-press inline-flex h-12 items-center justify-center rounded-xl bg-teal-600 px-8 text-[15px] font-semibold text-white shadow-lg shadow-teal-600/25 transition-colors duration-200 hover:bg-teal-700"
                 >
-                  Book a home visit physio
+                  Book a home visit physiotherapist
                 </Link>
                 <Link
                   to="/register"
@@ -248,7 +248,7 @@ export default function CityLandingPage() {
                   key={n}
                   className="rounded-full border border-slate-200 bg-white px-4 py-1.5 text-sm font-medium text-slate-700 shadow-sm"
                 >
-                  Physio in {n}
+                  Physiotherapist in {n}
                 </li>
               ))}
             </ul>
@@ -257,7 +257,7 @@ export default function CityLandingPage() {
                 Locality searches in {city.name}
               </h3>
               <p className="mt-2 text-sm leading-relaxed text-slate-600">
-                If you are searching terms like &quot;physio near me&quot; for a specific area, use these locality
+                If you are searching terms like &quot;physiotherapist near me&quot; for a specific area, use these locality
                 links:
               </p>
               <ul className="mt-4 flex flex-wrap gap-2.5">
@@ -267,7 +267,7 @@ export default function CityLandingPage() {
                       to={`/near-me-physio/${city.slug}/${entry.slug}`}
                       className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-teal-300 hover:text-teal-700"
                     >
-                      Physio near {entry.name}
+                      Physiotherapist near {entry.name}
                     </Link>
                   </li>
                 ))}
@@ -285,7 +285,7 @@ export default function CityLandingPage() {
         <section className="border-b border-slate-200 bg-white py-16 lg:py-24">
           <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
             <h2 className="type-page-title">
-              Frequently asked questions — physio in {city.name}
+              Frequently asked questions — physiotherapist in {city.name}
             </h2>
             <dl className="mt-10 space-y-8">
               {faq.map(({ q, a }) => (
@@ -300,7 +300,7 @@ export default function CityLandingPage() {
 
         <section className="border-b border-slate-200 bg-slate-50 py-14">
           <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-            <h2 className="type-page-title">Home visit physio in other cities</h2>
+            <h2 className="type-page-title">Home visit physiotherapist in other cities</h2>
             <p className="mt-3 max-w-2xl text-base leading-relaxed text-slate-500">
               PhysiOkhom connects patients with verified physiotherapists across Assam service cities.
             </p>
@@ -311,7 +311,7 @@ export default function CityLandingPage() {
                     to={`/physio-in/${c.slug}`}
                     className="inline-flex items-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:border-teal-300 hover:text-teal-700"
                   >
-                    Physio in {c.name}
+                    Physiotherapist in {c.name}
                   </Link>
                 </li>
               ))}
@@ -325,7 +325,7 @@ export default function CityLandingPage() {
               Book a physiotherapist at home in {city.name}
             </h2>
             <p className="mx-auto mt-4 max-w-lg text-lg leading-relaxed text-slate-500">
-              Pick a slot, share your {city.name} address, and pay online to confirm. Your verified physio will arrive
+              Pick a slot, share your {city.name} address, and pay online to confirm. Your verified physiotherapist will arrive
               at your door.
             </p>
             <div className="mt-10">
@@ -351,7 +351,7 @@ export default function CityLandingPage() {
               <Link to="/" className="transition-colors hover:text-white">Home</Link>
               <Link to="/register" className="transition-colors hover:text-white">Create account</Link>
               <Link to="/login" className="transition-colors hover:text-white">Sign in</Link>
-              <Link to="/book" className="transition-colors hover:text-white">Book a physio</Link>
+              <Link to="/book" className="transition-colors hover:text-white">Book a physiotherapist</Link>
               <Link to="/privacy-policy" className="transition-colors hover:text-white">Privacy Policy</Link>
             </div>
             <Link to="/register-physio" className="text-white/90 transition-colors duration-200 hover:text-white">

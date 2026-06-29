@@ -166,7 +166,7 @@ export default function PublicPhysicianPage() {
       <header className="border-b border-gray-200/80 bg-white/90 backdrop-blur-md">
         <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-4 px-4 py-6 sm:px-6">
           <Link to="/book" className="text-sm font-medium text-blue-600 hover:text-blue-800">
-            ← Book a session
+            ← Book an appointment
           </Link>
         </div>
       </header>

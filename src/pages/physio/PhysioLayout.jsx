@@ -174,7 +174,7 @@ export default function PhysioLayout() {
       <SeoNoIndex />
       <AppShell
       brand="PhysiOkhom"
-      badge="Physio"
+      badge="Physiotherapist"
       topBarTitle="Workspace"
       topBarSubtitle="Sessions, availability, and notes"
       navItems={navItems}

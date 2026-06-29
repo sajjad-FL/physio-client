@@ -1,4 +1,9 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
+
+import { ISSUE_OTHER_SENTINEL } from '../../constants/issues'
+import PainBodyMapPanel from '../booking/PainBodyMapPanel'
+import PainViewModeToggle from '../booking/PainViewModeToggle'
 
 import imgCupping    from '../../assets/technique_cupping.png'
 import imgNeedling   from '../../assets/technique_needling.png'
@@ -20,7 +25,7 @@ const CONDITIONS = [
   { label: 'Knee & Joint',     subtitle: 'Ligament injury, arthritis, stiffness',       issue: 'Knee & Joint Pain',  image: imgKneePain, color: '#ea580c', bg: '#fff7ed', border: '#fed7aa' },
   { label: 'Neck & Spine',     subtitle: 'Cervical pain, frozen shoulder, strain',      issue: 'Neck & Spine Pain',  image: imgNeckPain, color: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe' },
   { label: 'Stroke/Paralysis', subtitle: 'Stroke recovery, paralysis care, numbness',   issue: 'Stroke / Paralysis', image: imgStroke,   color: '#059669', bg: '#f0fdf4', border: '#bbf7d0' },
-  { label: 'Others',           subtitle: 'Post-op care, sports injury, general rehab',  issue: null,                 image: imgOther,    color: '#64748b', bg: '#f8fafc', border: '#e2e8f0' },
+  { label: 'Others',           subtitle: 'Post-op care, sports injury, general rehab',  issue: ISSUE_OTHER_SENTINEL, image: imgOther,    color: '#64748b', bg: '#f8fafc', border: '#e2e8f0' },
 ]
 
 const TECHNIQUES = [
@@ -35,7 +40,7 @@ const SPECIALTIES = [
   { label: 'Pediatric',    issue: 'Pediatric Rehab', image: imgPediatric  },
   { label: 'Post-Op',      issue: 'Post-Op Rehab',   image: imgPostOp     },
   { label: 'Elderly Care', issue: 'Elderly Care',    image: imgElderly    },
-  { label: 'Other Care',   issue: null,              image: imgOtherSpec  },
+  { label: 'Other Care',   issue: ISSUE_OTHER_SENTINEL, image: imgOtherSpec  },
 ]
 
 function bookTo(issue) {
@@ -115,20 +120,32 @@ function ServiceChip({ item }) {
 }
 
 export default function ServicesSection() {
+  const [viewMode, setViewMode] = useState('grid')
+
   return (
     <section aria-labelledby="services-heading" className="space-y-5">
 
-      {/* Header */}
-      <div className="flex items-center gap-2">
-        <div className="flex h-6 w-6 items-center justify-center rounded-md bg-teal-50">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0d9488" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-            <circle cx="12" cy="12" r="3"/>
-            <path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"/>
-          </svg>
+      {/* Header + Grid / Body Map toggle */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <div className="flex h-6 w-6 items-center justify-center rounded-md bg-teal-50">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0d9488" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"/>
+            </svg>
+          </div>
+          <h2 id="services-heading" className="text-sm font-bold text-slate-900">Book by Need</h2>
         </div>
-        <h2 id="services-heading" className="text-sm font-bold text-slate-900">Book by Need</h2>
+        <PainViewModeToggle
+          mode={viewMode}
+          onChange={(mode) => setViewMode(mode)}
+        />
       </div>
 
+      {viewMode === 'map' ? (
+        <PainBodyMapPanel bookCtaLabel={(issue) => `Book for ${issue}`} />
+      ) : (
+        <>
       {/* ── Techniques — highlighted first ── */}
       <div>
         <p className="mb-2.5 text-[10px] font-bold uppercase tracking-widest text-slate-400">Treatment Techniques</p>
@@ -152,6 +169,8 @@ export default function ServicesSection() {
           {SPECIALTIES.map((s) => <ServiceChip key={s.label} item={s} />)}
         </div>
       </div>
+        </>
+      )}
 
     </section>
   )

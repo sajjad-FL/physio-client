@@ -114,12 +114,12 @@ export default function ProfileDropdown({ variant = 'header', className = '' }) 
             </Link>
             {showPhysioWorkspace && (
               <Link to={PHYSIO_DASHBOARD_ENTRY} className={menuLink} role="menuitem" onClick={() => setOpen(false)}>
-                Physio workspace
+                Physiotherapist workspace
               </Link>
             )}
             {showBook && (
               <Link to="/book" className={menuLink} role="menuitem" onClick={() => setOpen(false)}>
-                Book a session
+                Book an appointment
               </Link>
             )}
             <Link to={profilePath} className={menuLink} role="menuitem" onClick={() => setOpen(false)}>
