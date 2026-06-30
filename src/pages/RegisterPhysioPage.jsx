@@ -25,6 +25,8 @@ import { validateLiveField } from '../utils/liveFieldValidation'
 import { PHYSIO_DEGREE_OPTIONS, isPhysioDegreeOption } from '../constants/physioQualification.js'
 import { ID_PROOF_TYPE_OPTIONS } from '../constants/idProofTypes.js'
 import { absoluteUrl } from '../utils/siteMeta'
+import { MAX_UPLOAD_SIZE_LABEL } from '../constants/uploadLimits.js'
+import { formatPhysioDisplayName } from '../utils/physioDisplayName.js'
 
 const baseInputClass =
   'h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm text-slate-900 shadow-sm outline-none transition-all duration-200 placeholder:text-slate-400 focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20'
@@ -408,7 +410,7 @@ export default function RegisterPhysioPage() {
       const fd = new FormData()
       fd.append('phone', normalizeIndianPhone(phone))
       fd.append('password', password)
-      fd.append('name', name.trim())
+      fd.append('name', formatPhysioDisplayName(name))
       fd.append('email', email.trim().toLowerCase())
       fd.append('dob', dob)
       fd.append('gender', gender)
@@ -715,7 +717,7 @@ export default function RegisterPhysioPage() {
                 <FieldLabel htmlFor="reg-avatar" required>
                   Passport size photo with clear background
                 </FieldLabel>
-                <p className="mb-2 text-xs text-ink-muted">JPEG, PNG, or WebP · max 2MB</p>
+                <p className="mb-2 text-xs text-ink-muted">JPEG, PNG, or WebP · max {MAX_UPLOAD_SIZE_LABEL}</p>
                 {avatarPreview ? (
                   <img
                     src={avatarPreview}
@@ -936,7 +938,7 @@ export default function RegisterPhysioPage() {
           <section className="rounded-2xl border border-slate-100 bg-white p-6 shadow-md sm:p-8">
             <h2 className="type-page-title text-ink">Documents</h2>
             <p className="mt-1 text-sm text-ink-muted">
-              PDF or images (max 2MB each). Fields marked with <span className="text-red-500">*</span> are required.
+              PDF or images (max {MAX_UPLOAD_SIZE_LABEL} each). Fields marked with <span className="text-red-500">*</span> are required.
               Professional registration is optional but helps verification.
             </p>
             <div className="mt-5 grid gap-4 sm:grid-cols-2">
@@ -1073,7 +1075,7 @@ export default function RegisterPhysioPage() {
               </div>
               <div className="flex justify-between gap-4 border-b border-border-subtle py-2">
                 <dt className="text-ink-muted">Name</dt>
-                <dd className="text-right font-medium text-ink">{name}</dd>
+                <dd className="text-right font-medium text-ink">{formatPhysioDisplayName(name) || '—'}</dd>
               </div>
               <div className="flex justify-between gap-4 border-b border-border-subtle py-2">
                 <dt className="text-ink-muted">Email</dt>

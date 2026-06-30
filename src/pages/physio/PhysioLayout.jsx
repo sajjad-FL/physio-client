@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, Outlet, useLocation } from 'react-router-dom'
-import Button from '../../components/ui/Button'
 import { api } from '../../config/api'
 import AppShell from '../../components/layout/AppShell'
 import AuthSpinner from '../../components/AuthSpinner'
@@ -67,6 +66,16 @@ const iconBadge = (
   </svg>
 )
 
+const iconGrid = (
+  <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24" aria-hidden>
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z"
+    />
+  </svg>
+)
+
 const baseNav = [
   { to: '/physio/bookings', label: 'Dashboard', icon: iconCalendar },
   { to: '/profile', label: 'Profile', icon: iconProfile },
@@ -76,6 +85,27 @@ const baseNav = [
   { to: '/physio/disputes', label: 'Disputes', icon: iconDispute },
   { to: '/physio/onboarding', label: 'Onboarding', icon: iconBadge },
 ]
+
+const bottomNavItems = [
+  { to: '/physio/bookings', label: 'Bookings', icon: iconCalendar },
+  { to: '/physio/wallet', label: 'Wallet', icon: iconWallet },
+  { to: '/physio/availability', label: 'Hours', icon: iconClock },
+  { to: '/physio/notes', label: 'Notes', icon: iconNotes },
+  { to: '/physio/hub', label: 'Hub', icon: iconGrid },
+]
+
+function titleForPath(pathname) {
+  if (pathname.startsWith('/physio/bookings/') && pathname !== '/physio/bookings') return 'Session'
+  if (pathname === '/physio/bookings') return 'Bookings'
+  if (pathname === '/physio/wallet') return 'Wallet'
+  if (pathname === '/physio/availability') return 'Hours'
+  if (pathname === '/physio/notes') return 'Clinical notes'
+  if (pathname === '/physio/hub') return 'Hub'
+  if (pathname === '/physio/disputes') return 'Disputes'
+  if (pathname === '/physio/onboarding') return 'Onboarding'
+  if (pathname === '/physio/verification') return 'Verification'
+  return 'Workspace'
+}
 
 function navLockedWhilePending(to) {
   if (to === '/profile') return false
@@ -104,6 +134,7 @@ export default function PhysioLayout() {
   const [loadingMe, setLoadingMe] = useState(true)
   const [navBadges, setNavBadges] = useState({})
   const location = useLocation()
+  const topBarTitle = useMemo(() => titleForPath(location.pathname), [location.pathname])
 
   useEffect(() => {
     let cancelled = false
@@ -175,9 +206,11 @@ export default function PhysioLayout() {
       <AppShell
       brand="PhysiOkhom"
       badge="Physiotherapist"
-      topBarTitle="Workspace"
-      topBarSubtitle="Sessions, availability, and notes"
+      topBarTitle={topBarTitle}
+      topBarSubtitle=""
       navItems={navItems}
+      bottomNavItems={bottomNavItems}
+      contentClassName="physio-app-mobile"
       headerActions={
         <Link
           to="/"
@@ -187,14 +220,9 @@ export default function PhysioLayout() {
         </Link>
       }
       sidebarFooter={
-        <div className="space-y-2">
-          <Link
-            to="/"
-            className="block rounded-xl py-2 text-center text-sm font-medium text-slate-500 transition hover:text-slate-900"
-          >
-            ← Marketing site
-          </Link>
-        </div>
+        <p className="text-center type-caption text-slate-400">
+          Disputes, onboarding, and profile — open Hub on mobile or use this sidebar on desktop.
+        </p>
       }
     >
       {me && !platformApproved && (

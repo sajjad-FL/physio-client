@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import { resolveFileUrl } from '../../utils/serverOrigin'
 import { validateFile } from '../../utils/onboardingValidation'
+import { MAX_UPLOAD_SIZE_LABEL } from '../../constants/uploadLimits.js'
 
 function looksLikePdf(path) {
   return /\.pdf(\?|#|$)/i.test(String(path || ''))
@@ -180,7 +181,7 @@ export default function DocumentUploadPreview({
           <p className="text-sm font-medium text-ink">
             {hasFile ? file.name : 'Drop a file here or browse'}
           </p>
-          <p className="text-xs text-ink-muted">PDF, JPEG, PNG, or WebP · max 2MB</p>
+          <p className="text-xs text-ink-muted">PDF, JPEG, PNG, or WebP · max {MAX_UPLOAD_SIZE_LABEL}</p>
           <span className="mt-1 inline-flex items-center rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-brand ring-1 ring-brand/20">
             Choose file
           </span>

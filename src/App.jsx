@@ -22,6 +22,7 @@ import PhysioDisputesPage from './pages/physio/PhysioDisputesPage'
 import PhysioVerificationPage from './pages/physio/PhysioVerificationPage'
 import PhysioOnboardingPage from './pages/physio/PhysioOnboardingPage'
 import PhysioWalletPage from './pages/physio/PhysioWalletPage'
+import PhysioHubPage from './pages/physio/PhysioHubPage'
 import UserDashboardLayout from './pages/dashboard/UserDashboardLayout'
 import DashboardHome from './pages/dashboard/DashboardHome'
 import DashboardBookings from './pages/dashboard/DashboardBookings'
@@ -159,6 +160,7 @@ export default function App() {
           <Route path="onboarding" element={<PhysioOnboardingPage />} />
           <Route path="verification" element={<PhysioVerificationPage />} />
           <Route path="wallet" element={<PhysioWalletPage />} />
+          <Route path="hub" element={<PhysioHubPage />} />
           <Route path="*" element={<Navigate to="/physio/bookings" replace />} />
         </Route>
         <Route

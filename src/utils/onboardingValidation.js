@@ -1,6 +1,7 @@
 import { validateIndianMobile } from './phoneIndia.js'
 import { isPhysioDegreeOption } from '../constants/physioQualification.js'
 import { isValidIdProofType } from '../constants/idProofTypes.js'
+import { MAX_UPLOAD_BYTES, MAX_UPLOAD_SIZE_LABEL } from '../constants/uploadLimits.js'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -203,13 +204,10 @@ export function validateSubmitForm(values) {
   return { errors, ok: Object.keys(errors).length === 0 }
 }
 
-/** Must match server `MAX_UPLOAD_BYTES` (2MB) */
-const MAX_FILE_BYTES = 2 * 1024 * 1024
-
 export function validateFile(file, label = 'File') {
   if (!file) return { ok: true }
-  if (file.size > MAX_FILE_BYTES) {
-    return { ok: false, message: `${label} must be 2MB or smaller` }
+  if (file.size > MAX_UPLOAD_BYTES) {
+    return { ok: false, message: `${label} must be ${MAX_UPLOAD_SIZE_LABEL} or smaller` }
   }
   const okType = /^image\//.test(file.type) || file.type === 'application/pdf'
   if (!okType) {
@@ -220,8 +218,8 @@ export function validateFile(file, label = 'File') {
 
 export function validateAvatarFile(file) {
   if (!file) return { ok: true }
-  if (file.size > MAX_FILE_BYTES) {
-    return { ok: false, message: 'Profile photo must be 2MB or smaller' }
+  if (file.size > MAX_UPLOAD_BYTES) {
+    return { ok: false, message: `Profile photo must be ${MAX_UPLOAD_SIZE_LABEL} or smaller` }
   }
   if (!/^image\//.test(file.type)) {
     return { ok: false, message: 'Profile photo must be an image' }

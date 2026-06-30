@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { BadgeCheck } from 'lucide-react'
 import { api } from '../../config/api'
 import { resolveFileUrl } from '../../utils/serverOrigin'
 import DocumentUploadPreview from '../../components/physio/DocumentUploadPreview'
 import DocumentMultiUploadPreview from '../../components/physio/DocumentMultiUploadPreview'
+import AffixInput from '../../components/ui/AffixInput'
 import { toastApiError, toastSaved, toastValidationErrors, firstValidationMessage } from '../../utils/formToast'
 import {
   validateAvatarFile,
@@ -18,6 +20,8 @@ import { validateLiveField } from '../../utils/liveFieldValidation'
 import { PHYSIO_DEGREE_OPTIONS, isPhysioDegreeOption } from '../../constants/physioQualification.js'
 import { formatPhysioSessionFeeLabel } from '../../utils/physioSessionFee.js'
 import { ID_PROOF_TYPE_OPTIONS } from '../../constants/idProofTypes.js'
+import { MAX_UPLOAD_SIZE_LABEL } from '../../constants/uploadLimits.js'
+import { formatPhysioDisplayName, stripPhysioNameAffixes } from '../../utils/physioDisplayName.js'
 
 const baseInputClass =
   'h-11 w-full rounded-lg border bg-white px-3 text-sm text-ink shadow-sm outline-none focus:ring-2 focus:ring-brand/20'
@@ -29,6 +33,27 @@ const steps = [
   { n: 4, title: 'Documents', desc: 'Uploads (S3 or local)' },
   { n: 5, title: 'Submit', desc: 'Review and send for verification' },
 ]
+
+function isVerifiedStatus(status) {
+  const s = String(status || '').toLowerCase()
+  return s === 'verified' || s === 'approved'
+}
+
+function VerificationStatusLine({ status, reason, className = 'mt-2' }) {
+  const verified = isVerifiedStatus(status)
+  return (
+    <p className={`${className} text-sm text-ink-muted`}>
+      Verification:{' '}
+      <span className="inline-flex items-center gap-1 font-medium text-ink">
+        {status}
+        {verified ? (
+          <BadgeCheck className="h-4 w-4 shrink-0 text-blue-500" aria-label="Verified" />
+        ) : null}
+      </span>
+      {reason ? ` — ${reason}` : ''}
+    </p>
+  )
+}
 
 function dobInputValue(iso) {
   if (!iso) return ''
@@ -144,7 +169,7 @@ export default function PhysioOnboardingPage() {
     setLoading(true)
     try {
       const { data } = await api.get('/physio/onboarding')
-      setName(data.name || '')
+      setName(stripPhysioNameAffixes(data.name || ''))
       setEmail(data.email || '')
       setDob(dobInputValue(data.dob))
       setGender(data.gender || '')
@@ -367,7 +392,7 @@ export default function PhysioOnboardingPage() {
 
       if (fromStep === 1) {
         patch.basic = {
-          name,
+          name: formatPhysioDisplayName(name),
           email,
           dob: dob || undefined,
           gender,
@@ -491,10 +516,7 @@ export default function PhysioOnboardingPage() {
             </Link>
             .
           </p>
-          <p className="mt-3 text-sm text-ink-muted">
-            Verification: <span className="font-medium text-ink">{vStatus}</span>
-            {vReason ? ` — ${vReason}` : ''}
-          </p>
+          <VerificationStatusLine status={vStatus} reason={vReason} className="mt-3" />
           <Link
             to="/physio/bookings"
             className="mt-5 inline-flex items-center justify-center rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-brand-hover"
@@ -508,7 +530,7 @@ export default function PhysioOnboardingPage() {
           <dl className="mt-4 grid gap-2 text-sm">
             <div className="flex justify-between gap-4 border-b border-border-subtle py-2">
               <dt className="text-ink-muted">Name</dt>
-              <dd className="text-right font-medium text-ink">{name || '—'}</dd>
+              <dd className="text-right font-medium text-ink">{formatPhysioDisplayName(name) || '—'}</dd>
             </div>
             <div className="flex justify-between gap-4 border-b border-border-subtle py-2">
               <dt className="text-ink-muted">Specialization</dt>
@@ -537,10 +559,7 @@ export default function PhysioOnboardingPage() {
         <p className="mt-1 text-sm text-ink-muted">
           Complete all steps. Documents are stored on S3 when configured, otherwise on the server.
         </p>
-        <p className="mt-2 text-sm text-ink-muted">
-          Verification: <span className="font-medium text-ink">{vStatus}</span>
-          {vReason ? ` — ${vReason}` : ''}
-        </p>
+        <VerificationStatusLine status={vStatus} reason={vReason} />
       </div>
 
       <ol className="flex flex-wrap gap-2">
@@ -575,17 +594,18 @@ export default function PhysioOnboardingPage() {
               <label className="mb-1 block text-xs font-medium text-ink-muted" htmlFor="ob-name">
                 Full name
               </label>
-              <input
+              <AffixInput
                 id="ob-name"
-                className={inputClass('name')}
+                error={Boolean(fieldErrors.name)}
                 value={name}
                 onChange={(e) => {
                   const v = e.target.value
                   setName(v)
                   patchField('name', v)
                 }}
-                aria-invalid={Boolean(fieldErrors.name)}
+                placeholder="Your name"
                 autoComplete="name"
+                aria-invalid={Boolean(fieldErrors.name)}
               />
               {fieldErrors.name ? <p className="mt-1 text-xs text-red-600">{fieldErrors.name}</p> : null}
             </div>
@@ -906,7 +926,7 @@ export default function PhysioOnboardingPage() {
         <section className="surface-card rounded-2xl p-6 ring-1 ring-border-subtle">
           <h2 className="type-page-title text-ink">Documents</h2>
           <p className="mt-1 text-sm text-ink-muted">
-            PDF or images (max 2MB each). Required uploads are marked; professional registration is optional.
+            PDF or images (max {MAX_UPLOAD_SIZE_LABEL} each). Required uploads are marked; professional registration is optional.
             Choose your government ID type and agree to the declaration below.
           </p>
           <div className="mt-5 grid gap-4 sm:grid-cols-2">
@@ -1075,7 +1095,7 @@ export default function PhysioOnboardingPage() {
           <dl className="mt-4 grid gap-2 text-sm">
             <div className="flex justify-between gap-4 border-b border-border-subtle py-2">
               <dt className="text-ink-muted">Name</dt>
-              <dd className="text-right font-medium text-ink">{name}</dd>
+              <dd className="text-right font-medium text-ink">{formatPhysioDisplayName(name) || '—'}</dd>
             </div>
             <div className="flex justify-between gap-4 border-b border-border-subtle py-2">
               <dt className="text-ink-muted">Specialization</dt>

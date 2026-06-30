@@ -1,4 +1,5 @@
 import toast from 'react-hot-toast'
+import { MAX_UPLOAD_SIZE_LABEL } from '../constants/uploadLimits.js'
 
 /**
  * Normalizes axios / fetch errors from the API.
@@ -12,7 +13,7 @@ export function parseApiError(err) {
   if (status === 413) {
     return {
       message:
-        'Upload too large for the server. Each file must be under 2MB; try fewer or smaller files, or contact support if this persists.',
+        `Upload too large for the server. Each file must be under ${MAX_UPLOAD_SIZE_LABEL}; try fewer or smaller files, or contact support if this persists.`,
       errors: null,
       status: 413,
     }

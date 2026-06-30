@@ -11,6 +11,8 @@ import Card from '../../components/ui/Card'
 import MapPickerModal from '../../components/location/MapPickerModal'
 import LocationSelectorRow from '../../components/location/LocationSelectorRow'
 import SeoNoIndex from '../../components/seo/SeoNoIndex'
+import { validateAvatarFile } from '../../utils/onboardingValidation'
+import { MAX_UPLOAD_SIZE_LABEL } from '../../constants/uploadLimits.js'
 
 const GENDERS = [
   { value: 'male', label: 'Male' },
@@ -224,8 +226,9 @@ export default function ProfilePage() {
       toast.error('Please choose a JPEG, PNG, or WebP image')
       return
     }
-    if (file.size > 2 * 1024 * 1024) {
-      toast.error('Image must be 2MB or smaller')
+    const avatarCheck = validateAvatarFile(file)
+    if (!avatarCheck.ok) {
+      toast.error(avatarCheck.message)
       return
     }
     if (previewLocal) URL.revokeObjectURL(previewLocal)
@@ -312,7 +315,7 @@ export default function ProfilePage() {
           <Button type="button" variant="outline" className="rounded-xl" disabled={uploading} onClick={() => fileInputRef.current?.click()}>
             {uploading ? 'Uploading…' : 'Upload photo'}
           </Button>
-          <p className="text-center text-xs text-gray-500">JPEG, PNG, or WebP · max 2MB</p>
+          <p className="text-center text-xs text-gray-500">JPEG, PNG, or WebP · max {MAX_UPLOAD_SIZE_LABEL}</p>
         </div>
 
         <form onSubmit={saveProfile} className="mt-8 space-y-5">

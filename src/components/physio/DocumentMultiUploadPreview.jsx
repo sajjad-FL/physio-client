@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import { resolveFileUrl } from '../../utils/serverOrigin'
 import { validateFile } from '../../utils/onboardingValidation'
+import { MAX_UPLOAD_SIZE_LABEL } from '../../constants/uploadLimits.js'
 
 function looksLikePdf(path) {
   return /\.pdf(\?|#|$)/i.test(String(path || ''))
@@ -109,7 +110,7 @@ export default function DocumentMultiUploadPreview({
             ) : null}
           </div>
           {description ? <p className="mt-1 text-xs leading-relaxed text-ink-muted">{description}</p> : null}
-          <p className="mt-1 text-xs text-ink-muted">Up to {maxFiles} files · PDF, JPEG, PNG, or WebP · max 2MB each</p>
+          <p className="mt-1 text-xs text-ink-muted">Up to {maxFiles} files · PDF, JPEG, PNG, or WebP · max {MAX_UPLOAD_SIZE_LABEL} each</p>
         </div>
         {filled ? (
           <span className="shrink-0 rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-800">

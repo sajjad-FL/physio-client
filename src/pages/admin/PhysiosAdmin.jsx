@@ -13,6 +13,20 @@ const TABS = [
   { id: 'queue', label: 'Verification queue' },
 ]
 
+function verificationDisplayStatus(p) {
+  return (
+    p.displayVerificationStatus ||
+    (p.verificationStatus === 'approved' ? 'verified' : p.verificationStatus || 'pending')
+  )
+}
+
+function isPlatformVerified(p) {
+  if (verificationDisplayStatus(p) === 'verified') return true
+  if (p.isVerified === true) return true
+  const raw = String(p.verification?.status || p.verificationStatus || '').toLowerCase()
+  return raw === 'verified' || raw === 'approved'
+}
+
 export default function PhysiosAdmin() {
   const [searchParams, setSearchParams] = useSearchParams()
   const activeTab = searchParams.get('tab') === 'queue' ? 'queue' : 'directory'
@@ -316,18 +330,61 @@ export default function PhysiosAdmin() {
           <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl ring-1 ring-border-subtle">
             <h3 className="type-page-title text-ink">Edit physiotherapist</h3>
             <form onSubmit={saveEdit} className="mt-4 space-y-4">
-              <input className={inputClass} value={editName} onChange={(e) => setEditName(e.target.value)} required />
-              <input className={inputClass} value={editSpec} onChange={(e) => setEditSpec(e.target.value)} required />
-              <div className="grid grid-cols-2 gap-3">
-                <input type="number" min="0" className={inputClass} value={editExp} onChange={(e) => setEditExp(e.target.value)} />
+              <div>
+                <label htmlFor="edit-name" className="mb-2 block text-sm font-medium text-ink">
+                  Name
+                </label>
                 <input
-                  type="number"
-                  min="0"
+                  id="edit-name"
                   className={inputClass}
-                  value={editPrice}
-                  onChange={(e) => setEditPrice(e.target.value)}
-                  placeholder="Fee per session (₹)"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  placeholder="Full name"
+                  required
                 />
+              </div>
+              <div>
+                <label htmlFor="edit-spec" className="mb-2 block text-sm font-medium text-ink">
+                  Specialization
+                </label>
+                <input
+                  id="edit-spec"
+                  className={inputClass}
+                  value={editSpec}
+                  onChange={(e) => setEditSpec(e.target.value)}
+                  placeholder="e.g. Orthopedic, Neuro rehab"
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label htmlFor="edit-exp" className="mb-2 block text-sm font-medium text-ink">
+                    Experience (years)
+                  </label>
+                  <input
+                    id="edit-exp"
+                    type="number"
+                    min="0"
+                    className={inputClass}
+                    value={editExp}
+                    onChange={(e) => setEditExp(e.target.value)}
+                    placeholder="Years of experience"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="edit-price" className="mb-2 block text-sm font-medium text-ink">
+                    Fee per session (₹)
+                  </label>
+                  <input
+                    id="edit-price"
+                    type="number"
+                    min="0"
+                    className={inputClass}
+                    value={editPrice}
+                    onChange={(e) => setEditPrice(e.target.value)}
+                    placeholder="e.g. 500"
+                  />
+                </div>
               </div>
               <label className="flex items-center gap-2 text-sm text-ink-muted">
                 <input type="checkbox" checked={editAvail} onChange={(e) => setEditAvail(e.target.checked)} />
@@ -658,7 +715,9 @@ export default function PhysiosAdmin() {
                 list.map((p) => {
                   const busy = rowBusy[p._id]
                   const availabilityNow = p.isAvailable ?? p.availability
-                  const disp = p.displayVerificationStatus || (p.verificationStatus === 'approved' ? 'verified' : p.verificationStatus || 'pending')
+                  const disp = verificationDisplayStatus(p)
+                  const alreadyVerified = isPlatformVerified(p)
+                  const isRejected = disp === 'rejected'
                   return (
                     <tr key={p._id} className="transition duration-200 ease-in-out hover:bg-gray-50">
                       <td className="px-4 py-4">
@@ -706,29 +765,33 @@ export default function PhysiosAdmin() {
                           >
                             Edit
                           </button>
-                          <button
-                            type="button"
-                            onClick={() => verifyPhysio(p._id, 'verified')}
-                            disabled={Boolean(busy)}
-                            className="cursor-pointer rounded-lg bg-green-500 px-4 py-2 text-xs font-semibold text-white shadow-sm transition duration-200 ease-in-out hover:bg-green-600 disabled:cursor-not-allowed disabled:opacity-50"
-                          >
-                            {busy === 'verified' ? '…' : 'Approve'}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const reason = window.prompt('Rejection reason (required, min 3 characters):') || ''
-                              if (reason.trim().length < 3) {
-                                toast.error('Enter a rejection reason of at least 3 characters, or cancel.')
-                                return
-                              }
-                              verifyPhysio(p._id, 'rejected', { rejectionReason: reason.trim() })
-                            }}
-                            disabled={Boolean(busy)}
-                            className="cursor-pointer rounded-lg bg-red-500 px-4 py-2 text-xs font-semibold text-white shadow-sm transition duration-200 ease-in-out hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-50"
-                          >
-                            {busy === 'rejected' ? '…' : 'Reject'}
-                          </button>
+                          {!alreadyVerified ? (
+                            <button
+                              type="button"
+                              onClick={() => verifyPhysio(p._id, 'verified')}
+                              disabled={Boolean(busy)}
+                              className="cursor-pointer rounded-lg bg-green-500 px-4 py-2 text-xs font-semibold text-white shadow-sm transition duration-200 ease-in-out hover:bg-green-600 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              {busy === 'verified' ? '…' : 'Approve'}
+                            </button>
+                          ) : null}
+                          {!alreadyVerified && !isRejected ? (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const reason = window.prompt('Rejection reason (required, min 3 characters):') || ''
+                                if (reason.trim().length < 3) {
+                                  toast.error('Enter a rejection reason of at least 3 characters, or cancel.')
+                                  return
+                                }
+                                verifyPhysio(p._id, 'rejected', { rejectionReason: reason.trim() })
+                              }}
+                              disabled={Boolean(busy)}
+                              className="cursor-pointer rounded-lg bg-red-500 px-4 py-2 text-xs font-semibold text-white shadow-sm transition duration-200 ease-in-out hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              {busy === 'rejected' ? '…' : 'Reject'}
+                            </button>
+                          ) : null}
                           <button
                             type="button"
                             onClick={() => deletePhysio(p._id, p.name)}
