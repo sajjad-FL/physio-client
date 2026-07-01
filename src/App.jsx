@@ -53,7 +53,7 @@ import AdminShopOrderDetailPage from './pages/admin/AdminShopOrderDetailPage'
 import { ShopCartProvider } from './hooks/useShopCart'
 import RoleProtectedRoute from './components/RoleProtectedRoute'
 import LegacyPhysioDashboardRedirect from './components/LegacyPhysioDashboardRedirect'
-import ProfileCompletionGate from './components/ProfileCompletionGate'
+import ProfileCompletionHost from './components/ProfileCompletionHost'
 
 function PublicPhysicianRoute() {
   const { id } = useParams()
@@ -63,7 +63,7 @@ function PublicPhysicianRoute() {
 export default function App() {
   return (
     <BrowserRouter>
-      <ProfileCompletionGate>
+      <ProfileCompletionHost />
       <Toaster
         position="top-center"
         toastOptions={{
@@ -191,7 +191,6 @@ export default function App() {
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-      </ProfileCompletionGate>
     </BrowserRouter>
   )
 }

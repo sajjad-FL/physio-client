@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { Link, Outlet, useLocation } from 'react-router-dom'
 import AppShell from '../../components/layout/AppShell'
 import SeoNoIndex from '../../components/seo/SeoNoIndex'
+import WhatsAppSupportFab from '../../components/support/WhatsAppSupportFab'
 import { useShopCart } from '../../hooks/useShopCart'
 
 const iconHome = (
@@ -85,6 +86,7 @@ const bottomNavItems = [
   { to: '/dashboard/wallet', label: 'Wallet', icon: iconWallet },
   { to: '/dashboard/products', label: 'Shop', icon: iconShop },
   { to: '/dashboard/profile', label: 'Profile', icon: iconUser },
+  { to: '/dashboard/disputes', label: 'Disputes', icon: iconDispute },
 ]
 
 function titleForPath(pathname) {
@@ -150,6 +152,7 @@ export default function UserDashboardLayout() {
     >
       <Outlet />
     </AppShell>
+    <WhatsAppSupportFab aboveBottomNav />
     </>
   )
 }

@@ -4,7 +4,6 @@ import toast from 'react-hot-toast'
 import { api } from '../config/api'
 import { ISSUE_OPTIONS, ISSUE_OTHER_SENTINEL, ISSUE_OTHER_VALUE } from '../constants/issues'
 import Button from '../components/ui/Button'
-import Card from '../components/ui/Card'
 import Input from '../components/ui/Input'
 import BookingSummaryBar from '../components/booking/BookingSummaryBar'
 import LocationAutocomplete from '../components/booking/LocationAutocomplete'
@@ -16,6 +15,7 @@ import { buildRazorpayPrefill } from '../utils/razorpayPrefill'
 import { mapboxReverseGeocode } from '../utils/mapboxGeocode'
 import { getCurrentCoords } from '../utils/geolocation'
 import SeoNoIndex from '../components/seo/SeoNoIndex'
+import WhatsAppSupportFab from '../components/support/WhatsAppSupportFab'
 import { useReferralMyCode } from '../hooks/useReferral'
 
 function todayISO() {
@@ -717,6 +717,7 @@ export default function PhysioListPage() {
           </div>
         </div>
       )}
+      <WhatsAppSupportFab />
     </div>
     </>
   )

@@ -22,6 +22,7 @@ import RescheduleModal from '../../components/physio/RescheduleModal'
 import { resolveFileUrl } from '../../utils/serverOrigin'
 import { distanceKm, parseLatLng } from '../../utils/geoDistance'
 import { usePricingSettings, computeTravelSurchargePreview } from '../../hooks/usePricingSettings'
+import { DAILY_SLOTS } from '../../constants/slots'
 
 const adminHeaders = () => ({
   headers: { Authorization: `Bearer ${import.meta.env.VITE_ADMIN_API_KEY || ''}` },

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { api } from '../../config/api'
 import toast from 'react-hot-toast'
 import { disputeStatusBadge, paymentBadge } from './dashboardUtils'
@@ -82,6 +83,14 @@ export default function DashboardDisputes() {
                         <span className="font-medium text-ink">Resolution: </span>
                         {d.resolution}
                       </p>
+                    ) : null}
+                    {b?._id ? (
+                      <Link
+                        to={`/dashboard/bookings/${b._id}`}
+                        className="mt-3 inline-block text-sm font-semibold text-teal-700 hover:text-teal-900 hover:underline"
+                      >
+                        View booking →
+                      </Link>
                     ) : null}
                   </div>
                   <div className="flex flex-col items-end gap-2">

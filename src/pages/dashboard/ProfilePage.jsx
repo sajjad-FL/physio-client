@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { api } from '../../config/api'
+import { clearToken } from '../../auth/session'
 import { getProfileCached, invalidateProfileCache } from '../../utils/profileCache'
 import { assetUrl } from '../../utils/assetUrl'
 import { mapboxReverseGeocode } from '../../utils/mapboxGeocode'
@@ -13,6 +14,7 @@ import LocationSelectorRow from '../../components/location/LocationSelectorRow'
 import SeoNoIndex from '../../components/seo/SeoNoIndex'
 import { validateAvatarFile } from '../../utils/onboardingValidation'
 import { MAX_UPLOAD_SIZE_LABEL } from '../../constants/uploadLimits.js'
+import { useReferralMyCode } from '../../hooks/useReferral'
 
 const GENDERS = [
   { value: 'male', label: 'Male' },
@@ -30,6 +32,7 @@ function profileRoleFromApi(d) {
 }
 
 export default function ProfilePage() {
+  const navigate = useNavigate()
   const fileInputRef = useRef(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -116,6 +119,36 @@ export default function ProfilePage() {
 
   const displayAvatarSrc = previewLocal || assetUrl(avatarUrl)
   const isPhysio = role === 'physio'
+  const isPatient = role === 'user'
+  const { referralRewardAmount, referralSignupBonusAmount } = useReferralMyCode(isPatient)
+
+  const profileStrength = useMemo(() => {
+    const fields = [name, email, dob, gender, addressText]
+    if (isPhysio) {
+      fields.push(specialization, experience, fees)
+    }
+    const filled = fields.filter((x) => String(x || '').trim() !== '').length
+    return Math.round((filled / fields.length) * 100)
+  }, [name, email, dob, gender, addressText, specialization, experience, fees, isPhysio])
+
+  async function handleDeleteAccount() {
+    if (
+      !window.confirm(
+        'This will permanently delete your account and all associated data. This action cannot be undone.',
+      )
+    ) {
+      return
+    }
+    try {
+      await api.delete('/profile')
+      clearToken()
+      window.dispatchEvent(new Event('auth-session-changed'))
+      toast.success('Account deleted')
+      navigate('/login', { replace: true })
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Could not delete account')
+    }
+  }
 
   function onPlaceResolved(place) {
     if (place && Number.isFinite(place.lat) && Number.isFinite(place.lng)) {
@@ -316,7 +349,38 @@ export default function ProfilePage() {
             {uploading ? 'Uploading…' : 'Upload photo'}
           </Button>
           <p className="text-center text-xs text-gray-500">JPEG, PNG, or WebP · max {MAX_UPLOAD_SIZE_LABEL}</p>
+          <div className="mt-2 w-full max-w-xs">
+            <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+              <div
+                className="h-full rounded-full bg-teal-600 transition-all"
+                style={{ width: `${profileStrength}%` }}
+              />
+            </div>
+            <p className="mt-1.5 text-center text-xs font-medium text-slate-600">{profileStrength}% complete</p>
+          </div>
         </div>
+
+        {isPatient ? (
+          <Link
+            to="/dashboard/referrals"
+            className="mb-6 flex items-center gap-3 rounded-2xl border border-teal-100 bg-gradient-to-r from-teal-50 to-emerald-50 p-4 transition hover:border-teal-200"
+          >
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-teal-100 text-teal-700">
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24" aria-hidden>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21 11.25v8.25a1.5 1.5 0 01-1.5 1.5H5.25a1.5 1.5 0 01-1.5-1.5v-8.25M12 4.875A2.625 2.625 0 109.375 7.5H12m0-2.625V7.5m0-2.625A2.625 2.625 0 1114.625 7.5H12m0 0V21m-8.625-9.75h18c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125h-18c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
+              </svg>
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold text-slate-900">Refer &amp; Earn Credits</p>
+              <p className="text-sm text-slate-600">
+                {referralSignupBonusAmount > 0
+                  ? `Friends get ₹${referralSignupBonusAmount} on signup · you earn ₹${referralRewardAmount}`
+                  : `Share your code and earn ₹${referralRewardAmount} per friend`}
+              </p>
+            </div>
+            <span className="text-sm font-semibold text-teal-700">→</span>
+          </Link>
+        ) : null}
 
         <form onSubmit={saveProfile} className="mt-8 space-y-5">
           <div>
@@ -554,6 +618,18 @@ export default function ProfilePage() {
             {saving ? 'Saving…' : 'Save changes'}
           </Button>
         </form>
+
+        {isPatient ? (
+          <div className="mt-8 border-t border-gray-100 pt-6">
+            <button
+              type="button"
+              onClick={handleDeleteAccount}
+              className="w-full rounded-xl border border-rose-200 bg-rose-50 py-3 text-sm font-semibold text-rose-800 transition hover:bg-rose-100"
+            >
+              Delete account
+            </button>
+          </div>
+        ) : null}
       </Card>
 
       <MapPickerModal
