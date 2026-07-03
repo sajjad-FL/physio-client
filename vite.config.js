@@ -4,6 +4,7 @@ import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { SERVICE_CITIES } from './src/constants/serviceCities.js'
+import { CONDITION_SLUGS } from './src/constants/conditions.js'
 
 /**
  * Writes dist/robots.txt and dist/sitemap.xml after build.
@@ -29,12 +30,16 @@ function seoDistFilesPlugin({ siteUrl, mode, apiPublicOrigin }) {
         )
       }
 
+      // NOTE: trailing slash on /physio/ is deliberate. `Disallow: /physio` (no
+      // slash) matches by prefix and would also block the public SEO pages
+      // /physio-in/* and /physician/*. `/physio/` blocks only the physio
+      // dashboard while leaving landing pages crawlable.
       const robotsBody = `User-agent: *
 Allow: /
 
 Disallow: /dashboard
 Disallow: /book
-Disallow: /physio
+Disallow: /physio/
 Disallow: /admin
 Disallow: /profile
 Disallow: /unauthorized
@@ -53,6 +58,9 @@ Sitemap: ${base}/sitemap.xml
 
       const staticPaths = ['/', '/login', '/register', '/forgot-password', '/register-physio', '/near-me-physio']
       const cityPaths = SERVICE_CITIES.map((c) => `/physio-in/${c.slug}`)
+      const conditionCityPaths = SERVICE_CITIES.flatMap((c) =>
+        CONDITION_SLUGS.map((cond) => `/physio-in/${c.slug}/${cond}`),
+      )
       const nearMeCityPaths = SERVICE_CITIES.map((c) => `/near-me-physio/${c.slug}`)
 
       const buildUrlBlock = (loc, priority, changefreq, lastmod) =>
@@ -67,6 +75,7 @@ Sitemap: ${base}/sitemap.xml
           return buildUrlBlock(loc, priority, 'weekly', lastmod)
         }),
         ...cityPaths.map((p) => buildUrlBlock(`${base}${p}`, '0.8', 'monthly', lastmod)),
+        ...conditionCityPaths.map((p) => buildUrlBlock(`${base}${p}`, '0.8', 'monthly', lastmod)),
         ...nearMeCityPaths.map((p) => buildUrlBlock(`${base}${p}`, '0.75', 'monthly', lastmod)),
       ]
       const sitemap = `<?xml version="1.0" encoding="UTF-8"?>

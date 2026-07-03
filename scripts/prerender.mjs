@@ -85,6 +85,11 @@ async function loadServiceCities() {
   return mod.SERVICE_CITIES || []
 }
 
+async function loadConditionSlugs() {
+  const mod = await import(url.pathToFileURL(path.join(clientRoot, 'src/constants/conditions.js')).href)
+  return mod.CONDITION_SLUGS || []
+}
+
 const MIME = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
@@ -168,7 +173,11 @@ async function main() {
 
   const cities = await loadServiceCities()
   const citySlugs = cities.map((c) => c.slug)
+  const conditionSlugs = await loadConditionSlugs()
   const cityRoutes = citySlugs.map((slug) => `/physio-in/${slug}`)
+  const conditionCityRoutes = citySlugs.flatMap((slug) =>
+    conditionSlugs.map((cond) => `/physio-in/${slug}/${cond}`),
+  )
   const nearMeCityRoutes = citySlugs.map((slug) => `/near-me-physio/${slug}`)
   const nearMeLocalityRoutes = cities.flatMap((city) =>
     (city.neighborhoods || [])
@@ -191,6 +200,7 @@ async function main() {
       '/register-physio',
       '/near-me-physio',
       ...cityRoutes,
+      ...conditionCityRoutes,
       ...nearMeCityRoutes,
       ...nearMeLocalityRoutes,
     ]),

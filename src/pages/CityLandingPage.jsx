@@ -6,12 +6,12 @@ import { SERVICE_CITIES, findCityBySlug } from '../constants/serviceCities'
 import { absoluteUrl, siteOrigin } from '../utils/siteMeta'
 
 const TREATMENTS = [
-  { title: 'Back pain', blurb: 'Lower-back pain, sciatica, disc issues and posture-related pain.' },
-  { title: 'Knee pain', blurb: 'Arthritis, ligament strain, post-replacement rehab and meniscus recovery.' },
-  { title: 'Neck and shoulder pain', blurb: 'Cervical spondylosis, frozen shoulder, and desk-job stiffness.' },
-  { title: 'Post-surgery rehab', blurb: 'Guided recovery after orthopedic, spinal or cardiac surgery.' },
-  { title: 'Stroke and paralysis', blurb: 'Mobility, strength and daily-life rehabilitation at home.' },
-  { title: 'Sports injuries', blurb: 'Ligament sprains, muscle tears and return-to-sport programs.' },
+  { title: 'Back pain', slug: 'back-pain', blurb: 'Lower-back pain, sciatica, disc issues and posture-related pain.' },
+  { title: 'Knee pain', slug: 'knee-pain', blurb: 'Arthritis, ligament strain, post-replacement rehab and meniscus recovery.' },
+  { title: 'Neck and shoulder pain', slug: 'neck-shoulder-pain', blurb: 'Cervical spondylosis, frozen shoulder, and desk-job stiffness.' },
+  { title: 'Post-surgery rehab', slug: 'post-surgery-rehab', blurb: 'Guided recovery after orthopedic, spinal or cardiac surgery.' },
+  { title: 'Stroke and paralysis', slug: 'stroke-paralysis', blurb: 'Mobility, strength and daily-life rehabilitation at home.' },
+  { title: 'Sports injuries', slug: 'sports-injury', blurb: 'Ligament sprains, muscle tears and return-to-sport programs.' },
 ]
 
 function buildFaq(city) {
@@ -221,13 +221,17 @@ export default function CityLandingPage() {
             </div>
             <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
               {TREATMENTS.map((t) => (
-                <div
+                <Link
                   key={t.title}
-                  className="rounded-2xl border border-slate-200/90 bg-white p-6 shadow-sm ring-1 ring-slate-900/[0.025]"
+                  to={`/physio-in/${city.slug}/${t.slug}`}
+                  className="group rounded-2xl border border-slate-200/90 bg-white p-6 shadow-sm ring-1 ring-slate-900/[0.025] transition hover:border-teal-300 hover:shadow-md"
                 >
-                  <h3 className="text-[17px] font-semibold tracking-tight text-slate-900">{t.title} in {city.name}</h3>
+                  <h3 className="text-[17px] font-semibold tracking-tight text-slate-900 group-hover:text-teal-700">{t.title} in {city.name}</h3>
                   <p className="mt-2 text-sm leading-relaxed text-slate-600">{t.blurb}</p>
-                </div>
+                  <span className="mt-3 inline-block text-sm font-semibold text-teal-700">
+                    {t.title} physiotherapy in {city.name} →
+                  </span>
+                </Link>
               ))}
             </div>
           </div>

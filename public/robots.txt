@@ -3,7 +3,7 @@ Allow: /
 
 Disallow: /dashboard
 Disallow: /book
-Disallow: /physio
+Disallow: /physio/
 Disallow: /admin
 Disallow: /profile
 Disallow: /unauthorized
