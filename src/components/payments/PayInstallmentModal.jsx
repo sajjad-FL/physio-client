@@ -72,7 +72,7 @@ export default function PayInstallmentModal({
       return
     }
     if (amt > outstanding + 0.009) {
-      setError(`Amount must be at most ₹${outstanding.toFixed(2)}`)
+      setError(`Amount must be at most the pending payment of ₹${outstanding.toFixed(2)}`)
       return
     }
     setSubmitting(true)
@@ -145,7 +145,7 @@ export default function PayInstallmentModal({
       open={open}
       onClose={submitting ? undefined : onClose}
       title="Pay installment"
-      description={`Outstanding balance: ₹${outstanding.toFixed(2)}. Pay any amount up to this limit.`}
+      description={`Pending payment: ₹${outstanding.toFixed(2)}. Pay any amount up to this limit.`}
     >
       <div className="space-y-4">
         {walletBalance > 0 ? (

@@ -183,6 +183,7 @@ export default function App() {
           <Route path="bookings" element={<ManagerBookingsPage />} />
           <Route path="bookings/:id" element={<ManagerBookingDetailPage />} />
           <Route path="ledger" element={<ManagerLedgerPage />} />
+          <Route path="profile" element={<ProfilePage />} />
         </Route>
         <Route
           path="/admin"

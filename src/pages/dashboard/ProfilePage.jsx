@@ -24,9 +24,10 @@ const GENDERS = [
 ]
 
 function profileRoleFromApi(d) {
-  if (d?.role === 'user' || d?.role === 'physio' || d?.role === 'admin') return d.role
+  if (d?.role === 'user' || d?.role === 'physio' || d?.role === 'admin' || d?.role === 'care_manager') return d.role
   const arr = Array.isArray(d?.roles) ? d.roles : []
   if (arr.includes('admin')) return 'admin'
+  if (arr.includes('care_manager')) return 'care_manager'
   if (arr.includes('physio')) return 'physio'
   return 'user'
 }
@@ -120,6 +121,7 @@ export default function ProfilePage() {
   const displayAvatarSrc = previewLocal || assetUrl(avatarUrl)
   const isPhysio = role === 'physio'
   const isPatient = role === 'user'
+  const isManager = role === 'care_manager'
   const { referralRewardAmount, referralSignupBonusAmount } = useReferralMyCode(isPatient)
 
   const profileStrength = useMemo(() => {
@@ -176,6 +178,9 @@ export default function ProfilePage() {
   function backLink() {
     if (role === 'admin') {
       return { to: '/admin', label: '← Admin' }
+    }
+    if (isManager) {
+      return { to: '/manager/bookings', label: '← Care manager' }
     }
     if (isPhysio) {
       return { to: '/physio/bookings', label: '← Physiotherapist workspace' }
@@ -317,7 +322,14 @@ export default function ProfilePage() {
 
       <div className="mb-8 text-center">
         <h1 className="type-page-title text-gray-900">Profile</h1>
-        <p className="mt-1 type-caption text-gray-500">Your details, photo, and saved address</p>
+        <p className="mt-1 type-caption text-gray-500">
+          {isManager ? 'Your account details and work location' : 'Your details, photo, and saved address'}
+        </p>
+        {isManager ? (
+          <span className="mt-3 inline-flex rounded-full bg-teal-50 px-3 py-1 text-xs font-semibold text-teal-800 ring-1 ring-teal-200/80">
+            Care Manager
+          </span>
+        ) : null}
       </div>
 
       <Card hover={false} className="border border-gray-100 p-6 shadow-sm sm:p-8">

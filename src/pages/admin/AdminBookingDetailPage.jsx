@@ -18,11 +18,13 @@ import InstallmentsCard from '../../components/payments/InstallmentsCard'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import AdminAssignPhysioModal from '../../components/admin/AdminAssignPhysioModal'
+import AdminAssignManagerModal from '../../components/admin/AdminAssignManagerModal'
 import RescheduleModal from '../../components/physio/RescheduleModal'
 import { resolveFileUrl } from '../../utils/serverOrigin'
 import { distanceKm, parseLatLng } from '../../utils/geoDistance'
 import { usePricingSettings, computeTravelSurchargePreview } from '../../hooks/usePricingSettings'
 import { DAILY_SLOTS } from '../../constants/slots'
+import { buildSessionPaymentMap } from '../../utils/sessionPaymentMap'
 
 const adminHeaders = () => ({
   headers: { Authorization: `Bearer ${import.meta.env.VITE_ADMIN_API_KEY || ''}` },
@@ -55,6 +57,7 @@ export default function AdminBookingDetailPage() {
   const [rejectPaymentReason, setRejectPaymentReason] = useState('')
   const [careManagers, setCareManagers] = useState([])
   const [assignManagerId, setAssignManagerId] = useState('')
+  const [assignManagerModalOpen, setAssignManagerModalOpen] = useState(false)
 
   const load = useCallback(async () => {
     if (!id) return
@@ -93,6 +96,19 @@ export default function AdminBookingDetailPage() {
     () => physios.find((p) => String(p._id) === String(assignPhysioId)),
     [physios, assignPhysioId],
   )
+  const selectedManagerForAssign = useMemo(() => {
+    const fromList = careManagers.find((m) => String(m._id) === String(assignManagerId))
+    if (fromList) return fromList
+    if (
+      assignManagerId &&
+      b?.managerId &&
+      typeof b.managerId === 'object' &&
+      String(b.managerId._id) === String(assignManagerId)
+    ) {
+      return b.managerId
+    }
+    return null
+  }, [careManagers, assignManagerId, b?.managerId])
   const selectedPhysioDistanceKm = useMemo(() => {
     if (!selectedPhysioForAssign || !b?.userId?.coordinates) return null
     const patient = parseLatLng(b.userId.coordinates)
@@ -391,6 +407,7 @@ export default function AdminBookingDetailPage() {
   }
 
   const paidLine = formatPaidAt(b)
+  const sessionPaymentMap = buildSessionPaymentMap(b, b.payments || [], b.paymentSummary || null)
 
   return (
     <div className="space-y-6">
@@ -586,6 +603,7 @@ export default function AdminBookingDetailPage() {
           subtitle="Verify each collected offline installment so it counts toward the coverage gate."
           summary={b.paymentSummary}
           payments={b.payments}
+          showSessionColumn
           renderRowActions={(p) => {
             if (p.mode !== 'offline' || p.status !== 'collected') return null
             const busy = paymentBusyId === String(p._id)
@@ -621,6 +639,7 @@ export default function AdminBookingDetailPage() {
         <div className="mt-4">
           <BookingSessionTimeline
             booking={b}
+            sessionPayments={sessionPaymentMap}
             reschedule={{
               enabled: true,
               onReschedule: (row) => setRescheduleRow(row),
@@ -739,29 +758,74 @@ export default function AdminBookingDetailPage() {
         <h2 className="mb-4 text-sm font-semibold text-ink">Actions — manage booking</h2>
         <div className="flex flex-col gap-4">
           {b.serviceType === 'home' ? (
-            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end">
+            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
               <div className="min-w-0 flex-1 space-y-2">
                 <label className="text-xs font-medium text-ink-muted">Care manager</label>
-                {b.managerId ? (
+                {b.managerId && !selectedManagerForAssign ? (
                   <p className="text-sm text-ink">
                     {typeof b.managerId === 'object' ? b.managerId.name : 'Assigned'} ·{' '}
                     {b.workflowStatus || '—'}
                   </p>
-                ) : (
+                ) : null}
+                {!b.managerId && !selectedManagerForAssign ? (
                   <p className="text-xs text-amber-800">No care manager assigned yet</p>
+                ) : null}
+                {selectedManagerForAssign ? (
+                  <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border-subtle bg-white p-3 ring-1 ring-border-subtle/60">
+                    <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-slate-100 ring-1 ring-border-subtle">
+                      {resolveFileUrl(selectedManagerForAssign.avatarUrl) ? (
+                        <img
+                          src={resolveFileUrl(selectedManagerForAssign.avatarUrl)}
+                          alt=""
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center text-sm font-semibold text-slate-400">
+                          {(selectedManagerForAssign.name || '?').slice(0, 1).toUpperCase()}
+                        </div>
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold text-ink">{selectedManagerForAssign.name}</p>
+                      <p className="truncate text-xs text-ink-muted">
+                        {selectedManagerForAssign.phone || '—'}
+                        {selectedManagerForAssign.zones?.length
+                          ? ` · ${selectedManagerForAssign.zones.length} zone${selectedManagerForAssign.zones.length === 1 ? '' : 's'}`
+                          : ''}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={rowBusy === 'manager'}
+                      onClick={() => setAssignManagerModalOpen(true)}
+                      className="tap-feedback shrink-0 rounded-lg border border-border-subtle bg-white px-3 py-2 text-xs font-semibold text-ink hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      Change
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={rowBusy === 'manager'}
+                    onClick={() => setAssignManagerModalOpen(true)}
+                    className="tap-feedback w-full rounded-xl border border-dashed border-border-subtle bg-slate-50/80 px-4 py-4 text-left text-sm font-medium text-ink hover:border-teal-300 hover:bg-teal-50/40 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:min-w-[240px]"
+                  >
+                    <span className="block text-ink">Choose care manager…</span>
+                    <span className="mt-0.5 block text-xs font-normal text-ink-muted">
+                      Browse zone coverage, distance &amp; contact details
+                    </span>
+                  </button>
                 )}
-                <select
-                  value={assignManagerId}
-                  onChange={(e) => setAssignManagerId(e.target.value)}
-                  className="w-full rounded-xl border border-border-subtle px-3 py-2 text-sm"
-                >
-                  <option value="">Select care manager…</option>
-                  {careManagers.map((m) => (
-                    <option key={m._id} value={m._id}>
-                      {m.name || m.phone}
-                    </option>
-                  ))}
-                </select>
+                <AdminAssignManagerModal
+                  key={b?._id ? `mgr-${b._id}` : `mgr-${id}`}
+                  open={assignManagerModalOpen}
+                  onClose={() => setAssignManagerModalOpen(false)}
+                  managers={careManagers}
+                  patientCoords={b?.userId?.coordinates}
+                  bookingPincode={b?.pincode || b?.userId?.pincode}
+                  selectedId={assignManagerId}
+                  onConfirmSelect={(managerId) => setAssignManagerId(managerId)}
+                />
               </div>
               <Button
                 type="button"

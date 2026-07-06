@@ -54,6 +54,8 @@ export default function InstallmentsCard({
   renderRowActions,
   children,
   emptyMessage = 'No installments recorded yet.',
+  balanceLabel = 'Pending',
+  showSessionColumn = false,
 }) {
   const rows = useMemo(() => {
     if (!Array.isArray(payments)) return []
@@ -96,7 +98,7 @@ export default function InstallmentsCard({
           ) : null}
         </div>
         <div className="rounded-xl border border-border-subtle/80 bg-slate-50/60 p-3">
-          <dt className="text-[11px] font-semibold uppercase tracking-wide text-ink-muted">Outstanding</dt>
+          <dt className="text-[11px] font-semibold uppercase tracking-wide text-ink-muted">{balanceLabel}</dt>
           <dd className="mt-1 text-base font-semibold tabular-nums text-ink">{formatRupees(outstanding)}</dd>
         </div>
         <div className="rounded-xl border border-border-subtle/80 bg-slate-50/60 p-3">
@@ -118,6 +120,7 @@ export default function InstallmentsCard({
             <thead>
               <tr className="text-[11px] font-semibold uppercase tracking-wide text-ink-muted">
                 <th className="pb-2 pr-3">When</th>
+                {showSessionColumn ? <th className="pb-2 pr-3">Session</th> : null}
                 <th className="pb-2 pr-3">Mode</th>
                 <th className="pb-2 pr-3 text-right">Amount</th>
                 <th className="pb-2 pr-3">Status</th>
@@ -134,6 +137,11 @@ export default function InstallmentsCard({
                     <td className="py-2 pr-3 align-top text-ink">
                       {formatDate(p.verifiedAt || p.collectedAt || p.createdAt)}
                     </td>
+                    {showSessionColumn ? (
+                      <td className="py-2 pr-3 align-top text-ink">
+                        {p.sessionOrdinal ? `#${p.sessionOrdinal}` : '—'}
+                      </td>
+                    ) : null}
                     <td className="py-2 pr-3 align-top capitalize text-ink">{p.mode}</td>
                     <td className="py-2 pr-3 align-top text-right font-medium tabular-nums text-ink">
                       {formatRupees(p.amount)}

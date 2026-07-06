@@ -3,7 +3,6 @@ import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import { resolveFileUrl } from '../../utils/serverOrigin'
 import { distanceKm, parseLatLng } from '../../utils/geoDistance'
-import { formatPhysioSessionFeeLabel } from '../../utils/physioSessionFee.js'
 
 const RADIUS_OPTIONS = [
   { value: 'any', label: 'Any distance' },
@@ -13,72 +12,47 @@ const RADIUS_OPTIONS = [
   { value: '50', label: 'Within 50 km' },
 ]
 
-const RATING_OPTIONS = [
-  { value: '0', label: 'Any rating' },
-  { value: '3', label: '3+ stars' },
-  { value: '4', label: '4+ stars' },
-  { value: '4.5', label: '4.5+ stars' },
-]
-
-const EXP_OPTIONS = [
-  { value: '0', label: 'Any experience' },
-  { value: '2', label: '2+ years' },
-  { value: '5', label: '5+ years' },
-  { value: '10', label: '10+ years' },
-]
-
 const SORT_OPTIONS = [
+  { value: 'zone_match', label: 'Zone match first' },
   { value: 'distance', label: 'Nearest first' },
-  { value: 'rating', label: 'Highest rated' },
   { value: 'name', label: 'Name A–Z' },
-  { value: 'price_asc', label: 'Lowest price' },
-  { value: 'price_desc', label: 'Highest price' },
 ]
 
 const selectClass =
   'min-w-0 max-w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs font-medium text-slate-800 shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20'
 
-function StarRow({ rating, count, compact }) {
-  const r = Number(rating)
-  const safe = Number.isFinite(r) ? Math.min(5, Math.max(0, r)) : 0
-  const full = Math.round(safe)
-  const empty = Math.max(0, 5 - full)
-  const textSm = compact ? 'text-[11px]' : 'text-sm'
-  const textXs = compact ? 'text-[10px]' : 'text-xs'
-  return (
-    <div className="flex flex-wrap items-center gap-1">
-      <span className={`${textSm} leading-none text-amber-400`} aria-hidden>
-        {'★'.repeat(full)}
-        <span className="text-slate-200">{'★'.repeat(empty)}</span>
-      </span>
-      <span className={`${textXs} font-medium tabular-nums text-slate-600`}>
-        {safe > 0 ? safe.toFixed(1) : 'No rating'}
-        {count > 0 && <span className="font-normal text-slate-400"> ({count})</span>}
-      </span>
-    </div>
-  )
+function managerCoversPincode(manager, bookingPincode) {
+  if (!bookingPincode) return false
+  const pin = String(bookingPincode).trim()
+  if (!pin) return false
+  return (manager.zones || []).some((z) => (z.pincodes || []).includes(pin))
 }
 
-export default function AdminAssignPhysioModal({
+function zoneSummary(manager) {
+  const zones = manager.zones || []
+  if (zones.length === 0) return 'No zone assigned'
+  if (zones.length === 1) return zones[0].name
+  return `${zones.length} zones · ${zones[0].name}${zones.length > 1 ? '…' : ''}`
+}
+
+export default function AdminAssignManagerModal({
   open,
   onClose,
-  physios,
+  managers,
   patientCoords: patientCoordsRaw,
+  bookingPincode,
   selectedId,
   onConfirmSelect,
-  profileTo,
 }) {
   const [search, setSearch] = useState('')
   const [draftId, setDraftId] = useState(selectedId || '')
   const [radiusKm, setRadiusKm] = useState('any')
-  const [minRating, setMinRating] = useState('0')
-  const [minExperience, setMinExperience] = useState('0')
-  const [specialty, setSpecialty] = useState('')
-  const [sortBy, setSortBy] = useState(() => (parseLatLng(patientCoordsRaw) ? 'distance' : 'rating'))
+  const [zoneFilter, setZoneFilter] = useState(() => (bookingPincode ? 'match' : 'any'))
+  const [sortBy, setSortBy] = useState(() => (bookingPincode ? 'zone_match' : 'name'))
 
   const patientPoint = useMemo(() => parseLatLng(patientCoordsRaw), [patientCoordsRaw])
   const canUseDistance = Boolean(patientPoint)
-  const effectiveSortBy = sortBy === 'distance' && !canUseDistance ? 'rating' : sortBy
+  const effectiveSortBy = sortBy === 'distance' && !canUseDistance ? 'name' : sortBy
 
   useEffect(() => {
     if (!open) return
@@ -89,121 +63,96 @@ export default function AdminAssignPhysioModal({
     return () => window.removeEventListener('keydown', onKey)
   }, [open, onClose])
 
-  const assignable = useMemo(
-    () =>
-      (physios || []).filter(
-        (p) =>
-          p.isVerified &&
-          p.verificationStatus === 'approved' &&
-          p.availability !== false &&
-          p.isAvailable !== false,
-      ),
-    [physios],
-  )
+  useEffect(() => {
+    if (open) setDraftId(selectedId || '')
+  }, [open, selectedId])
 
-  const specialtyOptions = useMemo(() => {
-    const set = new Set()
-    for (const p of assignable) {
-      const s = (p.specialization || '').trim()
-      if (s) set.add(s)
+  const zoneOptions = useMemo(() => {
+    const set = new Map()
+    for (const m of managers || []) {
+      for (const z of m.zones || []) {
+        if (z._id && z.name) set.set(String(z._id), z.name)
+      }
     }
-    return [...set].sort((a, b) => a.localeCompare(b))
-  }, [assignable])
+    return [...set.entries()].map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name))
+  }, [managers])
 
   const withMeta = useMemo(() => {
-    return assignable.map((p) => {
-      const pc = parseLatLng(p.coordinates)
+    return (managers || []).map((m) => {
+      const mc = parseLatLng(m.coordinates)
       let distKm = null
-      if (patientPoint && pc) {
-        distKm = distanceKm(patientPoint.lat, patientPoint.lng, pc.lat, pc.lng)
+      if (patientPoint && mc) {
+        distKm = distanceKm(patientPoint.lat, patientPoint.lng, mc.lat, mc.lng)
       }
-      return { p, distKm }
+      const coversPincode = managerCoversPincode(m, bookingPincode)
+      return { m, distKm, coversPincode }
     })
-  }, [assignable, patientPoint])
+  }, [managers, patientPoint, bookingPincode])
 
   const filteredSorted = useMemo(() => {
     const q = search.trim().toLowerCase()
     const rMax = radiusKm === 'any' ? null : Number(radiusKm)
-    const rMin = Number(minRating) || 0
-    const eMin = Number(minExperience) || 0
-    const spec = specialty.trim().toLowerCase()
+    const pin = String(bookingPincode || '').trim()
 
-    let rows = withMeta.filter(({ p, distKm }) => {
+    let rows = withMeta.filter(({ m, distKm, coversPincode }) => {
       if (q) {
-        const blob = [p.name, p.specialization, p.location, p.phone]
+        const blob = [
+          m.name,
+          m.phone,
+          m.location,
+          m.pincode,
+          ...(m.zones || []).map((z) => z.name),
+        ]
           .filter(Boolean)
           .join(' ')
           .toLowerCase()
         if (!blob.includes(q)) return false
       }
+      if (zoneFilter === 'match' && pin) {
+        if (!coversPincode) return false
+      } else if (zoneFilter !== 'any') {
+        const inZone = (m.zones || []).some((z) => String(z._id) === String(zoneFilter))
+        if (!inZone) return false
+      }
       if (rMax != null && canUseDistance) {
         if (distKm == null || distKm > rMax) return false
       }
-      if (rMin > 0) {
-        const ar = Number(p.avgRating)
-        if (!Number.isFinite(ar) || ar < rMin) return false
-      }
-      if (eMin > 0 && (Number(p.experience) || 0) < eMin) return false
-      if (spec && (p.specialization || '').trim().toLowerCase() !== spec) return false
       return true
     })
 
     const sorted = [...rows]
     sorted.sort((a, b) => {
       switch (effectiveSortBy) {
+        case 'zone_match': {
+          if (a.coversPincode !== b.coversPincode) return a.coversPincode ? -1 : 1
+          if (a.distKm != null && b.distKm != null && a.distKm !== b.distKm) return a.distKm - b.distKm
+          return (a.m.name || '').localeCompare(b.m.name || '')
+        }
         case 'distance': {
           const da = a.distKm
           const db = b.distKm
-          if (da == null && db == null) return 0
+          if (da == null && db == null) return (a.m.name || '').localeCompare(b.m.name || '')
           if (da == null) return 1
           if (db == null) return -1
           return da - db
         }
-        case 'rating': {
-          const ra = Number(a.p.avgRating) || 0
-          const rb = Number(b.p.avgRating) || 0
-          if (rb !== ra) return rb - ra
-          return (a.p.name || '').localeCompare(b.p.name || '')
-        }
         case 'name':
-          return (a.p.name || '').localeCompare(b.p.name || '')
-        case 'price_asc': {
-          const pa = Number(a.p.pricePerSession)
-          const pb = Number(b.p.pricePerSession)
-          const na = Number.isFinite(pa) ? pa : Infinity
-          const nb = Number.isFinite(pb) ? pb : Infinity
-          if (na !== nb) return na - nb
-          return (a.p.name || '').localeCompare(b.p.name || '')
-        }
-        case 'price_desc': {
-          const pa = Number(a.p.pricePerSession)
-          const pb = Number(b.p.pricePerSession)
-          const na = Number.isFinite(pa) ? pa : -Infinity
-          const nb = Number.isFinite(pb) ? pb : -Infinity
-          if (nb !== na) return nb - na
-          return (a.p.name || '').localeCompare(b.p.name || '')
-        }
         default:
-          return 0
+          return (a.m.name || '').localeCompare(b.m.name || '')
       }
     })
 
     return sorted
-  }, [withMeta, search, radiusKm, minRating, minExperience, specialty, effectiveSortBy, canUseDistance])
+  }, [withMeta, search, radiusKm, zoneFilter, bookingPincode, effectiveSortBy, canUseDistance])
 
   const selectionId = useMemo(() => {
     if (!draftId) return ''
-    const still = filteredSorted.some(({ p }) => String(p._id) === String(draftId))
+    const still = filteredSorted.some(({ m }) => String(m._id) === String(draftId))
     return still ? draftId : ''
   }, [draftId, filteredSorted])
 
   const filtersActive =
-    radiusKm !== 'any' || minRating !== '0' || minExperience !== '0' || Boolean(specialty.trim())
-
-  const excludedByRadius =
-    canUseDistance && radiusKm !== 'any'
-      ? withMeta.filter(({ distKm }) => distKm == null).length
-      : 0
+    radiusKm !== 'any' || (bookingPincode ? zoneFilter !== 'match' : zoneFilter !== 'any')
 
   if (!open) return null
 
@@ -215,9 +164,8 @@ export default function AdminAssignPhysioModal({
 
   function clearFilters() {
     setRadiusKm('any')
-    setMinRating('0')
-    setMinExperience('0')
-    setSpecialty('')
+    setZoneFilter(bookingPincode ? 'match' : 'any')
+    setSortBy(bookingPincode ? 'zone_match' : 'name')
   }
 
   const node = (
@@ -225,7 +173,7 @@ export default function AdminAssignPhysioModal({
       className="fixed inset-0 z-[100] flex items-end justify-center p-0 sm:items-center sm:p-4"
       role="dialog"
       aria-modal="true"
-      aria-labelledby="assign-physio-title"
+      aria-labelledby="assign-manager-title"
     >
       <button type="button" className="absolute inset-0 bg-slate-900/50 backdrop-blur-[2px]" aria-label="Close" onClick={onClose} />
       <div
@@ -235,11 +183,11 @@ export default function AdminAssignPhysioModal({
         <div className="shrink-0 border-b border-slate-100 px-4 py-4 sm:px-5">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <h2 id="assign-physio-title" className="type-page-title text-slate-900">
-                Assign physiotherapist
+              <h2 id="assign-manager-title" className="type-page-title text-slate-900">
+                Assign care manager
               </h2>
               <p className="mt-1 text-sm text-slate-500">
-                Verified, available therapists only. Use filters to match distance and fit.
+                Active care managers only. Filter by zone coverage and distance to the patient.
               </p>
             </div>
             <button
@@ -253,21 +201,37 @@ export default function AdminAssignPhysioModal({
               </svg>
             </button>
           </div>
+          {bookingPincode ? (
+            <p className="mt-2 rounded-lg bg-teal-50 px-3 py-2 text-xs text-teal-900 ring-1 ring-teal-100">
+              Patient pincode: <span className="font-semibold tabular-nums">{bookingPincode}</span>
+              {' · '}
+              Managers covering this pincode are prioritized.
+            </p>
+          ) : null}
           {!canUseDistance && (
             <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-900 ring-1 ring-amber-100">
-              Patient location is not on file. Distance and radius filters are unavailable until the patient profile has map coordinates.
+              Patient location is not on file. Distance filters are unavailable until the patient profile has map coordinates.
             </p>
           )}
           <input
             type="search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by name, specialty, area, phone…"
+            placeholder="Search by name, phone, area, zone…"
             className="mt-3 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
             autoComplete="off"
           />
           <div className="mt-3 space-y-2">
             <div className="flex flex-wrap items-center gap-2">
+              <select className={selectClass} value={zoneFilter} onChange={(e) => setZoneFilter(e.target.value)}>
+                <option value="any">All zones</option>
+                {bookingPincode ? <option value="match">Covers patient pincode</option> : null}
+                {zoneOptions.map((z) => (
+                  <option key={z.id} value={z.id}>
+                    {z.name}
+                  </option>
+                ))}
+              </select>
               <select
                 className={selectClass}
                 value={radiusKm}
@@ -278,28 +242,6 @@ export default function AdminAssignPhysioModal({
                 {RADIUS_OPTIONS.map((o) => (
                   <option key={o.value} value={o.value}>
                     {o.label}
-                  </option>
-                ))}
-              </select>
-              <select className={selectClass} value={minRating} onChange={(e) => setMinRating(e.target.value)}>
-                {RATING_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
-              <select className={selectClass} value={minExperience} onChange={(e) => setMinExperience(e.target.value)}>
-                {EXP_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
-              <select className={selectClass} value={specialty} onChange={(e) => setSpecialty(e.target.value)}>
-                <option value="">All specialties</option>
-                {specialtyOptions.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
                   </option>
                 ))}
               </select>
@@ -320,20 +262,15 @@ export default function AdminAssignPhysioModal({
                 </button>
               )}
             </div>
-            {excludedByRadius > 0 && radiusKm !== 'any' && canUseDistance && (
-              <p className="text-[11px] text-slate-500">
-                {excludedByRadius} therapist{excludedByRadius === 1 ? '' : 's'} hidden — no map coordinates on file.
-              </p>
-            )}
           </div>
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-3 sm:px-4 sm:py-4">
-          {assignable.length === 0 ? (
+          {(managers || []).length === 0 ? (
             <p className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-600">
-              No approved, verified physiotherapists found. Add or approve profiles in{' '}
-              <Link to="/admin/physios" className="font-semibold text-teal-700 underline-offset-2 hover:underline" onClick={onClose}>
-                Physiotherapists
+              No care managers found. Promote a user in{' '}
+              <Link to="/admin/directory" className="font-semibold text-teal-700 underline-offset-2 hover:underline" onClick={onClose}>
+                Users
               </Link>
               .
             </p>
@@ -341,14 +278,14 @@ export default function AdminAssignPhysioModal({
             <p className="py-8 text-center text-sm text-slate-500">
               {search.trim()
                 ? `No matches for "${search.trim()}".`
-                : 'No therapists match these filters. Try a wider radius or clear filters.'}
+                : 'No managers match these filters. Try a wider radius or clear filters.'}
             </p>
           ) : (
             <ul className="flex flex-col gap-2">
-              {filteredSorted.map(({ p, distKm }) => {
-                const id = p._id
+              {filteredSorted.map(({ m, distKm, coversPincode }) => {
+                const id = m._id
                 const active = selectionId === id
-                const avatarSrc = resolveFileUrl(p.avatar)
+                const avatarSrc = resolveFileUrl(m.avatarUrl)
                 return (
                   <li key={id}>
                     <div
@@ -373,47 +310,53 @@ export default function AdminAssignPhysioModal({
                           <img src={avatarSrc} alt="" className="h-full w-full object-cover" />
                         ) : (
                           <div className="flex h-full w-full items-center justify-center text-sm font-semibold text-slate-400">
-                            {(p.name || '?').slice(0, 1).toUpperCase()}
+                            {(m.name || '?').slice(0, 1).toUpperCase()}
                           </div>
                         )}
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
-                          <p className="text-sm font-semibold text-slate-900">{p.name || '—'}</p>
-                          {distKm != null && (
-                            <span className="shrink-0 rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-slate-700">
-                              {distKm < 10 ? distKm.toFixed(1) : Math.round(distKm)} km
-                            </span>
-                          )}
+                          <p className="text-sm font-semibold text-slate-900">{m.name || '—'}</p>
+                          <div className="flex shrink-0 flex-wrap items-center gap-1">
+                            {coversPincode ? (
+                              <span className="rounded-md bg-teal-100 px-1.5 py-0.5 text-[10px] font-semibold text-teal-800">
+                                Covers pincode
+                              </span>
+                            ) : null}
+                            {distKm != null && (
+                              <span className="rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-slate-700">
+                                {distKm < 10 ? distKm.toFixed(1) : Math.round(distKm)} km
+                              </span>
+                            )}
+                          </div>
                         </div>
-                        <p className="truncate text-[11px] text-slate-500">{p.specialization || '—'}</p>
-                        <div className="mt-0.5">
-                          <StarRow rating={p.avgRating} count={Number(p.totalReviews) || 0} compact />
-                        </div>
+                        <p className="truncate text-[11px] text-slate-500">{zoneSummary(m)}</p>
                         <p className="mt-0.5 truncate text-[11px] text-slate-600">
-                          <span className="font-semibold text-slate-700">{p.experience ?? 0}</span> yrs
-                          {p.pricePerSession != null && (
-                            <>
-                              <span className="text-slate-300"> · </span>
-                              <span className="tabular-nums">{formatPhysioSessionFeeLabel(p)}/session</span>
-                            </>
+                          {m.phone ? (
+                            <span className="font-medium text-slate-700">{m.phone}</span>
+                          ) : (
+                            <span className="text-slate-400">No phone</span>
                           )}
-                          {p.location ? (
+                          {m.pincode ? (
                             <>
                               <span className="text-slate-300"> · </span>
-                              <span className="text-slate-500">{p.location}</span>
+                              <span className="tabular-nums">PIN {m.pincode}</span>
+                            </>
+                          ) : null}
+                          {m.location ? (
+                            <>
+                              <span className="text-slate-300"> · </span>
+                              <span className="text-slate-500">{m.location}</span>
                             </>
                           ) : null}
                         </p>
                         <div className="mt-2 flex flex-wrap items-center gap-2 sm:mt-1.5">
                           <Link
-                            to={profileTo ? profileTo(id) : `/admin/physios/${id}`}
-                            target="_blank"
-                            rel="noreferrer"
+                            to="/admin/directory"
                             className="inline-flex items-center text-[11px] font-semibold text-teal-700 underline-offset-2 hover:underline"
                             onClick={(e) => e.stopPropagation()}
                           >
-                            Full profile
+                            User directory
                             <svg className="ml-0.5 h-3 w-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden>
                               <path
                                 strokeLinecap="round"
@@ -464,7 +407,7 @@ export default function AdminAssignPhysioModal({
               onClick={handleUseSelection}
               className="tap-feedback min-h-11 rounded-xl bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-10"
             >
-              Use this physiotherapist
+              Use this care manager
             </button>
           </div>
         </div>

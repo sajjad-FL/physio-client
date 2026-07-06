@@ -1,55 +1,17 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
 import { api } from '../../config/api'
 import toast from 'react-hot-toast'
 import AdminPageHeader, { AdminLink } from '../../components/admin/AdminPageHeader'
 import AdminFlowGuide from '../../components/admin/AdminFlowGuide'
+import AdminPaymentQueueTable, { PaymentQueueVerifySummary } from '../../components/admin/AdminPaymentQueueTable'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import Input from '../../components/ui/Input'
-import Pagination from '../../components/Pagination'
 
 function formatInr(n) {
   const v = Number(n)
   if (!Number.isFinite(v)) return '—'
   return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(v)
-}
-
-function formatDate(d) {
-  if (!d) return '—'
-  try {
-    return new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
-  } catch {
-    return '—'
-  }
-}
-
-const STATUS_STYLES = {
-  pending: 'bg-gray-100 text-gray-800 ring-gray-200',
-  paid: 'bg-sky-50 text-sky-900 ring-sky-200',
-  collected: 'bg-amber-50 text-amber-900 ring-amber-200',
-  verified: 'bg-emerald-50 text-emerald-900 ring-emerald-200',
-  rejected: 'bg-rose-50 text-rose-900 ring-rose-200',
-  refunded: 'bg-violet-50 text-violet-900 ring-violet-200',
-}
-
-const STATUS_LABEL = {
-  pending: 'Pending',
-  paid: 'Paid',
-  collected: 'Collected',
-  verified: 'Verified',
-  rejected: 'Rejected',
-  refunded: 'Refunded',
-}
-
-function StatusBadge({ status }) {
-  const key = status || 'pending'
-  const klass = STATUS_STYLES[key] || STATUS_STYLES.pending
-  return (
-    <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${klass}`}>
-      {STATUS_LABEL[key] || key}
-    </span>
-  )
 }
 
 const MODE_TABS = [
@@ -224,7 +186,7 @@ export default function AdminPaymentsPage() {
             <label className="text-xs font-medium text-gray-500">Search</label>
             <Input
               className="mt-1"
-              placeholder="Physiotherapist, patient, booking id, payment id"
+              placeholder="Physiotherapist, patient, issue, booking id"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && applyFilters()}
@@ -275,96 +237,19 @@ export default function AdminPaymentsPage() {
       </Card>
 
       <Card hover={false} className="overflow-hidden p-0">
-        {loading ? (
-          <div className="p-12 text-center text-sm text-gray-500">Loading…</div>
-        ) : rows.length === 0 ? (
-          <div className="p-12 text-center">
-            <p className="text-sm font-medium text-gray-900">No payments match your filters</p>
-            <p className="mt-1 text-xs text-gray-500">Adjust the filters or try a different search.</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[920px] text-left text-sm">
-              <thead className="sticky top-0 z-10 border-b border-gray-200 bg-gray-50/95 text-xs font-semibold uppercase tracking-wide text-gray-500 backdrop-blur">
-                <tr>
-                  <th className="px-4 py-3">Physiotherapist</th>
-                  <th className="px-4 py-3">Patient</th>
-                  <th className="px-4 py-3">Amount</th>
-                  <th className="px-4 py-3">Mode</th>
-                  <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3">Date</th>
-                  <th className="px-4 py-3 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {rows.map((row) => {
-                  const canVerify = row.mode === 'offline' && row.status === 'collected'
-                  return (
-                    <tr key={row._id} className="hover:bg-gray-50/80">
-                      <td className="px-4 py-3">
-                        <div className="font-medium text-gray-900">{row.physioName || '—'}</div>
-                        {row.physioPhone && <div className="text-xs text-gray-500">{row.physioPhone}</div>}
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="text-gray-800">{row.patientName || '—'}</div>
-                        {row.patientPhone && <div className="text-xs text-gray-500">{row.patientPhone}</div>}
-                      </td>
-                      <td className="px-4 py-3 tabular-nums font-semibold text-gray-900">{formatInr(row.amount)}</td>
-                      <td className="px-4 py-3 capitalize text-gray-600">{row.mode}</td>
-                      <td className="px-4 py-3">
-                        <StatusBadge status={row.status} />
-                        {row.status === 'rejected' && row.rejectReason && (
-                          <div className="mt-1 max-w-[200px] truncate text-xs text-rose-700" title={row.rejectReason}>
-                            {row.rejectReason}
-                          </div>
-                        )}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-gray-600">{formatDate(row.createdAt)}</td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex flex-wrap justify-end gap-2">
-                          {canVerify && (
-                            <>
-                              <button
-                                type="button"
-                                disabled={busy === `v-${row._id}`}
-                                onClick={() => setVerifyTarget(row)}
-                                className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:opacity-50"
-                              >
-                                Verify
-                              </button>
-                              <button
-                                type="button"
-                                disabled={busy === `r-${row._id}`}
-                                onClick={() => {
-                                  setRejectTarget(row)
-                                  setRejectReason('')
-                                }}
-                                className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-800 shadow-sm transition hover:bg-gray-50 disabled:opacity-50"
-                              >
-                                Reject
-                              </button>
-                            </>
-                          )}
-                          <Link
-                            to={`/admin/bookings/${row.bookingId}`}
-                            className="inline-flex rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50"
-                          >
-                            Open
-                          </Link>
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-        {!loading && rows.length > 0 && (
-          <div className="border-t border-gray-100 px-4 py-3">
-            <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
-          </div>
-        )}
+        <AdminPaymentQueueTable
+          rows={rows}
+          loading={loading}
+          page={page}
+          totalPages={totalPages}
+          onPageChange={setPage}
+          busy={busy}
+          onVerify={setVerifyTarget}
+          onReject={(row) => {
+            setRejectTarget(row)
+            setRejectReason('')
+          }}
+        />
       </Card>
 
       {verifyTarget && (
@@ -376,6 +261,7 @@ export default function AdminPaymentsPage() {
               <span className="font-semibold text-gray-900">{verifyTarget.physioName}</span>? This posts the ledger
               entries for this installment.
             </p>
+            <PaymentQueueVerifySummary row={verifyTarget} />
             <div className="mt-6 flex justify-end gap-2">
               <Button type="button" variant="ghost" onClick={() => setVerifyTarget(null)}>
                 Cancel
@@ -393,6 +279,7 @@ export default function AdminPaymentsPage() {
           <Card hover={false} className="max-w-md shadow-xl">
             <h3 className="type-page-title text-gray-900">Reject collection</h3>
             <p className="mt-1 text-sm text-gray-600">The physiotherapist can record a fresh collection after this.</p>
+            <PaymentQueueVerifySummary row={rejectTarget} />
             <label className="mt-4 block text-xs font-medium text-gray-500">Reason</label>
             <textarea
               className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 shadow-sm"

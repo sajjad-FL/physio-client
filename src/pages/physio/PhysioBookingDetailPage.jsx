@@ -95,8 +95,12 @@ export default function PhysioBookingDetailPage() {
    * the extreme "nothing unlocked" case (e.g. N=1 unpaid) blocks at booking
    * level; per-row gating handles partial coverage.
    */
+  const isHomeCare = booking?.serviceType === 'home'
+  const paymentGateSkipped = Boolean(booking?.managerId || isHomeCare)
+
   const paymentBlockReason = useMemo(() => {
     if (!booking) return 'Booking not loaded'
+    if (paymentGateSkipped) return ''
     if (!paymentSummary) {
       if (booking.paymentStatus !== 'held') return 'Payment must be secured before completion'
       return ''
@@ -304,7 +308,7 @@ export default function PhysioBookingDetailPage() {
           Mark each session complete after you finish the visit. No-show is for sessions the patient
           missed.
         </p>
-        {paymentSummary && unlockedSessions < sessionsCount && (
+        {paymentSummary && !paymentGateSkipped && unlockedSessions < sessionsCount && (
           <div className="mt-3 rounded-lg border border-blue-100 bg-blue-50/70 px-3 py-2 text-xs text-blue-950">
             {unlockedSessions === 0
               ? `Collect at least one installment to unlock session #1.`
@@ -329,6 +333,7 @@ export default function PhysioBookingDetailPage() {
               blockedReason: paymentBlockReason,
               busySessionId: busySessionKey,
               rowBlockedReason: (row) => {
+                if (paymentGateSkipped) return ''
                 if (!paymentSummary) return ''
                 const ordinal = row?.perSession ? Number(row.n || 0) : 1
                 if (ordinal <= 0) return ''

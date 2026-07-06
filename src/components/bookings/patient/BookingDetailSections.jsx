@@ -100,7 +100,7 @@ export function PaymentsTabPanel({
               <p className="type-stat mt-1 text-slate-900">₹{totalAmount.toFixed(2)}</p>
             </div>
             <div className="sm:text-right">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Outstanding balance</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Pending payment</p>
               <p className={`type-stat mt-1 ${outstanding > 0.009 ? 'text-rose-700' : 'text-emerald-700'}`}>
                 ₹{outstanding.toFixed(2)}
               </p>
@@ -192,6 +192,22 @@ export function PaymentsTabPanel({
             <dt className="text-ink-muted">Amount</dt>
             <dd className="font-semibold tabular-nums text-ink">{paymentAmountLabel(b)}</dd>
           </div>
+          {totalAmount > 0 || totalPaid > 0 || outstanding > 0.009 ? (
+            <>
+              <div className="flex justify-between gap-4">
+                <dt className="text-ink-muted">Payment received</dt>
+                <dd className="font-semibold tabular-nums text-emerald-700">₹{totalPaid.toFixed(2)}</dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt className="text-ink-muted">Remaining pending</dt>
+                <dd
+                  className={`font-semibold tabular-nums ${outstanding > 0.009 ? 'text-rose-700' : 'text-emerald-700'}`}
+                >
+                  ₹{Math.max(0, outstanding).toFixed(2)}
+                </dd>
+              </div>
+            </>
+          ) : null}
           <div className="flex justify-between gap-4">
             <dt className="text-ink-muted">Payment hold</dt>
             <dd className="text-ink">{paymentStatusLabel(b.paymentStatus)}</dd>

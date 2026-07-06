@@ -48,6 +48,7 @@ export default function ProfileDropdown({ variant = 'header', className = '' }) 
   const roles = getRoles()
   const isAdmin = roles.includes('admin')
   const isPhysio = roles.includes('physio')
+  const isCareManager = roles.includes('care_manager')
   const dashboardPath = getDefaultDashboardPath()
 
   useEffect(() => {
@@ -80,9 +81,13 @@ export default function ProfileDropdown({ variant = 'header', className = '' }) 
     )
   }
 
-  const showBook = !isAdmin
+  const showBook = !isAdmin && !isCareManager
   const showPhysioWorkspace = isPhysio && dashboardPath !== PHYSIO_DASHBOARD_ENTRY
-  const profilePath = isPhysio || isAdmin ? '/profile' : '/dashboard/profile'
+  const profilePath = isCareManager
+    ? '/manager/profile'
+    : isPhysio || isAdmin
+      ? '/profile'
+      : '/dashboard/profile'
 
   return (
     <div className={['relative', className].filter(Boolean).join(' ')} ref={ref}>

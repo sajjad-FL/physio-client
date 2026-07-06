@@ -44,6 +44,7 @@ function statusLabel(status) {
  *     onRate: (row) => void,
  *     rowBlockedReason?: (row: object) => string,
  *   },
+ *   sessionPayments?: Record<string, { recorded: number, items?: Array }>,
  * }} props
  */
 export default function BookingSessionTimeline({
@@ -52,6 +53,7 @@ export default function BookingSessionTimeline({
   adminSessions,
   physioActions,
   patientActions,
+  sessionPayments,
 }) {
   const rows = normalizeSessionRows(booking)
   const tday = todayYmd()
@@ -151,6 +153,10 @@ export default function BookingSessionTimeline({
             Boolean(patientActions?.enabled && patientActions?.onRate) && rowDone && !reviewed
           const showRatedBadge = Boolean(patientActions?.enabled) && rowDone && reviewed
 
+          const payKey = r.sessionId ? String(r.sessionId) : '__primary__'
+          const payEntry = sessionPayments?.[payKey]
+          const hasPaymentInfo = Boolean(sessionPayments)
+
           return (
             <li key={r.key} className={rowCls}>
               <div className="min-w-0 flex-1">
@@ -237,6 +243,20 @@ export default function BookingSessionTimeline({
                 {rowNoShow && r.noShowReason && (
                   <p className="mt-1 text-xs text-rose-900/80">Reason: {r.noShowReason}</p>
                 )}
+                {hasPaymentInfo ? (
+                  <p className="mt-1 text-xs">
+                    {payEntry?.recorded > 0.009 ? (
+                      <span className="font-semibold text-teal-800">
+                        ₹{Number(payEntry.recorded).toFixed(2)} recorded
+                        {payEntry.items?.some((i) => i.explicit === false) ? (
+                          <span className="ml-1 font-normal text-slate-500">(allocated)</span>
+                        ) : null}
+                      </span>
+                    ) : (
+                      <span className="text-slate-500">No payment recorded yet</span>
+                    )}
+                  </p>
+                ) : null}
               </div>
               <span
                 className={`inline-flex shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ${statusBadgeClass(
