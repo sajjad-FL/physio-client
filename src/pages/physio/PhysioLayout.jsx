@@ -114,13 +114,16 @@ function navLockedWhilePending(to) {
   return true
 }
 
-/** Bookings that need physio action: accept/reject assignment or create/submit a home plan. */
+/** Bookings that need physio action (legacy flow only — manager-owned cases skip accept/plan steps). */
 function bookingNeedsPhysioAction(b) {
   if (!b) return false
+  if (b.managerId) return false
   if (b.status === 'assigned') return true
   if (b.serviceType !== 'home') return false
   if (b.status !== 'accepted' && b.status !== 'scheduled') return false
-  if (b.planStatus === 'proposed' || b.planStatus === 'approved') return false
+  if (b.planStatus === 'proposed' || b.planStatus === 'approved' || b.planStatus === 'awaiting_consent' || b.planStatus === 'live') {
+    return false
+  }
   return true
 }
 

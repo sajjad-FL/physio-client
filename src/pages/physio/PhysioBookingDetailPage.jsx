@@ -19,7 +19,7 @@ import InstallmentsCard from '../../components/payments/InstallmentsCard'
 import RecordCollectionModal from '../../components/payments/RecordCollectionModal'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
-import { openGoogleMapsDestination } from '../../utils/googleMaps'
+import { isPlanLive } from '../../utils/planStatus'
 
 const actionBtn =
   'cursor-pointer rounded-xl px-4 py-2.5 text-sm font-semibold shadow-sm transition-all duration-200 hover:shadow-md active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50'
@@ -60,6 +60,7 @@ export default function PhysioBookingDetailPage() {
 
   const showCreatePlan = useMemo(() => {
     if (!booking) return false
+    if (booking.managerId) return false
     return (
       booking.serviceType === 'home' &&
       (booking.planStatus === 'requested' || booking.planStatus === 'rejected' || booking.planStatus == null)
@@ -85,7 +86,7 @@ export default function PhysioBookingDetailPage() {
     booking?.serviceType === 'home' && booking?.homePlanPaymentMode === 'offline'
   const outstanding = Number(paymentSummary?.outstanding || 0)
   const showInstallments =
-    booking?.planStatus === 'approved' ||
+    isPlanLive(booking?.planStatus) ||
     booking?.serviceType === 'online' ||
     paymentsList.length > 0
 
@@ -289,7 +290,7 @@ export default function PhysioBookingDetailPage() {
               : 'No online installments yet.'
           }
         >
-          {isOfflinePlan && outstanding > 0.009 && b.planStatus === 'approved' ? (
+          {isOfflinePlan && outstanding > 0.009 && isPlanLive(b.planStatus) && !b.managerId ? (
             <Button type="button" onClick={() => setRecordCollectionOpen(true)}>
               Record collection
             </Button>

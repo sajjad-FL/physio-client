@@ -16,6 +16,7 @@ import Button from '../../components/ui/Button'
 import ReviewSubmitModal from '../../components/reviews/ReviewSubmitModal'
 import { StarRatingDisplay } from '../../components/reviews/StarRating'
 import { normalizeSessionRows } from '../../components/physio/physioBookingHelpers'
+import { isPlanLive, isAwaitingPatientConsent } from '../../utils/planStatus'
 import { useReferralMyCode } from '../../hooks/useReferral'
 
 export default function UserBookingDetailPage() {
@@ -61,14 +62,14 @@ export default function UserBookingDetailPage() {
     load()
   }, [load])
 
-  async function approvePlan(bookingId) {
+  async function consentToPlan(bookingId) {
     setApproving(true)
     try {
-      await api.patch(`/bookings/${bookingId}/approve`)
-      toast.success('Plan approved. You can now pay.')
+      await api.post(`/bookings/${bookingId}/consent-plan`)
+      toast.success('Plan is live. Your care team will proceed with next steps.')
       await load()
     } catch (e) {
-      toast.error(e.response?.data?.message || 'Could not approve plan')
+      toast.error(e.response?.data?.message || 'Could not submit consent')
     } finally {
       setApproving(false)
     }
@@ -88,8 +89,9 @@ export default function UserBookingDetailPage() {
     }
   }
 
-  const planProposed = booking?.serviceType === 'home' && booking?.planStatus === 'proposed'
-  const planApproved = booking?.serviceType === 'home' && booking?.planStatus === 'approved'
+  const planAwaitingConsent =
+    booking?.serviceType === 'home' && isAwaitingPatientConsent(booking?.planStatus)
+  const planLive = booking?.serviceType === 'home' && isPlanLive(booking?.planStatus)
   const rows = booking ? normalizeSessionRows(booking) : []
   const overallReview = reviews.find((r) => !r.sessionId)
   const hasCompletedSession = rows.some((r) => r.status === 'completed')
@@ -114,7 +116,7 @@ export default function UserBookingDetailPage() {
     )
   }
 
-  if ((booking.status === 'pending' || booking.status === 'assigned') && !planProposed && !planApproved) {
+  if ((booking.status === 'pending' || booking.status === 'assigned') && !planAwaitingConsent && !planLive) {
     return <PendingBookingView booking={booking} />
   }
 
@@ -126,7 +128,7 @@ export default function UserBookingDetailPage() {
   const isOfflinePlan = b.serviceType === 'home' && b.homePlanPaymentMode === 'offline'
   const isOnlineBooking = b.serviceType === 'online' || (b.serviceType === 'home' && b.homePlanPaymentMode === 'online')
   const outstanding = Number(paymentSummary?.outstanding || 0)
-  const planReady = b.serviceType === 'online' || b.planStatus === 'approved'
+  const planReady = b.serviceType === 'online' || isPlanLive(b.planStatus)
   const showInstallments =
     planReady && (sessionsCount > 1 || isOnlineBooking) && (Number(b.totalAmount || 0) > 0 || paymentsList.length > 0)
   const canPayInstallment = isOnlineBooking && planReady && outstanding > 0.009
@@ -138,14 +140,14 @@ export default function UserBookingDetailPage() {
   const showOfflineMsg =
     b.serviceType === 'home' &&
     b.homePlanPaymentMode === 'offline' &&
-    b.planStatus === 'approved' &&
+    isPlanLive(b.planStatus) &&
     b.payment?.status !== 'verified'
 
   const physioPublicId = b.physioId && typeof b.physioId === 'object' ? b.physioId._id : b.physioId
   const physioDisplayName = typeof b.physioId === 'object' ? b.physioId?.name : undefined
 
   const tabBadges = {
-    overview: planProposed,
+    overview: planAwaitingConsent,
     payments:
       b.paymentStatus === 'pending' &&
       planReady &&
@@ -172,8 +174,8 @@ export default function UserBookingDetailPage() {
 
       {activeTab === 'overview' ? (
         <div className="space-y-5">
-          {planProposed ? (
-            <PlanProposedCard booking={b} onApprove={() => approvePlan(b._id)} approving={approving} />
+          {planAwaitingConsent ? (
+            <PlanProposedCard booking={b} onApprove={() => consentToPlan(b._id)} approving={approving} />
           ) : null}
 
           <SessionProgressTracker

@@ -9,7 +9,16 @@ import Input from '../../components/ui/Input'
 import Pagination from '../../components/Pagination'
 import { toastApiError } from '../../utils/formToast'
 
-const PAGE_SIZE = 20
+const adminHeaders = () => ({
+  headers: { Authorization: `Bearer ${import.meta.env.VITE_ADMIN_API_KEY || ''}` },
+})
+
+function roleLabel(role) {
+  if (role === 'physio') return 'Physiotherapist'
+  if (role === 'admin') return 'Admin'
+  if (role === 'care_manager') return 'Care Manager'
+  return role || 'User'
+}
 
 function formatDate(value) {
   if (!value) return '-'
@@ -115,6 +124,18 @@ export default function AdminDirectoryPage() {
     setUserPage(1)
   }
 
+  async function promoteToCareManager(user) {
+    const ok = window.confirm(`Promote ${user.name || user.phone} to Care Manager?`)
+    if (!ok) return
+    try {
+      await api.post('/admin/care-managers/promote', { userId: user._id }, adminHeaders())
+      toast.success('User promoted to Care Manager')
+      await loadUsers()
+    } catch (err) {
+      toastApiError(err, 'Promote failed')
+    }
+  }
+
   async function deleteUser(user) {
     const ok = window.confirm(`Delete this user account?\n\n${user.name || user.phone || user._id}`)
     if (!ok) return
@@ -167,6 +188,7 @@ export default function AdminDirectoryPage() {
               <option value="user">User</option>
               <option value="physio">Physiotherapist</option>
               <option value="admin">Admin</option>
+              <option value="care_manager">Care Manager</option>
             </Select>
           </div>
           <div>
@@ -223,8 +245,8 @@ export default function AdminDirectoryPage() {
                     </td>
                     <td className="px-4 py-3 text-slate-700">{u.phone || '-'}</td>
                     <td className="px-4 py-3">
-                      <Badge tone={u.role === 'admin' ? 'blue' : u.role === 'physio' ? 'green' : 'slate'}>
-                        {u.role === 'physio' ? 'Physiotherapist' : u.role === 'admin' ? 'Admin' : u.role || 'User'}
+                      <Badge tone={u.role === 'admin' ? 'blue' : u.role === 'physio' ? 'green' : u.role === 'care_manager' ? 'amber' : 'slate'}>
+                        {roleLabel(u.role)}
                       </Badge>
                     </td>
                     <td className="px-4 py-3 text-slate-600">{u.location || '-'}</td>
@@ -235,14 +257,25 @@ export default function AdminDirectoryPage() {
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-slate-600">{formatDate(u.createdAt)}</td>
                     <td className="px-4 py-3 text-right">
-                      <Button
-                        variant="outline"
-                        className="px-3 py-1.5 text-xs text-rose-700"
-                        disabled={deletingUserId === u._id || u.role === 'admin'}
-                        onClick={() => deleteUser(u)}
-                      >
-                        {deletingUserId === u._id ? 'Deleting...' : 'Delete'}
-                      </Button>
+                      <div className="flex justify-end gap-2">
+                        {u.role === 'user' ? (
+                          <Button
+                            variant="outline"
+                            className="px-3 py-1.5 text-xs"
+                            onClick={() => promoteToCareManager(u)}
+                          >
+                            Make manager
+                          </Button>
+                        ) : null}
+                        <Button
+                          variant="outline"
+                          className="px-3 py-1.5 text-xs text-rose-700"
+                          disabled={deletingUserId === u._id || u.role === 'admin'}
+                          onClick={() => deleteUser(u)}
+                        >
+                          {deletingUserId === u._id ? 'Deleting...' : 'Delete'}
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))}

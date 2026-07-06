@@ -5,6 +5,12 @@ import { openSupportWhatsApp } from '../../../utils/physioContact'
 export default function PendingBookingView({ booking: b }) {
   const serviceLabel = b.serviceType === 'online' ? 'Online Consultation' : 'Home Visit'
   const bookingRef = b._id ? `#${String(b._id).slice(-6).toUpperCase()}` : '—'
+  const managerName =
+    b.managerId && typeof b.managerId === 'object' ? b.managerId.name : null
+  const heading = managerName ? 'Your Care Manager is on it' : 'We received your booking'
+  const subcopy = managerName
+    ? `${managerName} will visit, prepare your plan, and coordinate your physiotherapist.`
+    : 'Our team is assigning a care manager for your home visit. You will be notified when your plan is ready.'
 
   return (
     <div className="mx-auto max-w-lg space-y-6 py-2">
@@ -24,10 +30,8 @@ export default function PendingBookingView({ booking: b }) {
             </svg>
           </span>
         </div>
-        <h1 className="type-page-title mt-6 text-slate-900">Finding Your Physiotherapist</h1>
-        <p className="mt-2 max-w-sm text-sm leading-relaxed text-slate-600">
-          We&apos;re assigning the best specialist for your condition. You&apos;ll be notified once confirmed.
-        </p>
+        <h1 className="type-page-title mt-6 text-slate-900">{heading}</h1>
+        <p className="mt-2 max-w-sm text-sm leading-relaxed text-slate-600">{subcopy}</p>
       </div>
 
       <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -36,6 +40,12 @@ export default function PendingBookingView({ booking: b }) {
             <dt className="text-slate-500">Date &amp; Time</dt>
             <dd className="font-medium text-slate-900">{formatBookingDateAndSlot(b.date, b.timeSlot) || '—'}</dd>
           </div>
+          {managerName ? (
+            <div className="flex justify-between gap-4 py-3">
+              <dt className="text-slate-500">Care Manager</dt>
+              <dd className="font-medium text-slate-900">{managerName}</dd>
+            </div>
+          ) : null}
           <div className="flex justify-between gap-4 py-3">
             <dt className="text-slate-500">Service</dt>
             <dd className="font-medium text-slate-900">{serviceLabel}</dd>

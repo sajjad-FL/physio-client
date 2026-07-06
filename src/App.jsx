@@ -51,6 +51,12 @@ import AdminPricingSettingsPage from './pages/admin/AdminPricingSettingsPage'
 import AdminProductsPage from './pages/admin/AdminProductsPage'
 import AdminShopOrdersPage from './pages/admin/AdminShopOrdersPage'
 import AdminShopOrderDetailPage from './pages/admin/AdminShopOrderDetailPage'
+import ManagerLayout from './pages/manager/ManagerLayout'
+import ManagerBookingsPage from './pages/manager/ManagerBookingsPage'
+import ManagerBookingDetailPage from './pages/manager/ManagerBookingDetailPage'
+import ManagerLedgerPage from './pages/manager/ManagerLedgerPage'
+import AdminZonesPage from './pages/admin/AdminZonesPage'
+import AdminSettlementsPage from './pages/admin/AdminSettlementsPage'
 import { ShopCartProvider } from './hooks/useShopCart'
 import RoleProtectedRoute from './components/RoleProtectedRoute'
 import LegacyPhysioDashboardRedirect from './components/LegacyPhysioDashboardRedirect'
@@ -166,6 +172,19 @@ export default function App() {
           <Route path="*" element={<Navigate to="/physio/bookings" replace />} />
         </Route>
         <Route
+          path="/manager"
+          element={
+            <RoleProtectedRoute allowedRoles={['care_manager']}>
+              <ManagerLayout />
+            </RoleProtectedRoute>
+          }
+        >
+          <Route index element={<Navigate to="/manager/bookings" replace />} />
+          <Route path="bookings" element={<ManagerBookingsPage />} />
+          <Route path="bookings/:id" element={<ManagerBookingDetailPage />} />
+          <Route path="ledger" element={<ManagerLedgerPage />} />
+        </Route>
+        <Route
           path="/admin"
           element={
             <RoleProtectedRoute allowedRoles={['admin']}>
@@ -182,6 +201,8 @@ export default function App() {
           <Route path="disputes" element={<DisputesAdmin />} />
           <Route path="payments" element={<Navigate to="/admin/finance?tab=queue" replace />} />
           <Route path="finance" element={<AdminFinancePage />} />
+          <Route path="zones" element={<AdminZonesPage />} />
+          <Route path="manager-settlements" element={<AdminSettlementsPage />} />
           <Route path="withdrawals" element={<Navigate to="/admin/finance" replace />} />
           <Route path="settlements" element={<Navigate to="/admin/finance" replace />} />
           <Route path="platform" element={<AdminPlatformSettingsPage />} />

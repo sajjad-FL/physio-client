@@ -53,20 +53,25 @@ export default function AdminBookingDetailPage() {
   const [paymentBusyId, setPaymentBusyId] = useState(null)
   const [rejectPayment, setRejectPayment] = useState(null)
   const [rejectPaymentReason, setRejectPaymentReason] = useState('')
+  const [careManagers, setCareManagers] = useState([])
+  const [assignManagerId, setAssignManagerId] = useState('')
 
   const load = useCallback(async () => {
     if (!id) return
     setLoading(true)
     setError(null)
     try {
-      const [bRes, pRes, dRes] = await Promise.all([
+      const [bRes, pRes, dRes, mRes] = await Promise.all([
         api.get(`/admin/bookings/${id}`, adminHeaders()),
         api.get('/physios', { params: { page: 1, limit: 100 } }),
         api.get('/admin/disputes', { ...adminHeaders(), params: { page: 1, limit: 20, bookingId: id } }),
+        api.get('/admin/care-managers', adminHeaders()).catch(() => ({ data: { managers: [] } })),
       ])
       setBooking(bRes.data)
       setPhysios(pRes.data?.data || [])
       setDisputes(dRes.data?.data || [])
+      setCareManagers(mRes.data?.managers || [])
+      setAssignManagerId(bRes.data?.managerId?._id || bRes.data?.managerId || '')
     } catch (e) {
       const msg =
         e.response?.status === 404 ? 'Booking not found' : e.response?.data?.message || 'Failed to load'
@@ -161,6 +166,23 @@ export default function AdminBookingDetailPage() {
       b.payment?.status === 'collected'
     )
   }, [b])
+
+  async function handleAssignManager() {
+    if (!b || !assignManagerId) {
+      toast.error('Choose a care manager.')
+      return
+    }
+    setRowBusy('manager')
+    try {
+      await api.patch(`/admin/bookings/${b._id}/assign-manager`, { managerId: assignManagerId }, adminHeaders())
+      toast.success('Care manager assigned')
+      await load()
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Assign manager failed')
+    } finally {
+      setRowBusy(null)
+    }
+  }
 
   async function handleAssign() {
     if (!b || !assignPhysioId) {
@@ -716,6 +738,40 @@ export default function AdminBookingDetailPage() {
       <Card hover={false} className="border-border-subtle p-5 sm:p-6">
         <h2 className="mb-4 text-sm font-semibold text-ink">Actions — manage booking</h2>
         <div className="flex flex-col gap-4">
+          {b.serviceType === 'home' ? (
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end">
+              <div className="min-w-0 flex-1 space-y-2">
+                <label className="text-xs font-medium text-ink-muted">Care manager</label>
+                {b.managerId ? (
+                  <p className="text-sm text-ink">
+                    {typeof b.managerId === 'object' ? b.managerId.name : 'Assigned'} ·{' '}
+                    {b.workflowStatus || '—'}
+                  </p>
+                ) : (
+                  <p className="text-xs text-amber-800">No care manager assigned yet</p>
+                )}
+                <select
+                  value={assignManagerId}
+                  onChange={(e) => setAssignManagerId(e.target.value)}
+                  className="w-full rounded-xl border border-border-subtle px-3 py-2 text-sm"
+                >
+                  <option value="">Select care manager…</option>
+                  {careManagers.map((m) => (
+                    <option key={m._id} value={m._id}>
+                      {m.name || m.phone}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <Button
+                type="button"
+                disabled={rowBusy === 'manager' || !assignManagerId}
+                onClick={handleAssignManager}
+              >
+                {rowBusy === 'manager' ? '…' : b.managerId ? 'Reassign manager' : 'Assign manager'}
+              </Button>
+            </div>
+          ) : null}
           <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
             <div className="min-w-0 flex-1 space-y-2">
               <label className="text-xs font-medium text-ink-muted">Assign physiotherapist</label>

@@ -5,10 +5,13 @@ export function bookingStatusBadge(status, sessionStatus, paymentStatus, planSta
   if (status === 'completed' || sessionStatus === 'completed') {
     return { label: 'Completed', cls: 'bg-emerald-50 text-emerald-900 ring-emerald-200/80' }
   }
-  if (planStatus === 'proposed') {
-    return { label: 'Approve Plan', cls: 'bg-orange-50 text-orange-950 ring-orange-200/80' }
+  if (planStatus === 'proposed' || planStatus === 'awaiting_consent') {
+    return { label: 'Consent to Plan', cls: 'bg-orange-50 text-orange-950 ring-orange-200/80' }
   }
-  if (paymentStatus === 'pending' && (planStatus === 'approved' || status === 'assigned')) {
+  if (planStatus === 'live') {
+    return { label: 'Plan Active', cls: 'bg-emerald-50 text-emerald-900 ring-emerald-200/80' }
+  }
+  if (paymentStatus === 'pending' && (planStatus === 'approved' || planStatus === 'live' || status === 'assigned')) {
     return { label: 'Pay Installment', cls: 'bg-amber-50 text-amber-950 ring-amber-200/80' }
   }
   if (status === 'scheduled' || status === 'accepted' || sessionStatus === 'scheduled') {
@@ -18,7 +21,7 @@ export function bookingStatusBadge(status, sessionStatus, paymentStatus, planSta
     return { label: 'Therapist Assigned', cls: 'bg-sky-50 text-sky-900 ring-sky-200/80' }
   }
   if (status === 'pending') {
-    return { label: 'Finding Therapist', cls: 'bg-slate-50 text-slate-700 ring-slate-200/80' }
+    return { label: 'Awaiting care team', cls: 'bg-slate-50 text-slate-700 ring-slate-200/80' }
   }
   return { label: 'Pending', cls: 'bg-amber-50 text-amber-900 ring-amber-200/80' }
 }

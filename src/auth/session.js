@@ -17,11 +17,12 @@ function normalizeRoleInput(input) {
   if (input == null || input === '') return 'user'
   if (typeof input === 'string') {
     if (input === 'patient') return 'user'
-    if (input === 'user' || input === 'physio' || input === 'admin') return input
+    if (input === 'user' || input === 'physio' || input === 'admin' || input === 'care_manager') return input
     return 'user'
   }
   if (Array.isArray(input)) {
     if (input.includes('admin')) return 'admin'
+    if (input.includes('care_manager')) return 'care_manager'
     if (input.includes('physio')) return 'physio'
     return 'user'
   }
@@ -32,11 +33,11 @@ export function getToken() {
   return localStorage.getItem(TOKEN_KEY)
 }
 
-/** @returns {'user' | 'physio' | 'admin'} */
+/** @returns {'user' | 'physio' | 'admin' | 'care_manager'} */
 export function getRole() {
   try {
     const single = localStorage.getItem(ROLE_KEY)
-    if (single === 'user' || single === 'physio' || single === 'admin') return single
+    if (single === 'user' || single === 'physio' || single === 'admin' || single === 'care_manager') return single
     if (single === 'patient') return 'user'
   } catch {
     /* ignore */
@@ -115,6 +116,7 @@ export function hasAnyRole(...allowed) {
 export function getDefaultDashboardPath() {
   const role = getRole()
   if (role === 'admin') return '/admin'
+  if (role === 'care_manager') return '/manager'
   if (role === 'physio') return PHYSIO_DASHBOARD_ENTRY
   return '/dashboard'
 }
