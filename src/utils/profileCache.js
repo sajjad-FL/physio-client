@@ -1,4 +1,4 @@
-import { getToken } from '../auth/session'
+import { getToken, syncSessionFromProfile } from '../auth/session'
 
 const TTL_MS = 45_000
 
@@ -28,5 +28,6 @@ export async function getProfileCached(api, { force = false } = {}) {
   }
   const res = await api.get('/profile')
   entry = { token, data: res.data, fetchedAt: Date.now() }
+  syncSessionFromProfile(res.data)
   return { data: entry.data }
 }

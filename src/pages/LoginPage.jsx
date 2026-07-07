@@ -7,6 +7,7 @@ import AuthSpinner from '../components/AuthSpinner'
 import Button from '../components/ui/Button'
 import PasswordInput from '../components/ui/PasswordInput'
 import { setSession, getToken, getDefaultDashboardPath } from '../auth/session'
+import { getProfileCached } from '../utils/profileCache'
 import { validateIndianMobile } from '../utils/phoneIndia'
 import { validateLiveField } from '../utils/liveFieldValidation'
 import { absoluteUrl } from '../utils/siteMeta'
@@ -27,7 +28,15 @@ export default function LoginPage() {
       setSessionRedirecting(false)
       return
     }
-    navigate(getDefaultDashboardPath(), { replace: true })
+    let cancelled = false
+    getProfileCached(api)
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) navigate(getDefaultDashboardPath(), { replace: true })
+      })
+    return () => {
+      cancelled = true
+    }
   }, [navigate])
 
   const inputCls =
@@ -62,6 +71,11 @@ export default function LoginPage() {
       const role = res.data?.role ?? 'user'
       toast.success('Signed in')
       setSession(res.data.token, role, res.data.isProfileComplete === true)
+      try {
+        await getProfileCached(api, { force: true })
+      } catch {
+        /* use login payload role if profile sync fails */
+      }
       navigate(getDefaultDashboardPath())
     } catch (err) {
       const d = err.response?.data

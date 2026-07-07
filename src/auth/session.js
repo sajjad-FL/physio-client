@@ -29,6 +29,34 @@ function normalizeRoleInput(input) {
   return 'user'
 }
 
+/** Resolve canonical role from GET /profile payload. */
+export function resolveRoleFromProfile(profile) {
+  if (!profile) return 'user'
+  if (profile.role != null && profile.role !== '') {
+    return normalizeRoleInput(profile.role)
+  }
+  if (Array.isArray(profile.roles) && profile.roles.length) {
+    return normalizeRoleInput(profile.roles)
+  }
+  return 'user'
+}
+
+/**
+ * Keep localStorage role in sync with the server (e.g. after admin promotes a user to care manager).
+ * @param {{ role?: string, roles?: string[], isProfileComplete?: boolean }} profile
+ */
+export function syncSessionFromProfile(profile) {
+  const token = getToken()
+  if (!token || !profile) return
+  const serverRole = resolveRoleFromProfile(profile)
+  const storedRole = getRole()
+  const storedComplete = getProfileCompleteStored()
+  const serverComplete = profile.isProfileComplete === true
+  if (serverRole !== storedRole || storedComplete !== serverComplete) {
+    setSession(token, serverRole, serverComplete)
+  }
+}
+
 export function getToken() {
   return localStorage.getItem(TOKEN_KEY)
 }
@@ -119,6 +147,36 @@ export function getDefaultDashboardPath() {
   if (role === 'care_manager') return '/manager'
   if (role === 'physio') return PHYSIO_DASHBOARD_ENTRY
   return '/dashboard'
+}
+
+/**
+ * If the user is on a dashboard meant for another role, return the path they should use instead.
+ * @param {string} pathname
+ * @returns {string | null}
+ */
+export function redirectPathForRoleMismatch(pathname) {
+  const role = getRole()
+  const path = String(pathname || '')
+
+  if (role === 'care_manager') {
+    if (path.startsWith('/dashboard') || path.startsWith('/book')) return '/manager'
+    if (path.startsWith('/physio')) return '/manager'
+  }
+  if (role === 'physio') {
+    if (path.startsWith('/dashboard') || path.startsWith('/book')) return PHYSIO_DASHBOARD_ENTRY
+    if (path.startsWith('/manager')) return PHYSIO_DASHBOARD_ENTRY
+  }
+  if (role === 'admin') {
+    if (path.startsWith('/dashboard') || path.startsWith('/book')) return '/admin'
+    if (path.startsWith('/manager')) return '/admin'
+    if (path.startsWith('/physio')) return '/admin'
+  }
+  if (role === 'user') {
+    if (path.startsWith('/manager')) return '/dashboard'
+    if (path.startsWith('/physio')) return '/dashboard'
+    if (path.startsWith('/admin')) return '/dashboard'
+  }
+  return null
 }
 
 /** Pass React Router’s `navigate` so the app leaves protected routes cleanly. */

@@ -42,12 +42,14 @@ export default function ProfileCompletionGate({ children }) {
           const legacy = Array.isArray(res.data?.roles) ? res.data.roles : []
           const isPhysio =
             r === 'physio' || (!r && legacy.includes('physio'))
+          const isCareManager =
+            r === 'care_manager' || (!r && legacy.includes('care_manager'))
           setProfileCompleteStored(ok)
           if (ok) {
             setState('complete')
             setProfileSnapshot(null)
-          } else if (isPhysio) {
-            // Physios complete account via /physio/onboarding and /profile; server still guards bookings/wallet.
+          } else if (isPhysio || isCareManager) {
+            // Physios and care managers complete account via their own flows; server guards their APIs.
             setState('complete')
             setProfileSnapshot(null)
           } else {

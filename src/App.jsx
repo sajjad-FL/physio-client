@@ -62,6 +62,7 @@ import { ShopCartProvider } from './hooks/useShopCart'
 import RoleProtectedRoute from './components/RoleProtectedRoute'
 import LegacyPhysioDashboardRedirect from './components/LegacyPhysioDashboardRedirect'
 import ProfileCompletionHost from './components/ProfileCompletionHost'
+import SessionRoleSync from './components/SessionRoleSync'
 
 function PublicPhysicianRoute() {
   const { id } = useParams()
@@ -71,6 +72,7 @@ function PublicPhysicianRoute() {
 export default function App() {
   return (
     <BrowserRouter>
+      <SessionRoleSync />
       <ProfileCompletionHost />
       <Toaster
         position="top-center"
@@ -96,7 +98,7 @@ export default function App() {
         <Route
           path="/profile"
           element={
-            <RoleProtectedRoute allowedRoles={['user', 'physio', 'admin']}>
+            <RoleProtectedRoute allowedRoles={['user', 'physio', 'admin', 'care_manager']}>
               <ProfilePage />
             </RoleProtectedRoute>
           }
