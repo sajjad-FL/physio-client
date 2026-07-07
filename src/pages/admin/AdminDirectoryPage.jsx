@@ -9,9 +9,7 @@ import Input from '../../components/ui/Input'
 import Pagination from '../../components/Pagination'
 import { toastApiError } from '../../utils/formToast'
 
-const adminHeaders = () => ({
-  headers: { Authorization: `Bearer ${import.meta.env.VITE_ADMIN_API_KEY || ''}` },
-})
+const PAGE_SIZE = 20
 
 function roleLabel(role) {
   if (role === 'physio') return 'Physiotherapist'
@@ -128,7 +126,7 @@ export default function AdminDirectoryPage() {
     const ok = window.confirm(`Promote ${user.name || user.phone} to Care Manager?`)
     if (!ok) return
     try {
-      await api.post('/admin/care-managers/promote', { userId: user._id }, adminHeaders())
+      await api.post('/admin/care-managers/promote', { userId: user._id })
       toast.success('User promoted to Care Manager')
       await loadUsers()
     } catch (err) {

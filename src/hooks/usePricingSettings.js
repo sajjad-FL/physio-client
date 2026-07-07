@@ -4,11 +4,13 @@ import { api } from '../config/api'
 /** Fallback when API unavailable (matches server pricingDefaults). */
 export const FALLBACK_PRICING_SETTINGS = {
   defaultBookingAmountRupees: 500,
+  platformCommissionPerSessionRupees: 100,
   platformCommissionPercent: 20,
   distanceSurchargeBaseKm: 5,
   distanceSurchargePerKmRupees: 5,
   homePlanMaxDiscountPercent: 15,
   defaultPhysioPricePerSession: 500,
+  managerCommissionPerSessionRupees: 0,
   allowedPlanSessionCounts: [7, 15, 30],
   planTiers: [
     {

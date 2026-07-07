@@ -7,6 +7,7 @@ import {
   marketplacePaymentStatusLabel,
   paymentAmountLabel,
   paymentModeLabel,
+  billingTypeLabel,
   paymentStatusLabel,
   sessionStatusLabel,
 } from '../../utils/bookingDisplay'
@@ -26,9 +27,6 @@ import { usePricingSettings, computeTravelSurchargePreview } from '../../hooks/u
 import { DAILY_SLOTS } from '../../constants/slots'
 import { buildSessionPaymentMap } from '../../utils/sessionPaymentMap'
 
-const adminHeaders = () => ({
-  headers: { Authorization: `Bearer ${import.meta.env.VITE_ADMIN_API_KEY || ''}` },
-})
 export default function AdminBookingDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -65,10 +63,10 @@ export default function AdminBookingDetailPage() {
     setError(null)
     try {
       const [bRes, pRes, dRes, mRes] = await Promise.all([
-        api.get(`/admin/bookings/${id}`, adminHeaders()),
+        api.get(`/admin/bookings/${id}`),
         api.get('/physios', { params: { page: 1, limit: 100 } }),
-        api.get('/admin/disputes', { ...adminHeaders(), params: { page: 1, limit: 20, bookingId: id } }),
-        api.get('/admin/care-managers', adminHeaders()).catch(() => ({ data: { managers: [] } })),
+        api.get('/admin/disputes', { params: { page: 1, limit: 20, bookingId: id } }),
+        api.get('/admin/care-managers').catch(() => ({ data: { managers: [] } })),
       ])
       setBooking(bRes.data)
       setPhysios(pRes.data?.data || [])
@@ -190,7 +188,7 @@ export default function AdminBookingDetailPage() {
     }
     setRowBusy('manager')
     try {
-      await api.patch(`/admin/bookings/${b._id}/assign-manager`, { managerId: assignManagerId }, adminHeaders())
+      await api.patch(`/admin/bookings/${b._id}/assign-manager`, { managerId: assignManagerId })
       toast.success('Care manager assigned')
       await load()
     } catch (err) {
@@ -214,9 +212,7 @@ export default function AdminBookingDetailPage() {
     try {
       await api.patch(
         `/bookings/${b._id}`,
-        { physioId: assignPhysioId, status: 'assigned', amountPerSession: priceNum },
-        adminHeaders(),
-      )
+        { physioId: assignPhysioId, status: 'assigned', amountPerSession: priceNum },      )
       toast.success('Assigned')
       setAssignPrice('')
       await load()
@@ -231,7 +227,7 @@ export default function AdminBookingDetailPage() {
     if (!b) return
     setRowBusy('complete')
     try {
-      await api.patch(`/bookings/${b._id}`, { status: 'completed' }, adminHeaders())
+      await api.patch(`/bookings/${b._id}`, { status: 'completed' })
       toast.success('Updated')
       await load()
     } catch (err) {
@@ -245,7 +241,7 @@ export default function AdminBookingDetailPage() {
     if (!b) return
     setRowBusy('verifyOff')
     try {
-      await api.patch(`/bookings/${b._id}/verify-payment`, {}, adminHeaders())
+      await api.patch(`/bookings/${b._id}/verify-payment`, {})
       toast.success('Payment verified')
       await load()
     } catch (err) {
@@ -259,7 +255,7 @@ export default function AdminBookingDetailPage() {
     if (!paymentId) return
     setPaymentBusyId(String(paymentId))
     try {
-      await api.post(`/admin/payments/${paymentId}/verify`, {}, adminHeaders())
+      await api.post(`/admin/payments/${paymentId}/verify`, {})
       toast.success('Installment verified')
       await load()
     } catch (err) {
@@ -278,7 +274,7 @@ export default function AdminBookingDetailPage() {
     }
     setPaymentBusyId(String(rejectPayment._id))
     try {
-      await api.post(`/admin/payments/${rejectPayment._id}/reject`, { reason }, adminHeaders())
+      await api.post(`/admin/payments/${rejectPayment._id}/reject`, { reason })
       toast.success('Installment rejected')
       setRejectPayment(null)
       setRejectPaymentReason('')
@@ -294,7 +290,7 @@ export default function AdminBookingDetailPage() {
     if (!b) return
     setRowBusy('release')
     try {
-      await api.post('/payment/release', { bookingId: b._id }, adminHeaders())
+      await api.post('/payment/release', { bookingId: b._id })
       toast.success('Payment released')
       await load()
     } catch (err) {
@@ -307,7 +303,7 @@ export default function AdminBookingDetailPage() {
   async function openNotes() {
     if (!b) return
     try {
-      const res = await api.get(`/notes/${b._id}`, adminHeaders())
+      const res = await api.get(`/notes/${b._id}`)
       setNotesModal(res.data)
     } catch (err) {
       if (err.response?.status === 404) {
@@ -328,9 +324,7 @@ export default function AdminBookingDetailPage() {
     try {
       await api.patch(
         `/admin/disputes/${resolveOpen._id}`,
-        { resolution: resolution.trim(), action: resolveAction },
-        adminHeaders(),
-      )
+        { resolution: resolution.trim(), action: resolveAction },      )
       toast.success('Dispute updated')
       setResolveOpen(null)
       await load()
@@ -352,9 +346,7 @@ export default function AdminBookingDetailPage() {
     try {
       await api.post(
         `/admin/bookings/${b._id}/sessions`,
-        { date: addSessionDate, timeSlot: addSessionTime },
-        adminHeaders(),
-      )
+        { date: addSessionDate, timeSlot: addSessionTime },      )
       toast.success('Session added')
       setAddSessionOpen(false)
       await load()
@@ -371,7 +363,7 @@ export default function AdminBookingDetailPage() {
     if (!ok) return
     setSessionBusy(String(row.sessionId))
     try {
-      await api.delete(`/admin/bookings/${b._id}/sessions/${row.sessionId}`, adminHeaders())
+      await api.delete(`/admin/bookings/${b._id}/sessions/${row.sessionId}`)
       toast.success('Session deleted')
       await load()
     } catch (err) {
@@ -666,7 +658,7 @@ export default function AdminBookingDetailPage() {
           booking={b}
           sessionRow={rescheduleRow}
           title="Reschedule session (admin)"
-          patchReschedule={(body) => api.patch(`/admin/bookings/${b._id}/reschedule`, body, adminHeaders())}
+          patchReschedule={(body) => api.patch(`/admin/bookings/${b._id}/reschedule`, body)}
           onClose={() => setRescheduleRow(null)}
           onUpdated={load}
         />
@@ -728,6 +720,12 @@ export default function AdminBookingDetailPage() {
             <dt className="text-ink-muted">Mode</dt>
             <dd className="font-medium text-ink">{paymentModeLabel(b)}</dd>
           </div>
+          {billingTypeLabel(b) ? (
+            <div className="flex justify-between gap-4">
+              <dt className="text-ink-muted">Payment type</dt>
+              <dd className="font-medium text-ink">{billingTypeLabel(b)}</dd>
+            </div>
+          ) : null}
           <div className="flex justify-between gap-4">
             <dt className="text-ink-muted">Payment hold</dt>
             <dd className="font-medium text-ink">{paymentStatusLabel(b.paymentStatus)}</dd>

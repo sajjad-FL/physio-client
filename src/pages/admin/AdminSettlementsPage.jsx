@@ -6,10 +6,6 @@ import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import AdminCaseContext, { resolveAdminCaseContext } from '../../components/admin/AdminCaseContext'
 
-const adminHeaders = () => ({
-  headers: { Authorization: `Bearer ${import.meta.env.VITE_ADMIN_API_KEY || ''}` },
-})
-
 const LEDGER_STATUS_LABEL = {
   open: 'Awaiting settlement',
   batched: 'In settlement batch',
@@ -50,6 +46,18 @@ function LedgerEntryCard({ entry, selectable, checked, onToggle }) {
             <p className="font-medium text-slate-900">₹{Number(entry.amount).toFixed(2)}</p>
             <AdminCaseContext source={entry} showLink={false} className="mt-0.5" />
             <p className="mt-1 text-xs font-medium text-amber-800">{ledgerStatusLabel(entry.status)}</p>
+            {Number(entry.managerCommissionAmount) > 0 ? (
+              <p className="text-xs font-medium text-emerald-700">
+                Manager commission: ₹{Number(entry.managerCommissionAmount).toFixed(2)}
+              </p>
+            ) : null}
+            {entry.distribution?.distributedAt ? (
+              <p className="text-xs text-slate-500">
+                Distributed: physio ₹{Number(entry.distribution.physioShare || 0).toFixed(2)} · manager ₹
+                {Number(entry.distribution.managerShare || 0).toFixed(2)} · platform ₹
+                {Number(entry.distribution.platformShare || 0).toFixed(2)}
+              </p>
+            ) : null}
             {collectedLabel ? <p className="text-xs text-slate-500">{collectedLabel}</p> : null}
             {entry.note ? <p className="mt-1 text-xs text-slate-500">{entry.note}</p> : null}
           </div>
@@ -90,6 +98,19 @@ function BatchCard({ batch, busy, onSettle }) {
           </Button>
         ) : null}
       </div>
+      {batch.status === 'open' && batch.distributionPreview ? (
+        <p className="mt-2 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-700 ring-1 ring-slate-200">
+          On settle: physio ₹{Number(batch.distributionPreview.physioTotal || 0).toFixed(2)} · manager
+          commission ₹{Number(batch.distributionPreview.managerTotal || 0).toFixed(2)} · platform ₹
+          {Number(batch.distributionPreview.platformTotal || 0).toFixed(2)}
+        </p>
+      ) : null}
+      {batch.status === 'settled' && batch.distributedAt ? (
+        <p className="mt-2 rounded-lg bg-emerald-50 px-3 py-2 text-xs text-emerald-800 ring-1 ring-emerald-100">
+          Distributed: physio ₹{Number(batch.physioPayoutTotal || 0).toFixed(2)} · manager commission ₹
+          {Number(batch.commissionTotal || 0).toFixed(2)}
+        </p>
+      ) : null}
       {entries.length > 0 ? (
         <ul className="mt-3 space-y-2 border-t border-slate-100 pt-3">
           {entries.map((e) => {
@@ -126,20 +147,32 @@ export default function AdminSettlementsPage() {
   const [batches, setBatches] = useState([])
   const [selectedEntryIds, setSelectedEntryIds] = useState([])
   const [busy, setBusy] = useState(false)
+  const [payoutRequests, setPayoutRequests] = useState([])
+  const [payoutBusyId, setPayoutBusyId] = useState(null)
+
+  const loadPayoutRequests = useCallback(async () => {
+    try {
+      const res = await api.get('/withdraw', { params: { payee: 'manager' } })
+      setPayoutRequests(Array.isArray(res.data) ? res.data : [])
+    } catch {
+      setPayoutRequests([])
+    }
+  }, [])
 
   useEffect(() => {
-    api.get('/admin/care-managers', adminHeaders()).then((res) => {
+    api.get('/admin/care-managers').then((res) => {
       setManagers(res.data?.managers || [])
     })
-    api.get('/admin/settlement-batches', adminHeaders()).then((res) => {
+    api.get('/admin/settlement-batches').then((res) => {
       setBatches(res.data?.batches || [])
     })
-  }, [])
+    loadPayoutRequests()
+  }, [loadPayoutRequests])
 
   const loadLedger = useCallback(async (managerId) => {
     if (!managerId) return
     try {
-      const res = await api.get(`/admin/managers/${managerId}/ledger`, adminHeaders())
+      const res = await api.get(`/admin/managers/${managerId}/ledger`)
       setLedger(res.data)
       setSelectedEntryIds([])
     } catch {
@@ -163,12 +196,10 @@ export default function AdminSettlementsPage() {
     try {
       await api.post(
         `/admin/managers/${selectedManagerId}/settlement-batches`,
-        { ledgerEntryIds: selectedEntryIds },
-        adminHeaders(),
-      )
+        { ledgerEntryIds: selectedEntryIds },      )
       toast.success('Settlement batch created')
       await loadLedger(selectedManagerId)
-      const res = await api.get('/admin/settlement-batches', adminHeaders())
+      const res = await api.get('/admin/settlement-batches')
       setBatches(res.data?.batches || [])
     } catch (err) {
       toast.error(err.response?.data?.message || 'Could not create batch')
@@ -180,9 +211,9 @@ export default function AdminSettlementsPage() {
   async function settleBatch(batchId) {
     setBusy(true)
     try {
-      await api.patch(`/admin/settlement-batches/${batchId}/settle`, {}, adminHeaders())
+      await api.patch(`/admin/settlement-batches/${batchId}/settle`, {})
       toast.success('Batch settled')
-      const res = await api.get('/admin/settlement-batches', adminHeaders())
+      const res = await api.get('/admin/settlement-batches')
       setBatches(res.data?.batches || [])
       if (selectedManagerId) await loadLedger(selectedManagerId)
     } catch (err) {
@@ -192,9 +223,35 @@ export default function AdminSettlementsPage() {
     }
   }
 
+  async function processPayout(request, status) {
+    let payoutReference = ''
+    if (status === 'approved') {
+      payoutReference = window.prompt('Payout reference (UPI/bank ref):', '') ?? ''
+      if (payoutReference === '' && !window.confirm('Approve without a payout reference?')) return
+    }
+    const note = status === 'rejected' ? window.prompt('Reason for rejecting:', '') : ''
+    if (status === 'rejected' && note == null) return
+    setPayoutBusyId(String(request._id))
+    try {
+      await api.patch(`/withdraw/${request._id}`, {
+        status,
+        payoutReference: payoutReference.trim(),
+        note: (note || '').trim(),
+      })
+      toast.success(status === 'approved' ? 'Payout approved' : 'Request rejected')
+      await loadPayoutRequests()
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Could not process request')
+    } finally {
+      setPayoutBusyId(null)
+    }
+  }
+
   const allEntries = ledger?.entries || []
   const openEntries = allEntries.filter((e) => e.status === 'open')
   const historyEntries = allEntries.filter((e) => e.status !== 'open')
+  const pendingPayouts = payoutRequests.filter((r) => r.status === 'pending')
+  const processedPayouts = payoutRequests.filter((r) => r.status !== 'pending').slice(0, 10)
 
   return (
     <div className="space-y-6">
@@ -216,9 +273,13 @@ export default function AdminSettlementsPage() {
           ))}
         </select>
         {ledger ? (
-          <p className="mt-2 text-sm text-slate-600">
-            Open balance: ₹{Number(ledger.openTotal || 0).toFixed(2)}
-          </p>
+          <div className="mt-2 space-y-0.5 text-sm text-slate-600">
+            <p>Open balance: ₹{Number(ledger.openTotal || 0).toFixed(2)}</p>
+            <p>
+              Commission — pending: ₹{Number(ledger.pendingCommission || 0).toFixed(2)} · credited: ₹
+              {Number(ledger.settledCommission || 0).toFixed(2)}
+            </p>
+          </div>
         ) : null}
       </Card>
 
@@ -269,6 +330,72 @@ export default function AdminSettlementsPage() {
           batches.map((batch) => (
             <BatchCard key={batch._id} batch={batch} busy={busy} onSettle={settleBatch} />
           ))
+        )}
+      </div>
+
+      <div className="space-y-2">
+        <h3 className="text-sm font-semibold text-slate-900">Manager payout requests</h3>
+        {pendingPayouts.length === 0 && processedPayouts.length === 0 ? (
+          <Card hover={false} className="p-4 text-sm text-slate-600">
+            No manager withdrawal requests yet. Managers request payouts of settled commission from their
+            Earnings page.
+          </Card>
+        ) : (
+          <>
+            {pendingPayouts.map((r) => {
+              const rowBusy = payoutBusyId === String(r._id)
+              return (
+                <Card key={r._id} hover={false} className="p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-slate-900">
+                        {r.managerId?.name || 'Manager'} · ₹{Number(r.amount).toFixed(2)}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        Requested {formatDate(r.requestedAt)}
+                        {r.managerId?.phone ? ` · ${r.managerId.phone}` : ''}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 gap-2">
+                      <Button type="button" disabled={rowBusy} onClick={() => processPayout(r, 'approved')}>
+                        {rowBusy ? '…' : 'Approve'}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        disabled={rowBusy}
+                        onClick={() => processPayout(r, 'rejected')}
+                      >
+                        Reject
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              )
+            })}
+            {processedPayouts.map((r) => (
+              <Card key={r._id} hover={false} className="p-4">
+                <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-slate-700">
+                      <span className="font-medium text-slate-900">
+                        {r.managerId?.name || 'Manager'} · ₹{Number(r.amount).toFixed(2)}
+                      </span>
+                      <span className="mx-1 text-slate-400">·</span>
+                      <span className={r.status === 'approved' ? 'text-emerald-700' : 'text-rose-700'}>
+                        {r.status}
+                      </span>
+                    </p>
+                    <p className="text-xs text-slate-500">
+                      {formatDate(r.processedAt || r.requestedAt)}
+                      {r.payoutReference ? ` · Ref: ${r.payoutReference}` : ''}
+                      {r.rejectReason ? ` · ${r.rejectReason}` : ''}
+                    </p>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </>
         )}
       </div>
     </div>

@@ -6,10 +6,6 @@ import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import { invalidatePricingSettingsCache } from '../../hooks/usePricingSettings'
 
-const adminHeaders = () => ({
-  headers: { Authorization: `Bearer ${import.meta.env.VITE_ADMIN_API_KEY || ''}` },
-})
-
 const inputCls =
   'h-11 w-full max-w-xs rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20'
 
@@ -23,11 +19,12 @@ export default function AdminPricingSettingsPage() {
   const [resetting, setResetting] = useState(false)
 
   const [defaultBookingAmountRupees, setDefaultBookingAmountRupees] = useState(500)
-  const [platformCommissionPercent, setPlatformCommissionPercent] = useState(20)
+  const [platformCommissionPerSessionRupees, setPlatformCommissionPerSessionRupees] = useState(100)
   const [distanceSurchargeBaseKm, setDistanceSurchargeBaseKm] = useState(5)
   const [distanceSurchargePerKmRupees, setDistanceSurchargePerKmRupees] = useState(5)
   const [homePlanMaxDiscountPercent, setHomePlanMaxDiscountPercent] = useState(15)
   const [defaultPhysioPricePerSession, setDefaultPhysioPricePerSession] = useState(500)
+  const [managerCommissionPerSessionRupees, setManagerCommissionPerSessionRupees] = useState(0)
   const [planTiers, setPlanTiers] = useState([])
   const [planMilestones, setPlanMilestones] = useState({})
   const [updatedAt, setUpdatedAt] = useState(null)
@@ -39,11 +36,12 @@ export default function AdminPricingSettingsPage() {
 
   const applyPayload = useCallback((data) => {
     setDefaultBookingAmountRupees(data.defaultBookingAmountRupees)
-    setPlatformCommissionPercent(data.platformCommissionPercent)
+    setPlatformCommissionPerSessionRupees(data.platformCommissionPerSessionRupees ?? 100)
     setDistanceSurchargeBaseKm(data.distanceSurchargeBaseKm)
     setDistanceSurchargePerKmRupees(data.distanceSurchargePerKmRupees)
     setHomePlanMaxDiscountPercent(data.homePlanMaxDiscountPercent)
     setDefaultPhysioPricePerSession(data.defaultPhysioPricePerSession)
+    setManagerCommissionPerSessionRupees(data.managerCommissionPerSessionRupees ?? 0)
     setPlanTiers(Array.isArray(data.planTiers) ? data.planTiers : [])
     setPlanMilestones(data.planMilestones && typeof data.planMilestones === 'object' ? data.planMilestones : {})
     setUpdatedAt(data.pricingUpdatedAt || null)
@@ -52,7 +50,7 @@ export default function AdminPricingSettingsPage() {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const { data } = await api.get('/admin/pricing/settings', adminHeaders())
+      const { data } = await api.get('/admin/pricing/settings')
       applyPayload(data)
     } catch (e) {
       toast.error(e.response?.data?.message || 'Failed to load pricing settings')
@@ -101,16 +99,15 @@ export default function AdminPricingSettingsPage() {
         '/admin/pricing/settings',
         {
           defaultBookingAmountRupees: Number(defaultBookingAmountRupees),
-          platformCommissionPercent: Number(platformCommissionPercent),
+          platformCommissionPerSessionRupees: Number(platformCommissionPerSessionRupees),
           distanceSurchargeBaseKm: Number(distanceSurchargeBaseKm),
           distanceSurchargePerKmRupees: Number(distanceSurchargePerKmRupees),
           homePlanMaxDiscountPercent: Number(homePlanMaxDiscountPercent),
           defaultPhysioPricePerSession: Number(defaultPhysioPricePerSession),
+          managerCommissionPerSessionRupees: Number(managerCommissionPerSessionRupees),
           planTiers,
           planMilestones,
-        },
-        adminHeaders(),
-      )
+        },      )
       applyPayload(data)
       invalidatePricingSettingsCache()
       toast.success('Pricing settings saved')
@@ -125,7 +122,7 @@ export default function AdminPricingSettingsPage() {
     if (!window.confirm('Reset all pricing fields to built-in defaults?')) return
     setResetting(true)
     try {
-      const { data } = await api.post('/admin/pricing/settings/reset', {}, adminHeaders())
+      const { data } = await api.post('/admin/pricing/settings/reset', {})
       applyPayload(data)
       invalidatePricingSettingsCache()
       toast.success('Pricing reset to defaults')
@@ -173,16 +170,18 @@ export default function AdminPricingSettingsPage() {
               <span className="mt-1 block text-[11px] text-slate-500">Home bookings before physiotherapist assign; online fallback</span>
             </label>
             <label className="block text-xs font-medium text-slate-600">
-              Platform commission (%)
+              Platform commission (₹ per session)
               <input
                 type="number"
                 min={0}
-                max={100}
-                step={0.5}
+                step={1}
                 className={`${inputCls} mt-1 max-w-none`}
-                value={platformCommissionPercent}
-                onChange={(e) => setPlatformCommissionPercent(e.target.value)}
+                value={platformCommissionPerSessionRupees}
+                onChange={(e) => setPlatformCommissionPerSessionRupees(e.target.value)}
               />
+              <span className="mt-1 block text-[11px] text-slate-500">
+                Flat platform fee per session on verified payments. 0 disables it.
+              </span>
             </label>
             <label className="block text-xs font-medium text-slate-600">
               Suggested physiotherapist rate (₹)
@@ -206,6 +205,20 @@ export default function AdminPricingSettingsPage() {
                 value={homePlanMaxDiscountPercent}
                 onChange={(e) => setHomePlanMaxDiscountPercent(e.target.value)}
               />
+            </label>
+            <label className="block text-xs font-medium text-slate-600">
+              Care-manager commission (₹ per session)
+              <input
+                type="number"
+                min={0}
+                step={1}
+                className={`${inputCls} mt-1 max-w-none`}
+                value={managerCommissionPerSessionRupees}
+                onChange={(e) => setManagerCommissionPerSessionRupees(e.target.value)}
+              />
+              <span className="mt-1 block text-[11px] text-slate-500">
+                Earned per session on manager-collected plans; paid out when the cash hand-off is settled. 0 disables it.
+              </span>
             </label>
           </div>
         </Card>
@@ -245,7 +258,9 @@ export default function AdminPricingSettingsPage() {
 
         <Card>
           <h2 className="type-page-title text-slate-900">Home plan tiers</h2>
-          <p className="mt-1 text-sm text-slate-600">Marketing copy and default discounts for 7 / 15 / 30 session plans.</p>
+          <p className="mt-1 text-sm text-slate-600">
+            Marketing copy and per-tier full-payment discounts for 7 / 15 / 30 session plans.
+          </p>
           <div className="mt-4 space-y-4">
             {planTiers.map((tier) => (
               <div key={tier.sessions} className="rounded-xl border border-slate-200 p-4">
@@ -268,7 +283,7 @@ export default function AdminPricingSettingsPage() {
                     />
                   </label>
                   <label className="block text-xs text-slate-600 sm:col-span-2">
-                    Default discount (%)
+                    Full payment discount (%)
                     <input
                       type="number"
                       min={0}
@@ -280,6 +295,9 @@ export default function AdminPricingSettingsPage() {
                         updateTier(tier.sessions, { defaultDiscountPercent: Number(e.target.value) || 0 })
                       }
                     />
+                    <span className="mt-1 block text-[11px] text-slate-500">
+                      Applied only when the care manager selects Full payment. Installment plans get no discount.
+                    </span>
                   </label>
                   <label className="block text-xs text-slate-600 sm:col-span-2">
                     Description

@@ -76,7 +76,6 @@ const iconDoc = (
 /** `countKey` matches `GET /admin/nav-counts` response fields; omit when no badge. */
 const baseNavItems = [
   { section: 'Operations', to: '/admin', label: 'Bookings', end: true, icon: iconBookings, countKey: 'bookings' },
-  { section: 'Operations', to: '/admin/payments', label: 'Payment queue', icon: iconCash, countKey: 'payments' },
   { section: 'Operations', to: '/admin/disputes', label: 'Disputes', icon: iconDispute, countKey: 'disputes' },
   { section: 'People', to: '/admin/users', label: 'Users', icon: iconUsers },
   {

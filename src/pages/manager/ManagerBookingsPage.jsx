@@ -204,7 +204,7 @@ export default function ManagerBookingsPage() {
           </p>
         </Card>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-2">
           <p className="text-xs font-medium text-slate-500">
             Showing {displayItems.length} of {total || items.length} case{(total || items.length) === 1 ? '' : 's'}
           </p>
@@ -213,46 +213,49 @@ export default function ManagerBookingsPage() {
             const due = managerOutstanding(b)
             const physioName =
               b.physioId && typeof b.physioId === 'object' ? b.physioId.name : null
+            const visitLine = formatBookingDateAndSlot(b.date, b.timeSlot)
+            const showHintAsPrimary =
+              meta.tone === 'urgent' || meta.tone === 'action' || meta.tone === 'waiting'
+            const secondaryParts = showHintAsPrimary
+              ? [meta.hint, physioName].filter(Boolean)
+              : [visitLine || null, physioName].filter(Boolean)
+            const secondaryLine = secondaryParts.join(' · ')
+
             return (
               <Link key={b._id} to={`/manager/bookings/${b._id}`} className="block">
                 <Card
-                  className={`overflow-hidden border-l-4 p-0 transition hover:border-teal-200 hover:shadow-md ${accentClass(meta.tone)}`}
+                  hover={false}
+                  className={`!p-0 overflow-hidden border-l-[3px] shadow-none transition hover:border-teal-200 hover:shadow-sm ${accentClass(meta.tone)}`}
                 >
-                  <div className="flex gap-4 p-4">
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-teal-100 text-sm font-bold text-teal-800">
+                  <div className="flex items-center gap-2.5 px-3 py-2.5 sm:px-3.5">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-teal-100 text-xs font-bold text-teal-800">
                       {patientInitial(b.userId?.name)}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-start justify-between gap-2">
-                        <div>
-                          <p className="font-semibold text-slate-900">{b.userId?.name || 'Patient'}</p>
-                          <p className="mt-0.5 text-sm text-slate-600">{b.issue || 'Home visit'}</p>
-                        </div>
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="min-w-0 truncate text-sm font-semibold leading-tight text-slate-900">
+                          <span>{b.userId?.name || 'Patient'}</span>
+                          <span className="font-normal text-slate-500">
+                            {' · '}
+                            {b.issue || 'Home visit'}
+                          </span>
+                        </p>
                         <span
-                          className={`inline-flex shrink-0 rounded-full px-3 py-1 text-xs font-semibold ring-1 ${badgeClass(meta.tone)}`}
+                          className={`inline-flex shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold leading-none ring-1 ${badgeClass(meta.tone)}`}
                         >
                           {meta.label}
                         </span>
                       </div>
-                      <p className="mt-2 text-xs text-slate-500">
-                        {formatBookingDateAndSlot(b.date, b.timeSlot) || 'Date TBD'}
-                        {b.pincode ? ` · PIN ${b.pincode}` : ''}
-                        {b.userId?.phone ? ` · ${b.userId.phone}` : ''}
-                      </p>
-                      <p className="mt-1.5 text-xs font-medium text-teal-800">{meta.hint}</p>
-                      {due > 0.009 ? (
-                        <p className="mt-1 text-xs font-semibold text-rose-700">₹{due.toFixed(0)} pending</p>
-                      ) : null}
-                      {physioName ? (
-                        <p className="mt-1 text-xs text-slate-500">
-                          Physio: <span className="font-medium text-slate-700">{physioName}</span>
+                      {(secondaryLine || due > 0.009) && (
+                        <p className="mt-0.5 truncate text-[11px] leading-tight text-slate-500">
+                          {secondaryLine}
+                          {due > 0.009 && !meta.label.includes('pending') ? (
+                            <span className="font-semibold text-rose-700">
+                              {secondaryLine ? ' · ' : ''}₹{due.toFixed(0)} pending
+                            </span>
+                          ) : null}
                         </p>
-                      ) : null}
-                    </div>
-                    <div className="hidden shrink-0 self-center sm:flex">
-                      <span className="rounded-lg bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600">
-                        Open →
-                      </span>
+                      )}
                     </div>
                   </div>
                 </Card>

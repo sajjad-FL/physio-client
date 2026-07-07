@@ -55,6 +55,7 @@ import ManagerLayout from './pages/manager/ManagerLayout'
 import ManagerBookingsPage from './pages/manager/ManagerBookingsPage'
 import ManagerBookingDetailPage from './pages/manager/ManagerBookingDetailPage'
 import ManagerLedgerPage from './pages/manager/ManagerLedgerPage'
+import ManagerWalletPage from './pages/manager/ManagerWalletPage'
 import AdminZonesPage from './pages/admin/AdminZonesPage'
 import AdminSettlementsPage from './pages/admin/AdminSettlementsPage'
 import { ShopCartProvider } from './hooks/useShopCart'
@@ -183,6 +184,7 @@ export default function App() {
           <Route path="bookings" element={<ManagerBookingsPage />} />
           <Route path="bookings/:id" element={<ManagerBookingDetailPage />} />
           <Route path="ledger" element={<ManagerLedgerPage />} />
+          <Route path="wallet" element={<ManagerWalletPage />} />
           <Route path="profile" element={<ProfilePage />} />
         </Route>
         <Route

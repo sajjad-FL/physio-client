@@ -405,18 +405,13 @@ export default function AdminFinancePage() {
         title="Wallets & payouts"
         subtitle="Track physiotherapist earnings, record commission settlements, and approve withdrawal requests."
         breadcrumbs={[{ label: 'Admin', to: '/admin' }, { label: 'Wallets & payouts' }]}
-        actions={
-          <>
-            <AdminLink to="/admin/payments">Payment queue →</AdminLink>
-            <AdminLink to="/admin/physios">Physiotherapists →</AdminLink>
-          </>
-        }
+        actions={<AdminLink to="/admin/physios">Physiotherapists →</AdminLink>}
       />
 
       <AdminFlowGuide
         title="Finance flow"
         steps={[
-          'Verified payments (from Payment queue) credit physiotherapist wallets and accrue platform commission.',
+          'Use the Payment Queue tab to verify offline collections — verified amounts credit physiotherapist wallets and accrue platform commission.',
           'Use Commission due filter to find physiotherapists who owe the platform — record settlement when they pay back.',
           'Approve pending payout requests to debit withdrawable balance after you transfer funds externally.',
           'Open a physiotherapist row for full wallet history, settlements, and recent ledger activity.',

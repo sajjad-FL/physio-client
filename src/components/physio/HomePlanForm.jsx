@@ -50,9 +50,10 @@ const fieldInput =
  * @param {object} props
  * @param {object} props.booking — booking row with timeSlot, physioId
  * @param {boolean} props.busy
- * @param {(payload: { sessions: number, amountPerSession: number, discountPercent: number, paymentMode: 'online'|'offline', schedule: { date: string, time: string }[] }) => void} props.onSubmit
+ * @param {boolean} [props.allowCustomFee] — manager flow: patient price is editable (≥ physio rate + manager commission) instead of locked to the physio rate
+ * @param {(payload: { sessions: number, amountPerSession: number, discountPercent: number, billingType: 'full'|'installment', paymentMode: 'online'|'offline', schedule: { date: string, time: string }[] }) => void} props.onSubmit
  */
-export default function HomePlanForm({ booking, busy, onSubmit }) {
+export default function HomePlanForm({ booking, busy, onSubmit, allowCustomFee = false }) {
   const { settings: pricingSettings } = usePricingSettings()
   const allowedSessionCounts = pricingSettings.allowedPlanSessionCounts?.length
     ? pricingSettings.allowedPlanSessionCounts
@@ -67,14 +68,29 @@ export default function HomePlanForm({ booking, busy, onSubmit }) {
   }, [pricingSettings.planTiers])
 
   const defaultSessionCount = allowedSessionCounts[0] ?? 7
-  const defaultTierDiscount = Number(tierBySessions.get(defaultSessionCount)?.defaultDiscountPercent) || 0
+
+  const tierFullPaymentDiscount = (sessionCount) => {
+    const tier = tierBySessions.get(Number(sessionCount))
+    const raw = Number(tier?.defaultDiscountPercent) || 0
+    return Math.min(maxDiscountPercent, Math.max(0, raw))
+  }
+
+  const resolveDiscount = (sessionCount, type) =>
+    type === 'full' ? tierFullPaymentDiscount(sessionCount) : 0
 
   const defaultSlot =
     booking?.timeSlot && DAILY_SLOTS.includes(booking.timeSlot) ? booking.timeSlot : DAILY_SLOTS[0]
-  const defaultAmount = booking?.physioId?.pricePerSession != null ? String(booking.physioId.pricePerSession) : ''
   const physio = booking?.physioId
   const feeLo = Number(physio?.pricePerSession)
-  const fixedFee = Number.isFinite(feeLo) && feeLo > 0
+  const hasPhysioRate = Number.isFinite(feeLo) && feeLo > 0
+  /** Physio flow: fee locked to own rate. Manager flow (allowCustomFee): editable with a floor. */
+  const fixedFee = hasPhysioRate && !allowCustomFee
+  const managerCommission = allowCustomFee
+    ? Number(pricingSettings.managerCommissionPerSessionRupees) || 0
+    : 0
+  const minFee = allowCustomFee && hasPhysioRate ? round2(feeLo + managerCommission) : null
+  const defaultAmount =
+    minFee != null ? String(minFee) : hasPhysioRate ? String(feeLo) : ''
   const defaultPrimaryDate = useMemo(
     () => parseBookingPrimaryDate(booking?.date),
     [booking?.date],
@@ -82,11 +98,16 @@ export default function HomePlanForm({ booking, busy, onSubmit }) {
 
   const [sessions, setSessions] = useState(defaultSessionCount)
   const [amountPerSession, setAmountPerSession] = useState(defaultAmount)
-  const [discount, setDiscount] = useState(defaultTierDiscount)
+  const [billingType, setBillingType] = useState('installment')
   const [sessionTime, setSessionTime] = useState(defaultSlot)
-  const [paymentMode, setPaymentMode] = useState('online')
+  const [paymentMode, setPaymentMode] = useState('offline')
   const [selectedDates, setSelectedDates] = useState(() =>
     defaultPrimaryDate ? [defaultPrimaryDate] : [],
+  )
+
+  const discount = useMemo(
+    () => resolveDiscount(sessions, billingType),
+    [sessions, billingType, tierBySessions, maxDiscountPercent],
   )
 
   const defaultPrimaryDateKey = defaultPrimaryDate ? defaultPrimaryDate.getTime() : null
@@ -96,17 +117,13 @@ export default function HomePlanForm({ booking, busy, onSubmit }) {
     setSessionTime(defaultSlot)
     setSelectedDates(defaultPrimaryDate ? [defaultPrimaryDate] : [])
     setSessions(defaultSessionCount)
-    setDiscount(defaultTierDiscount)
-  }, [booking._id, defaultAmount, defaultSlot, defaultPrimaryDate, defaultPrimaryDateKey, defaultSessionCount, defaultTierDiscount])
+    setBillingType('installment')
+  }, [booking._id, defaultAmount, defaultSlot, defaultPrimaryDate, defaultPrimaryDateKey, defaultSessionCount])
 
   function handleSessionsChange(nextRaw) {
     const next = Number(nextRaw)
     if (!allowedSessionCounts.includes(next)) return
     setSessions(next)
-    const tier = tierBySessions.get(next)
-    if (tier != null && tier.defaultDiscountPercent != null) {
-      setDiscount(Math.min(maxDiscountPercent, Math.max(0, Number(tier.defaultDiscountPercent) || 0)))
-    }
   }
 
   useEffect(() => {
@@ -151,7 +168,7 @@ export default function HomePlanForm({ booking, busy, onSubmit }) {
 
   const dateMismatch = selectedDates.length !== Number(sessions)
   const amt = Number(amountPerSession)
-  const feeOk = !fixedFee || amt === feeLo
+  const feeOk = fixedFee ? amt === feeLo : minFee == null || amt >= minFee
   const canSubmit =
     allowedSessionCounts.includes(Number(sessions)) &&
     Number(amountPerSession) > 0 &&
@@ -169,6 +186,7 @@ export default function HomePlanForm({ booking, busy, onSubmit }) {
       sessions: Number(sessions),
       amountPerSession: Number(amountPerSession),
       discountPercent: totals.discountPct,
+      billingType,
       paymentMode,
       schedule,
     })
@@ -219,7 +237,19 @@ export default function HomePlanForm({ booking, busy, onSubmit }) {
                       <span className="mt-1 block text-gray-600">Shown amount is what the patient pays per session.</span>
                     )}
                   </p>
-                ) : perVisitTravel > 0 ? (
+                ) : null}
+                {!fixedFee && allowCustomFee ? (
+                  <p className="mb-2 text-xs text-gray-600">
+                    {minFee != null
+                      ? `Patient price per session — at least ₹${minFee} (physiotherapist rate ₹${feeLo}` +
+                        (managerCommission > 0 ? ` + manager commission ₹${managerCommission}` : '') +
+                        ').'
+                      : 'Patient price per session. When you assign a physiotherapist later, this must cover their rate' +
+                        (managerCommission > 0 ? ` plus the ₹${managerCommission} manager commission` : '') +
+                        '.'}
+                  </p>
+                ) : null}
+                {!fixedFee && perVisitTravel > 0 ? (
                   <p className="mb-2 text-xs text-gray-600">
                     Assignment distance surcharge ₹{perVisitTravel.toFixed(2)} per home visit is added to each
                     session in the total below.
@@ -227,17 +257,23 @@ export default function HomePlanForm({ booking, busy, onSubmit }) {
                 ) : null}
                 <input
                   type="number"
-                  min={fixedFee ? feeLo : 1}
+                  min={fixedFee ? feeLo : minFee ?? 1}
                   max={fixedFee ? round2(feeLo + perVisitTravel) : undefined}
                   step={1}
                   value={fixedFee ? String(round2(feeLo + perVisitTravel)) : amountPerSession}
                   onChange={(e) => setAmountPerSession(e.target.value)}
-                  placeholder={fixedFee ? String(feeLo) : 'e.g. 800'}
+                  placeholder={fixedFee ? String(feeLo) : minFee != null ? String(minFee) : 'e.g. 800'}
                   readOnly={fixedFee}
                   className={`${fieldInput}${fixedFee ? ' cursor-not-allowed bg-gray-50 text-gray-700' : ''}`}
                 />
                 {fixedFee && Number.isFinite(amt) && !feeOk ? (
                   <p className="mt-1 text-xs text-red-600">Per-session amount must match your fixed rate of ₹{feeLo}.</p>
+                ) : null}
+                {!fixedFee && minFee != null && Number.isFinite(amt) && amt > 0 && !feeOk ? (
+                  <p className="mt-1 text-xs text-red-600">
+                    Must be at least ₹{minFee} to cover the physiotherapist rate
+                    {managerCommission > 0 ? ' and manager commission' : ''}.
+                  </p>
                 ) : null}
               </div>
             </div>
@@ -249,11 +285,14 @@ export default function HomePlanForm({ booking, busy, onSubmit }) {
                 max={maxDiscountPercent}
                 step={0.5}
                 value={discount}
-                onChange={(e) =>
-                  setDiscount(Math.min(maxDiscountPercent, Math.max(0, Number(e.target.value) || 0)))
-                }
-                className={fieldInput}
+                readOnly
+                className={`${fieldInput} cursor-not-allowed bg-gray-50 text-gray-700`}
               />
+              <p className="mt-1 text-xs text-gray-500">
+                {billingType === 'full'
+                  ? 'Set by admin for full payment on this plan length.'
+                  : 'Installment plans have no discount.'}
+              </p>
             </div>
             <div>
               <label className={fieldLabel}>Session time (each visit)</label>
@@ -272,21 +311,40 @@ export default function HomePlanForm({ booking, busy, onSubmit }) {
           </div>
 
           <div>
-            <p className={`${fieldLabel} mb-3`}>Payment mode</p>
+            <p className={`${fieldLabel} mb-3`}>Payment type</p>
             <div className="flex flex-col gap-3 sm:flex-row">
               <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-sm transition-all duration-200 hover:border-blue-200 hover:shadow-md has-[:checked]:border-blue-500 has-[:checked]:ring-2 has-[:checked]:ring-blue-500/20">
                 <input
                   type="radio"
-                  name={`pm-${booking._id}`}
-                  checked={paymentMode === 'online'}
-                  onChange={() => setPaymentMode('online')}
+                  name={`bt-${booking._id}`}
+                  checked={billingType === 'full'}
+                  onChange={() => setBillingType('full')}
                   className="text-blue-600"
                 />
                 <span className="min-w-0">
-                  <span className="block text-sm font-medium text-gray-900">Online</span>
-                  <span className="block text-xs text-gray-500">Patient pays after approving</span>
+                  <span className="block text-sm font-medium text-gray-900">Full payment</span>
+                  <span className="block text-xs text-gray-500">Patient pays entire plan upfront — admin discount applies</span>
                 </span>
               </label>
+              <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-sm transition-all duration-200 hover:border-blue-200 hover:shadow-md has-[:checked]:border-blue-500 has-[:checked]:ring-2 has-[:checked]:ring-blue-500/20">
+                <input
+                  type="radio"
+                  name={`bt-${booking._id}`}
+                  checked={billingType === 'installment'}
+                  onChange={() => setBillingType('installment')}
+                  className="text-blue-600"
+                />
+                <span className="min-w-0">
+                  <span className="block text-sm font-medium text-gray-900">Installment</span>
+                  <span className="block text-xs text-gray-500">Pay over time per milestones — no discount</span>
+                </span>
+              </label>
+            </div>
+          </div>
+
+          <div>
+            <p className={`${fieldLabel} mb-3`}>Payment mode</p>
+            <div className="flex flex-col gap-3 sm:flex-row">
               <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-sm transition-all duration-200 hover:border-blue-200 hover:shadow-md has-[:checked]:border-blue-500 has-[:checked]:ring-2 has-[:checked]:ring-blue-500/20">
                 <input
                   type="radio"
@@ -298,6 +356,19 @@ export default function HomePlanForm({ booking, busy, onSubmit }) {
                 <span className="min-w-0">
                   <span className="block text-sm font-medium text-gray-900">Offline</span>
                   <span className="block text-xs text-gray-500">Cash / UPI — you verify later</span>
+                </span>
+              </label>
+              <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-sm transition-all duration-200 hover:border-blue-200 hover:shadow-md has-[:checked]:border-blue-500 has-[:checked]:ring-2 has-[:checked]:ring-blue-500/20">
+                <input
+                  type="radio"
+                  name={`pm-${booking._id}`}
+                  checked={paymentMode === 'online'}
+                  onChange={() => setPaymentMode('online')}
+                  className="text-blue-600"
+                />
+                <span className="min-w-0">
+                  <span className="block text-sm font-medium text-gray-900">Online</span>
+                  <span className="block text-xs text-gray-500">Patient pays after approving</span>
                 </span>
               </label>
             </div>

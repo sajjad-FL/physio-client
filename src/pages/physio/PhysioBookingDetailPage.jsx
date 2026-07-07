@@ -6,6 +6,7 @@ import {
   marketplacePaymentStatusLabel,
   paymentAmountLabel,
   paymentModeLabel,
+  billingTypeLabel,
   paymentStatusLabel,
   sessionStatusLabel,
 } from '../../utils/bookingDisplay'
@@ -395,12 +396,18 @@ export default function PhysioBookingDetailPage() {
             <dt className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Plan status</dt>
             <dd className="mt-0.5 capitalize text-gray-900">{b.planStatus || '—'}</dd>
           </div>
-          {b.discountPercent != null && (
+          {b.discountPercent != null && b.discountPercent > 0 && (
             <div>
               <dt className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Discount</dt>
               <dd className="mt-0.5 font-medium text-gray-900">{b.discountPercent}%</dd>
             </div>
           )}
+          {billingTypeLabel(b) ? (
+            <div>
+              <dt className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Payment type</dt>
+              <dd className="mt-0.5 font-medium text-gray-900">{billingTypeLabel(b)}</dd>
+            </div>
+          ) : null}
           <div>
             <dt className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Total</dt>
             <dd className="mt-0.5 font-semibold text-gray-900">{paymentAmountLabel(b)}</dd>

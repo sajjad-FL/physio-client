@@ -79,7 +79,7 @@ export function managerWorkflowMeta(b) {
   if (outstanding <= 0.009 && totalPaid > 0) {
     return {
       label: 'In treatment',
-      hint: 'Plan fully paid — sessions in progress',
+      hint: '',
       tone: 'progress',
     }
   }

@@ -4,10 +4,6 @@ import { api } from '../../config/api'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 
-const adminHeaders = () => ({
-  headers: { Authorization: `Bearer ${import.meta.env.VITE_ADMIN_API_KEY || ''}` },
-})
-
 export default function AdminZonesPage() {
   const [zones, setZones] = useState([])
   const [managers, setManagers] = useState([])
@@ -21,8 +17,8 @@ export default function AdminZonesPage() {
     setLoading(true)
     try {
       const [zRes, mRes, pRes] = await Promise.all([
-        api.get('/admin/zones', adminHeaders()),
-        api.get('/admin/care-managers', adminHeaders()),
+        api.get('/admin/zones'),
+        api.get('/admin/care-managers'),
         api.get('/physios', { params: { page: 1, limit: 100 } }),
       ])
       setZones(zRes.data?.zones || [])
@@ -50,9 +46,7 @@ export default function AdminZonesPage() {
     try {
       await api.post(
         '/admin/zones',
-        { name: name.trim(), pincodes, managerIds: managers.map((m) => m._id).slice(0, 1), physioIds: [] },
-        adminHeaders(),
-      )
+        { name: name.trim(), pincodes, managerIds: managers.map((m) => m._id).slice(0, 1), physioIds: [] },      )
       toast.success('Zone created')
       setName('')
       setPincodesRaw('')

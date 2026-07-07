@@ -13,6 +13,7 @@ import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import { resolveFileUrl } from '../../utils/serverOrigin'
 import { buildSessionPaymentMap } from '../../utils/sessionPaymentMap'
+import { billingTypeLabel, paymentAmountLabel } from '../../utils/bookingDisplay'
 
 export default function ManagerBookingDetailPage() {
   const { id } = useParams()
@@ -172,7 +173,7 @@ export default function ManagerBookingDetailPage() {
       {canCreatePlan ? (
         <Card hover={false} className="p-5">
           <h3 className="mb-4 font-semibold text-slate-900">Create treatment plan</h3>
-          <HomePlanForm booking={b} busy={busy} onSubmit={submitPlan} />
+          <HomePlanForm booking={b} busy={busy} onSubmit={submitPlan} allowCustomFee />
         </Card>
       ) : null}
 
@@ -253,6 +254,34 @@ export default function ManagerBookingDetailPage() {
         <Card hover={false} className="p-5">
           <h3 className="font-semibold text-slate-900">Assigned physio</h3>
           <p className="mt-2 text-sm text-slate-700">{b.physioId?.name}</p>
+        </Card>
+      ) : null}
+
+      {hasPlan ? (
+        <Card hover={false} className="p-5">
+          <h3 className="font-semibold text-slate-900">Plan summary</h3>
+          <dl className="mt-3 space-y-2 text-sm">
+            <div className="flex justify-between gap-4">
+              <dt className="text-slate-500">Sessions</dt>
+              <dd className="font-medium text-slate-900">{b.sessions ?? '—'}</dd>
+            </div>
+            <div className="flex justify-between gap-4">
+              <dt className="text-slate-500">Total</dt>
+              <dd className="font-medium tabular-nums text-slate-900">{paymentAmountLabel(b)}</dd>
+            </div>
+            {billingTypeLabel(b) ? (
+              <div className="flex justify-between gap-4">
+                <dt className="text-slate-500">Payment type</dt>
+                <dd className="font-medium text-slate-900">{billingTypeLabel(b)}</dd>
+              </div>
+            ) : null}
+            {b.discountPercent != null && b.discountPercent > 0 ? (
+              <div className="flex justify-between gap-4">
+                <dt className="text-slate-500">Discount</dt>
+                <dd className="font-medium text-emerald-800">{b.discountPercent}%</dd>
+              </div>
+            ) : null}
+          </dl>
         </Card>
       ) : null}
 

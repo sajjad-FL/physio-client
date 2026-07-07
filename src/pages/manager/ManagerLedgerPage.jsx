@@ -73,6 +73,12 @@ export default function ManagerLedgerPage() {
                     <p className="mt-0.5 text-sm text-slate-700">{patientName}</p>
                     <p className="text-xs text-slate-500">{issue}</p>
                     <p className="mt-1 text-xs font-medium text-amber-800">{ledgerStatusLabel(e.status)}</p>
+                    {Number(e.managerCommissionAmount) > 0 ? (
+                      <p className="mt-1 text-xs font-medium text-emerald-700">
+                        Your commission: ₹{Number(e.managerCommissionAmount).toFixed(2)}
+                        {e.status === 'settled' ? ' — credited' : ' — paid on settlement'}
+                      </p>
+                    ) : null}
                     {e.note ? <p className="mt-1 text-xs text-slate-500">{e.note}</p> : null}
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-2">

@@ -22,6 +22,13 @@ export function paymentModeLabel(b) {
   return 'Online'
 }
 
+export function billingTypeLabel(b) {
+  if (b.serviceType !== 'home' || !b.homePlanBillingType) return null
+  if (b.homePlanBillingType === 'full') return 'Full payment'
+  if (b.homePlanBillingType === 'installment') return 'Installment'
+  return null
+}
+
 export function formatPaidAt(b) {
   const raw = b.paidAt || b.heldAt
   if (!raw) return null
