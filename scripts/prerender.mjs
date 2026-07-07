@@ -155,6 +155,39 @@ function startServer(rootDir, rootIndexHtml) {
   })
 }
 
+function installRequestFilter(page, allowedOrigin) {
+  return page.setRequestInterception(true).then(() => {
+    page.on('request', (req) => {
+      const target = req.url()
+      if (
+        target.startsWith(allowedOrigin) ||
+        target.startsWith('data:') ||
+        target.startsWith('blob:')
+      ) {
+        req.continue()
+        return
+      }
+      // External fonts/analytics never settle reliably in CI — skip for prerender.
+      req.abort()
+    })
+  })
+}
+
+async function captureRoute(page, target, { timeoutMs = 60_000 } = {}) {
+  await page.goto(target, { waitUntil: 'load', timeout: timeoutMs })
+  await page.waitForSelector('h1', { timeout: Math.min(timeoutMs, 20_000) })
+  // Let react-helmet-async flush title/meta after paint.
+  await page.evaluate(
+    () =>
+      new Promise((resolve) => {
+        requestAnimationFrame(() => requestAnimationFrame(resolve))
+      }),
+  )
+  await page.evaluate(() => new Promise((r) => setTimeout(r, 200)))
+  let html = await page.evaluate(() => `<!doctype html>\n${document.documentElement.outerHTML}`)
+  return promoteSeoHead(html)
+}
+
 function routeToOutputPath(route) {
   const clean = route.replace(/^\/+|\/+$/g, '')
   if (!clean) return path.join(distDir, 'index.html')
@@ -228,12 +261,14 @@ async function main() {
   try {
     browser = await puppeteer.launch({
       headless: 'new',
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
     })
-    const page = await browser.newPage()
+    let page = await browser.newPage()
     await page.setViewport({ width: 1280, height: 900 })
     await page.setUserAgent('PhysiOkhomPrerender/1.0 (+static-build)')
+    await installRequestFilter(page, origin)
 
+    let routeIndex = 0
     for (const route of routes) {
       const outFile = routeToOutputPath(route)
       const outDir = path.dirname(outFile)
@@ -241,14 +276,21 @@ async function main() {
       const target = `${origin}${route}`
       console.log(`[prerender] ${route} -> ${path.relative(clientRoot, outFile)}`)
       try {
-        await page.goto(target, { waitUntil: 'networkidle0', timeout: 45_000 })
-        await page.evaluate(() => new Promise((r) => setTimeout(r, 150)))
-        let html = await page.evaluate(() => `<!doctype html>\n${document.documentElement.outerHTML}`)
-        html = promoteSeoHead(html)
+        // Recycle the tab periodically to avoid Chromium slowdown on long runs.
+        if (routeIndex > 0 && routeIndex % 25 === 0) {
+          await page.close()
+          const fresh = await browser.newPage()
+          await fresh.setViewport({ width: 1280, height: 900 })
+          await fresh.setUserAgent('PhysiOkhomPrerender/1.0 (+static-build)')
+          await installRequestFilter(fresh, origin)
+          page = fresh
+        }
+        const html = await captureRoute(page, target)
         fs.writeFileSync(outFile, html, 'utf8')
       } catch (err) {
         console.warn(`[prerender] failed ${route}: ${err?.message || err}`)
       }
+      routeIndex += 1
     }
   } finally {
     if (browser) await browser.close()
