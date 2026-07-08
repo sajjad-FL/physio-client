@@ -4,10 +4,16 @@ services:
   - type: web
     name: physio-client
     env: static
-    buildCommand: npm run build
+    # `npx puppeteer browsers install chrome` guarantees the Chrome binary exists
+    # even when node_modules came from Render's build cache (postinstall skipped).
+    # Set SKIP_PRERENDER=1 here to disable prerendering without a code change.
+    buildCommand: npx puppeteer browsers install chrome && npm run build
     envVars:
       - key: VITE_PUBLIC_SITE_URL
         value: https://physiokhom.com
+      # Ensure devDependencies (vite, puppeteer) install even if NODE_ENV=production.
+      - key: NPM_CONFIG_PRODUCTION
+        value: "false"
     staticPublishPath: dist
     routes:
       - type: rewrite

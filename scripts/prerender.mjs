@@ -175,7 +175,9 @@ function installRequestFilter(page, allowedOrigin) {
 
 async function captureRoute(page, target, { timeoutMs = 60_000 } = {}) {
   await page.goto(target, { waitUntil: 'load', timeout: timeoutMs })
-  await page.waitForSelector('h1', { timeout: Math.min(timeoutMs, 20_000) })
+  // 10s is plenty for a local static server; a longer wait just burns CI build
+  // minutes on routes whose h1 will never appear (e.g. blocked API data).
+  await page.waitForSelector('h1', { timeout: Math.min(timeoutMs, 10_000) })
   // Let react-helmet-async flush title/meta after paint.
   await page.evaluate(
     () =>
@@ -195,6 +197,11 @@ function routeToOutputPath(route) {
 }
 
 async function main() {
+  if (['1', 'true'].includes(String(process.env.SKIP_PRERENDER).toLowerCase())) {
+    console.log('[prerender] SKIP_PRERENDER is set — skipping. dist/index.html keeps its baked-in SEO tags.')
+    process.exit(0)
+  }
+
   let puppeteer
   try {
     puppeteer = (await import('puppeteer')).default
@@ -259,16 +266,26 @@ async function main() {
 
   let browser
   try {
-    browser = await puppeteer.launch({
-      headless: 'new',
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
-    })
+    try {
+      browser = await puppeteer.launch({
+        headless: 'new',
+        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
+      })
+    } catch (err) {
+      // A broken Chrome install (missing binary, missing shared libs, OOM) must
+      // not fail the deploy — dist/index.html still carries baseline SEO tags.
+      console.warn(`[prerender] Could not launch Chromium: ${err?.message || err}`)
+      console.warn('[prerender] Skipping prerender. On Render: check .puppeteerrc.cjs cache dir and that devDependencies are installed.')
+      server.close()
+      process.exit(0)
+    }
     let page = await browser.newPage()
     await page.setViewport({ width: 1280, height: 900 })
     await page.setUserAgent('PhysiOkhomPrerender/1.0 (+static-build)')
     await installRequestFilter(page, origin)
 
     let routeIndex = 0
+    let consecutiveFailures = 0
     for (const route of routes) {
       const outFile = routeToOutputPath(route)
       const outDir = path.dirname(outFile)
@@ -287,8 +304,16 @@ async function main() {
         }
         const html = await captureRoute(page, target)
         fs.writeFileSync(outFile, html, 'utf8')
+        consecutiveFailures = 0
       } catch (err) {
         console.warn(`[prerender] failed ${route}: ${err?.message || err}`)
+        consecutiveFailures += 1
+        // A dead browser (e.g. OOM-killed on a small CI machine) makes every
+        // remaining route fail too — bail out instead of burning build minutes.
+        if (consecutiveFailures >= 8) {
+          console.warn('[prerender] 8 consecutive failures — aborting the rest of the run. Routes already written are kept.')
+          break
+        }
       }
       routeIndex += 1
     }
@@ -301,6 +326,8 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error('[prerender] Unexpected error:', err)
-  process.exit(1)
+  // Prerendering is an SEO enhancement, never a deploy gate: dist/index.html
+  // ships with baseline SEO meta, so fail soft and let the deploy finish.
+  console.error('[prerender] Unexpected error (deploy continues without prerender):', err)
+  process.exit(0)
 })
