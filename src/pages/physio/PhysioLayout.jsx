@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, Outlet, useLocation } from 'react-router-dom'
 import { api } from '../../config/api'
+import { physioNeedsAction } from '../../utils/physioWorkflow'
 import AppShell from '../../components/layout/AppShell'
 import AuthSpinner from '../../components/AuthSpinner'
 import SeoNoIndex from '../../components/seo/SeoNoIndex'
@@ -114,19 +115,6 @@ function navLockedWhilePending(to) {
   return true
 }
 
-/** Bookings that need physio action (legacy flow only — manager-owned cases skip accept/plan steps). */
-function bookingNeedsPhysioAction(b) {
-  if (!b) return false
-  if (b.managerId) return false
-  if (b.status === 'assigned') return true
-  if (b.serviceType !== 'home') return false
-  if (b.status !== 'accepted' && b.status !== 'scheduled') return false
-  if (b.planStatus === 'proposed' || b.planStatus === 'approved' || b.planStatus === 'awaiting_consent' || b.planStatus === 'live') {
-    return false
-  }
-  return true
-}
-
 function activeDisputeCount(disputes) {
   if (!Array.isArray(disputes)) return 0
   return disputes.filter((d) => d.status === 'open' || d.status === 'under_review').length
@@ -174,7 +162,7 @@ export default function PhysioLayout() {
         const bookings = bRes.data?.data || []
         const disputes = dRes.data?.data || []
         setNavBadges({
-          '/physio/bookings': bookings.filter(bookingNeedsPhysioAction).length,
+          '/physio/bookings': bookings.filter(physioNeedsAction).length,
           '/physio/disputes': activeDisputeCount(disputes),
         })
       } catch {

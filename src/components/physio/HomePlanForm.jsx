@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { DAILY_SLOTS } from '../../constants/slots'
-import { formatBookingTimeSlot } from '../../utils/date'
+import { formatBookingDateAndSlot, formatBookingTimeSlot } from '../../utils/date'
 import Button from '../ui/Button'
 import DragSelectCalendar from './DragSelectCalendar'
 import { formatPhysioSessionFeeLabel } from '../../utils/physioSessionFee.js'
@@ -35,6 +35,16 @@ function parseBookingPrimaryDate(ymd) {
   return d.getTime() >= today.getTime() ? d : null
 }
 
+/** Parse YYYY-MM-DD to local midnight Date (any date, including past). */
+function parseYmdLocalDate(ymd) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(ymd || '').trim())
+  if (!m) return null
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
+  if (Number.isNaN(d.getTime())) return null
+  d.setHours(0, 0, 0, 0)
+  return d
+}
+
 function formatSummaryDay(d) {
   return new Date(d).toLocaleDateString('en-IN', {
     day: 'numeric',
@@ -42,19 +52,70 @@ function formatSummaryDay(d) {
   })
 }
 
+function existingPlanDefaults(booking, { allowCustomFee, allowedSessionCounts, defaultSessionCount, defaultSlot, defaultAmount }) {
+  const hasExistingPlan =
+    Number(booking?.sessions) > 0 &&
+    Array.isArray(booking?.schedule) &&
+    booking.schedule.length > 0
+
+  if (!hasExistingPlan) {
+    const primaryDate = allowCustomFee ? null : parseBookingPrimaryDate(booking?.date)
+    return {
+      sessions: defaultSessionCount,
+      amountPerSession: defaultAmount,
+      billingType: 'installment',
+      paymentMode: 'offline',
+      sessionTime: defaultSlot,
+      selectedDates: primaryDate ? [primaryDate] : [],
+      isEditing: false,
+    }
+  }
+
+  const scheduleDates = booking.schedule
+    .map((s) => parseYmdLocalDate(s?.date))
+    .filter(Boolean)
+    .sort((a, b) => a - b)
+  const firstTime = booking.schedule[0]?.time
+  const sessionTime = firstTime && DAILY_SLOTS.includes(firstTime) ? firstTime : defaultSlot
+  const sessionCount = Number(booking.sessions)
+  const amount =
+    booking.amountPerSession != null && Number.isFinite(Number(booking.amountPerSession))
+      ? String(booking.amountPerSession)
+      : defaultAmount
+
+  return {
+    sessions: allowedSessionCounts.includes(sessionCount) ? sessionCount : defaultSessionCount,
+    amountPerSession: amount,
+    billingType: booking.homePlanBillingType === 'full' ? 'full' : 'installment',
+    paymentMode: booking.homePlanPaymentMode === 'online' ? 'online' : 'offline',
+    sessionTime,
+    selectedDates: scheduleDates,
+    isEditing: true,
+  }
+}
+
 const fieldLabel = 'mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-500'
 const fieldInput =
-  'w-full rounded-xl border border-gray-200 bg-white px-3 py-3 text-sm text-gray-900 shadow-sm transition-shadow focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30'
+  'w-full min-w-0 rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 shadow-sm transition-shadow focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 sm:py-3'
 
 /**
  * @param {object} props
  * @param {object} props.booking — booking row with timeSlot, physioId
  * @param {boolean} props.busy
  * @param {boolean} [props.allowCustomFee] — manager flow: patient price is editable (≥ physio rate + manager commission) instead of locked to the physio rate
+ * @param {string} [props.submitLabel] — override submit button label
+ * @param {boolean} [props.embedded] — nested inside another panel (manager case detail); lighter padding, no double card chrome
  * @param {(payload: { sessions: number, amountPerSession: number, discountPercent: number, billingType: 'full'|'installment', paymentMode: 'online'|'offline', schedule: { date: string, time: string }[] }) => void} props.onSubmit
  */
-export default function HomePlanForm({ booking, busy, onSubmit, allowCustomFee = false }) {
-  const { settings: pricingSettings } = usePricingSettings()
+export default function HomePlanForm({
+  booking,
+  busy,
+  onSubmit,
+  allowCustomFee = false,
+  submitLabel,
+  embedded = false,
+}) {
+  const { settings: pricingSettings, reload: reloadPricingSettings } = usePricingSettings()
   const allowedSessionCounts = pricingSettings.allowedPlanSessionCounts?.length
     ? pricingSettings.allowedPlanSessionCounts
     : [7, 15, 30]
@@ -71,8 +132,9 @@ export default function HomePlanForm({ booking, busy, onSubmit, allowCustomFee =
 
   const tierFullPaymentDiscount = (sessionCount) => {
     const tier = tierBySessions.get(Number(sessionCount))
-    const raw = Number(tier?.defaultDiscountPercent) || 0
-    return Math.min(maxDiscountPercent, Math.max(0, raw))
+    const raw = Number(tier?.defaultDiscountPercent)
+    if (!Number.isFinite(raw) || raw < 0) return 0
+    return Math.round(raw * 100) / 100
   }
 
   const resolveDiscount = (sessionCount, type) =>
@@ -91,34 +153,72 @@ export default function HomePlanForm({ booking, busy, onSubmit, allowCustomFee =
   const minFee = allowCustomFee && hasPhysioRate ? round2(feeLo + managerCommission) : null
   const defaultAmount =
     minFee != null ? String(minFee) : hasPhysioRate ? String(feeLo) : ''
-  const defaultPrimaryDate = useMemo(
-    () => parseBookingPrimaryDate(booking?.date),
-    [booking?.date],
+  const assessmentDateForBlock = useMemo(() => {
+    if (!allowCustomFee || !booking?.date) return null
+    return parseYmdLocalDate(booking.date)
+  }, [allowCustomFee, booking?.date])
+  const disabledCalendarDates = useMemo(
+    () => (assessmentDateForBlock ? [assessmentDateForBlock] : []),
+    [assessmentDateForBlock],
+  )
+  const assessmentDateYmd = allowCustomFee ? String(booking?.date || '').trim() : ''
+
+  const planDefaults = useMemo(
+    () =>
+      existingPlanDefaults(booking, {
+        allowCustomFee,
+        allowedSessionCounts,
+        defaultSessionCount,
+        defaultSlot,
+        defaultAmount,
+      }),
+    [
+      booking?._id,
+      booking?.sessions,
+      booking?.schedule,
+      booking?.amountPerSession,
+      booking?.homePlanBillingType,
+      booking?.homePlanPaymentMode,
+      allowCustomFee,
+      allowedSessionCounts,
+      defaultSessionCount,
+      defaultSlot,
+      defaultAmount,
+    ],
   )
 
-  const [sessions, setSessions] = useState(defaultSessionCount)
-  const [amountPerSession, setAmountPerSession] = useState(defaultAmount)
-  const [billingType, setBillingType] = useState('installment')
-  const [sessionTime, setSessionTime] = useState(defaultSlot)
-  const [paymentMode, setPaymentMode] = useState('offline')
-  const [selectedDates, setSelectedDates] = useState(() =>
-    defaultPrimaryDate ? [defaultPrimaryDate] : [],
-  )
+  const [sessions, setSessions] = useState(planDefaults.sessions)
+  const [amountPerSession, setAmountPerSession] = useState(planDefaults.amountPerSession)
+  const [billingType, setBillingType] = useState(planDefaults.billingType)
+  const [sessionTime, setSessionTime] = useState(planDefaults.sessionTime)
+  const [paymentMode, setPaymentMode] = useState(planDefaults.paymentMode)
+  const [selectedDates, setSelectedDates] = useState(planDefaults.selectedDates)
 
   const discount = useMemo(
     () => resolveDiscount(sessions, billingType),
     [sessions, billingType, tierBySessions, maxDiscountPercent],
   )
 
-  const defaultPrimaryDateKey = defaultPrimaryDate ? defaultPrimaryDate.getTime() : null
+  useEffect(() => {
+    reloadPricingSettings()
+  }, [reloadPricingSettings])
 
   useEffect(() => {
-    setAmountPerSession(defaultAmount)
-    setSessionTime(defaultSlot)
-    setSelectedDates(defaultPrimaryDate ? [defaultPrimaryDate] : [])
-    setSessions(defaultSessionCount)
-    setBillingType('installment')
-  }, [booking._id, defaultAmount, defaultSlot, defaultPrimaryDate, defaultPrimaryDateKey, defaultSessionCount])
+    setAmountPerSession(planDefaults.amountPerSession)
+    setSessionTime(planDefaults.sessionTime)
+    setSelectedDates(planDefaults.selectedDates)
+    setSessions(planDefaults.sessions)
+    setBillingType(planDefaults.billingType)
+    setPaymentMode(planDefaults.paymentMode)
+  }, [booking._id, planDefaults])
+
+  function handleDatesChange(updater) {
+    setSelectedDates((prev) => {
+      const next = typeof updater === 'function' ? updater(prev) : updater
+      if (!assessmentDateYmd) return next
+      return next.filter((d) => toYMD(d) !== assessmentDateYmd)
+    })
+  }
 
   function handleSessionsChange(nextRaw) {
     const next = Number(nextRaw)
@@ -142,7 +242,7 @@ export default function HomePlanForm({ booking, busy, onSubmit, allowCustomFee =
   const totals = useMemo(() => {
     const n = Number(amountPerSession)
     const s = Number(sessions) || 0
-    const d = Math.min(maxDiscountPercent, Math.max(0, Number(discount) || 0))
+    const d = billingType === 'full' ? Math.max(0, Number(discount) || 0) : 0
     if (!Number.isFinite(n) || n <= 0 || s < 1) {
       return {
         subtotal: 0,
@@ -157,7 +257,7 @@ export default function HomePlanForm({ booking, busy, onSubmit, allowCustomFee =
     const discountAmount = round2(subtotal * (d / 100))
     const patientPays = round2(subtotal - discountAmount)
     return { subtotal, discountAmount, linePerSession, discountPct: d, patientPays }
-  }, [amountPerSession, sessions, discount, perVisitTravel, maxDiscountPercent])
+  }, [amountPerSession, sessions, discount, billingType, perVisitTravel])
 
   const showAssignmentPricing = Boolean(
     booking &&
@@ -199,12 +299,21 @@ export default function HomePlanForm({ booking, busy, onSubmit, allowCustomFee =
   }, [booking._id])
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-8">
-      <div className="grid gap-8 lg:grid-cols-2 lg:items-start">
-        <div className="space-y-6 rounded-2xl border border-gray-100 bg-gray-50/40 p-5 shadow-sm ring-1 ring-gray-100/80 lg:p-6">
-          <h3 className="text-sm font-semibold text-gray-900">Plan details</h3>
-          <div className="grid gap-5 sm:grid-cols-2">
-            <div className="sm:col-span-2 sm:grid sm:grid-cols-2 sm:gap-5">
+    <form
+      onSubmit={handleSubmit}
+      className={`min-w-0 max-w-full ${embedded ? 'space-y-5 sm:space-y-6' : 'space-y-8'}`}
+    >
+      <div className={`grid min-w-0 max-w-full ${embedded ? 'gap-5' : 'gap-8 lg:grid-cols-2 lg:items-start'}`}>
+        <div
+          className={
+            embedded
+              ? 'min-w-0 space-y-4'
+              : 'space-y-6 rounded-2xl border border-gray-100 bg-gray-50/40 p-4 shadow-sm ring-1 ring-gray-100/80 sm:p-5 lg:p-6'
+          }
+        >
+          {!embedded ? <h3 className="text-sm font-semibold text-gray-900">Plan details</h3> : null}
+          <div className={`grid min-w-0 ${embedded ? 'gap-4' : 'gap-5 sm:grid-cols-2'}`}>
+            <div className={embedded ? 'space-y-4' : 'sm:col-span-2 sm:grid sm:grid-cols-2 sm:gap-5'}>
               <div>
                 <label className={fieldLabel}>Number of sessions</label>
                 <select
@@ -312,8 +421,8 @@ export default function HomePlanForm({ booking, busy, onSubmit, allowCustomFee =
 
           <div>
             <p className={`${fieldLabel} mb-3`}>Payment type</p>
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-sm transition-all duration-200 hover:border-blue-200 hover:shadow-md has-[:checked]:border-blue-500 has-[:checked]:ring-2 has-[:checked]:ring-blue-500/20">
+            <div className="flex flex-col gap-2.5 sm:flex-row sm:gap-3">
+              <label className="flex min-w-0 flex-1 cursor-pointer items-start gap-2.5 rounded-xl border border-gray-200 bg-white px-3 py-2.5 shadow-sm transition-all duration-200 hover:border-blue-200 sm:items-center sm:gap-3 sm:px-4 sm:py-3 has-[:checked]:border-blue-500 has-[:checked]:ring-2 has-[:checked]:ring-blue-500/20">
                 <input
                   type="radio"
                   name={`bt-${booking._id}`}
@@ -326,7 +435,7 @@ export default function HomePlanForm({ booking, busy, onSubmit, allowCustomFee =
                   <span className="block text-xs text-gray-500">Patient pays entire plan upfront — admin discount applies</span>
                 </span>
               </label>
-              <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-sm transition-all duration-200 hover:border-blue-200 hover:shadow-md has-[:checked]:border-blue-500 has-[:checked]:ring-2 has-[:checked]:ring-blue-500/20">
+              <label className="flex min-w-0 flex-1 cursor-pointer items-start gap-2.5 rounded-xl border border-gray-200 bg-white px-3 py-2.5 shadow-sm transition-all duration-200 hover:border-blue-200 sm:items-center sm:gap-3 sm:px-4 sm:py-3 has-[:checked]:border-blue-500 has-[:checked]:ring-2 has-[:checked]:ring-blue-500/20">
                 <input
                   type="radio"
                   name={`bt-${booking._id}`}
@@ -344,8 +453,8 @@ export default function HomePlanForm({ booking, busy, onSubmit, allowCustomFee =
 
           <div>
             <p className={`${fieldLabel} mb-3`}>Payment mode</p>
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-sm transition-all duration-200 hover:border-blue-200 hover:shadow-md has-[:checked]:border-blue-500 has-[:checked]:ring-2 has-[:checked]:ring-blue-500/20">
+            <div className="flex flex-col gap-2.5 sm:flex-row sm:gap-3">
+              <label className="flex min-w-0 flex-1 cursor-pointer items-start gap-2.5 rounded-xl border border-gray-200 bg-white px-3 py-2.5 shadow-sm transition-all duration-200 hover:border-blue-200 sm:items-center sm:gap-3 sm:px-4 sm:py-3 has-[:checked]:border-blue-500 has-[:checked]:ring-2 has-[:checked]:ring-blue-500/20">
                 <input
                   type="radio"
                   name={`pm-${booking._id}`}
@@ -358,7 +467,7 @@ export default function HomePlanForm({ booking, busy, onSubmit, allowCustomFee =
                   <span className="block text-xs text-gray-500">Cash / UPI — you verify later</span>
                 </span>
               </label>
-              <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-sm transition-all duration-200 hover:border-blue-200 hover:shadow-md has-[:checked]:border-blue-500 has-[:checked]:ring-2 has-[:checked]:ring-blue-500/20">
+              <label className="flex min-w-0 flex-1 cursor-pointer items-start gap-2.5 rounded-xl border border-gray-200 bg-white px-3 py-2.5 shadow-sm transition-all duration-200 hover:border-blue-200 sm:items-center sm:gap-3 sm:px-4 sm:py-3 has-[:checked]:border-blue-500 has-[:checked]:ring-2 has-[:checked]:ring-blue-500/20">
                 <input
                   type="radio"
                   name={`pm-${booking._id}`}
@@ -375,20 +484,34 @@ export default function HomePlanForm({ booking, busy, onSubmit, allowCustomFee =
           </div>
         </div>
 
-        <div className="space-y-4">
+        <div className={`min-w-0 space-y-4 ${embedded ? 'border-t border-slate-200/80 pt-5' : ''}`}>
           <div>
-            <h3 className="text-sm font-semibold text-gray-900">Session dates</h3>
-            <p className="mt-1 text-xs text-gray-500">Pick {sessions} date{sessions === 1 ? '' : 's'} — click or drag on the calendar.</p>
+            <h3 className="text-sm font-semibold text-gray-900">Treatment session dates</h3>
+            <p className="mt-1 text-xs text-gray-500">
+              Pick {sessions} treatment date{sessions === 1 ? '' : 's'} — click or drag on the calendar.
+            </p>
           </div>
+          {allowCustomFee && booking?.date ? (
+            <div className="rounded-xl border border-teal-200/90 bg-teal-50/60 px-3 py-2.5 text-sm text-teal-950 ring-1 ring-teal-100/80 sm:px-4 sm:py-3">
+              <p>
+                Assessment visit on{' '}
+                <span className="font-semibold">{formatBookingDateAndSlot(booking.date, booking.timeSlot)}</span>{' '}
+                is <span className="font-semibold">complimentary</span> (Care Manager). Select{' '}
+                <span className="font-semibold">{sessions}</span> treatment session date
+                {sessions === 1 ? '' : 's'} for the physiotherapist below.
+              </p>
+            </div>
+          ) : null}
           <DragSelectCalendar
             selectedDates={selectedDates}
-            onDatesChange={setSelectedDates}
+            onDatesChange={handleDatesChange}
             minDate={today}
             maxSelectable={sessions}
+            disabledDates={disabledCalendarDates}
           />
           {dateMismatch && (
             <p className="text-sm text-amber-800">
-              Select exactly {sessions} date{sessions === 1 ? '' : 's'} (currently {selectedDates.length}).
+              Select exactly {sessions} treatment date{sessions === 1 ? '' : 's'} (currently {selectedDates.length}).
             </p>
           )}
           {selectedDates.length > 0 && (
@@ -417,7 +540,7 @@ export default function HomePlanForm({ booking, busy, onSubmit, allowCustomFee =
       </div>
 
       {showAssignmentPricing && (
-        <div className="rounded-2xl border border-amber-200/90 bg-amber-50/60 px-5 py-4 text-sm text-amber-950 shadow-sm ring-1 ring-amber-100/80">
+        <div className="rounded-2xl border border-amber-200/90 bg-amber-50/60 px-3 py-3 text-sm text-amber-950 shadow-sm ring-1 ring-amber-100/80 sm:px-5 sm:py-4">
           <p className="text-xs font-bold uppercase tracking-wide text-amber-900/90">Current booking (after assignment)</p>
           <p className="mt-1 text-xs text-amber-900/75">
             What the patient owes for this booking at assignment (often one visit). The blue total is your proposed plan:
@@ -449,30 +572,37 @@ export default function HomePlanForm({ booking, busy, onSubmit, allowCustomFee =
         </div>
       )}
 
-      <div className="relative overflow-hidden rounded-2xl border-2 border-blue-200/80 bg-gradient-to-br from-blue-50/95 via-white to-amber-50/40 p-6 shadow-lg shadow-blue-900/5 ring-1 ring-blue-100/60">
+      <div className="relative overflow-hidden rounded-2xl border-2 border-blue-200/80 bg-gradient-to-br from-blue-50/95 via-white to-amber-50/40 p-4 shadow-lg shadow-blue-900/5 ring-1 ring-blue-100/60 sm:p-6">
         <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-500 via-blue-400 to-amber-400/80" aria-hidden />
         <p className="text-xs font-bold uppercase tracking-wide text-blue-900/90">Total for patient</p>
-        <dl className="relative mt-4 space-y-3 text-sm">
-          <div className="flex justify-between gap-4 text-gray-600">
-            <dt>
+        <dl className="relative mt-3 space-y-2.5 text-sm sm:mt-4 sm:space-y-3">
+          <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:gap-4 text-gray-600">
+            <dt className="min-w-0">
               Subtotal ({sessions} × ₹{totals.linePerSession > 0 ? totals.linePerSession.toFixed(2) : amountPerSession || '—'})
             </dt>
-            <dd className="tabular-nums font-medium">₹{totals.subtotal.toFixed(2)}</dd>
+            <dd className="shrink-0 tabular-nums font-medium">₹{totals.subtotal.toFixed(2)}</dd>
           </div>
-          <div className="flex justify-between gap-4 text-gray-600">
+          <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:gap-4 text-gray-600">
             <dt>Discount ({totals.discountPct}%)</dt>
-            <dd className="tabular-nums font-medium text-emerald-800">− ₹{totals.discountAmount.toFixed(2)}</dd>
+            <dd className="shrink-0 tabular-nums font-medium text-emerald-800">− ₹{totals.discountAmount.toFixed(2)}</dd>
           </div>
-          <div className="type-stat flex justify-between gap-4 border-t border-blue-200/70 pt-4 text-gray-900">
+          <div className="type-stat flex flex-col gap-0.5 border-t border-blue-200/70 pt-3 text-gray-900 sm:flex-row sm:justify-between sm:gap-4 sm:pt-4">
             <dt>Patient pays</dt>
-            <dd className="tabular-nums text-blue-700">₹{totals.patientPays.toFixed(2)}</dd>
+            <dd className="shrink-0 tabular-nums text-lg text-blue-700 sm:text-base">₹{totals.patientPays.toFixed(2)}</dd>
           </div>
         </dl>
       </div>
 
-      <div className="flex flex-wrap gap-3">
-        <Button type="submit" variant="primary" className="min-w-[200px]" disabled={!canSubmit}>
-          {busy ? 'Submitting…' : 'Submit home plan'}
+      <div className="flex flex-wrap gap-3 pb-1">
+        <Button
+          type="submit"
+          variant="primary"
+          className="w-full sm:min-w-[200px] sm:w-auto"
+          disabled={!canSubmit}
+        >
+          {busy
+            ? 'Submitting…'
+            : submitLabel || (planDefaults.isEditing ? 'Update home plan' : 'Submit home plan')}
         </Button>
       </div>
     </form>

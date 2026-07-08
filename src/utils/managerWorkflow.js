@@ -142,4 +142,59 @@ export function managerOutstanding(b) {
   return outstandingForBooking(b)
 }
 
+/** @param {object} b @param {{ workflow?: string, date?: string }} filters */
+export function matchesManagerListFilters(b, filters) {
+  if (!managerMatchesFilter(b, filters?.workflow || 'all')) return false
+
+  const dateFilter = filters?.date || 'all'
+  if (dateFilter === 'all') return true
+
+  const d = String(b?.date || '')
+  if (!d) return false
+
+  const today = new Date()
+  const t = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+
+  if (dateFilter === 'today') return d === t
+  if (dateFilter === 'upcoming') return d > t
+  if (dateFilter === 'past') return d < t
+  return true
+}
+
+/** Lower tier = higher in the list. */
+export function managerCaseSortTier(b) {
+  const ws = b?.workflowStatus
+  const outstanding = outstandingForBooking(b)
+  const totalPaid = totalPaidForBooking(b)
+  const planLive = b?.planStatus === 'live' || b?.planStatus === 'approved'
+
+  if (planLive && outstanding > 0.009) return 1
+  if (ws === 'manager_assigned') return 2
+  if (ws === 'assessment_done') return 3
+  if (ws === 'plan_live') return 4
+  if (ws === 'physio_assigned' && managerNeedsAction(b)) return 5
+  if (MANAGER_WAITING_STATUSES.has(ws)) return 50
+  if (MANAGER_ACTIVE_STATUSES.has(ws) || (outstanding <= 0.009 && totalPaid > 0)) return 80
+  return 100
+}
+
+/** @param {object} a @param {object} b */
+export function compareManagerCases(a, b) {
+  const tierA = managerCaseSortTier(a)
+  const tierB = managerCaseSortTier(b)
+  if (tierA !== tierB) return tierA - tierB
+
+  const outA = managerOutstanding(a)
+  const outB = managerOutstanding(b)
+  if (outA !== outB) return outB - outA
+
+  const dateA = String(a?.date || '')
+  const dateB = String(b?.date || '')
+  if (dateA && dateB && dateA !== dateB) return dateA.localeCompare(dateB)
+
+  const updatedA = String(a?.updatedAt || '')
+  const updatedB = String(b?.updatedAt || '')
+  return updatedB.localeCompare(updatedA)
+}
+
 export { WORKFLOW as MANAGER_WORKFLOW }

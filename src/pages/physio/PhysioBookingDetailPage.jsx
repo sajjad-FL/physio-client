@@ -8,22 +8,74 @@ import {
   paymentModeLabel,
   billingTypeLabel,
   paymentStatusLabel,
-  sessionStatusLabel,
 } from '../../utils/bookingDisplay'
 import toast from 'react-hot-toast'
 import HomePlanForm from '../../components/physio/HomePlanForm'
 import RescheduleModal from '../../components/physio/RescheduleModal'
 import BookingSessionTimeline from '../../components/bookings/BookingSessionTimeline'
-import SessionNotesEditor from '../../components/bookings/SessionNotesEditor'
+import BookingWorkflowStepRail from '../../components/bookings/BookingWorkflowStepRail'
+import SessionNotesModal from '../../components/bookings/SessionNotesModal'
 import SessionProgressTracker from '../../components/bookings/SessionProgressTracker'
 import InstallmentsCard from '../../components/payments/InstallmentsCard'
 import RecordCollectionModal from '../../components/payments/RecordCollectionModal'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
+import { openGoogleMapsDestination } from '../../utils/googleMaps'
 import { isPlanLive } from '../../utils/planStatus'
+import { buildSessionPaymentMap } from '../../utils/sessionPaymentMap'
+import {
+  buildPhysioWorkflowSteps,
+  defaultPhysioOpenStep,
+  physioPageContext,
+} from '../../utils/physioBookingWorkflow'
 
-const actionBtn =
-  'cursor-pointer rounded-xl px-4 py-2.5 text-sm font-semibold shadow-sm transition-all duration-200 hover:shadow-md active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50'
+function badgeToneClass(tone) {
+  switch (tone) {
+    case 'urgent':
+      return 'bg-amber-50 text-amber-900 ring-amber-200/80'
+    case 'action':
+      return 'bg-teal-50 text-teal-900 ring-teal-200/80'
+    case 'waiting':
+      return 'bg-blue-50 text-blue-900 ring-blue-200/80'
+    case 'progress':
+      return 'bg-emerald-50 text-emerald-900 ring-emerald-200/80'
+    default:
+      return 'bg-slate-50 text-slate-700 ring-slate-200/80'
+  }
+}
+
+function PlanSummaryGrid({ b }) {
+  return (
+    <dl className="grid grid-cols-2 gap-x-3 gap-y-3 rounded-xl bg-slate-50/80 p-4 text-sm sm:gap-4">
+      <div className="min-w-0">
+        <dt className="text-slate-500">Sessions</dt>
+        <dd className="mt-0.5 font-semibold text-slate-900">{b.sessions ?? '—'}</dd>
+      </div>
+      {b.amountPerSession != null ? (
+        <div className="min-w-0">
+          <dt className="text-slate-500">Per session</dt>
+          <dd className="mt-0.5 font-semibold tabular-nums text-slate-900">₹{Number(b.amountPerSession).toFixed(0)}</dd>
+        </div>
+      ) : null}
+      {b.discountPercent != null && b.discountPercent > 0 ? (
+        <div className="min-w-0">
+          <dt className="text-slate-500">Discount</dt>
+          <dd className="mt-0.5 font-semibold text-slate-900">{b.discountPercent}%</dd>
+        </div>
+      ) : null}
+      <div className="min-w-0">
+        <dt className="text-slate-500">Total</dt>
+        <dd className="mt-0.5 font-semibold tabular-nums text-slate-900">{paymentAmountLabel(b)}</dd>
+      </div>
+      {billingTypeLabel(b) ? (
+        <div className="min-w-0 col-span-2 sm:col-span-1">
+          <dt className="text-slate-500">Payment type</dt>
+          <dd className="mt-0.5 font-semibold text-slate-900">{billingTypeLabel(b)}</dd>
+        </div>
+      ) : null}
+    </dl>
+  )
+}
 
 export default function PhysioBookingDetailPage() {
   const { id } = useParams()
@@ -37,6 +89,9 @@ export default function PhysioBookingDetailPage() {
   const [noShowRow, setNoShowRow] = useState(null)
   const [noShowReason, setNoShowReason] = useState('')
   const [recordCollectionOpen, setRecordCollectionOpen] = useState(false)
+  const [notesRow, setNotesRow] = useState(null)
+  const [openStep, setOpenStep] = useState('patient')
+  const [stepReady, setStepReady] = useState(false)
 
   const load = useCallback(async () => {
     if (!id) return
@@ -59,68 +114,60 @@ export default function PhysioBookingDetailPage() {
     load()
   }, [load])
 
-  const showCreatePlan = useMemo(() => {
-    if (!booking) return false
-    if (booking.managerId) return false
-    return (
-      booking.serviceType === 'home' &&
-      (booking.planStatus === 'requested' || booking.planStatus === 'rejected' || booking.planStatus == null)
+  useEffect(() => {
+    setStepReady(false)
+    setOpenStep('patient')
+  }, [id])
+
+  const pageCtx = useMemo(() => {
+    if (!booking) return null
+    const sessionsCount =
+      booking.paymentSummary?.sessionsCount ||
+      (Array.isArray(booking.schedule) && booking.schedule.length > 0 ? booking.schedule.length : 1)
+    const unlockedSessions = Number(
+      booking.paymentSummary?.unlockedSessions ?? booking.paymentSummary?.coveredSessions ?? 0,
     )
+    const isOfflinePlan = booking.serviceType === 'home' && booking.homePlanPaymentMode === 'offline'
+    const isHomeCare = booking.serviceType === 'home'
+    const paymentGateSkipped = Boolean(booking.managerId || isHomeCare)
+    const showInstallments =
+      isPlanLive(booking.planStatus) ||
+      booking.serviceType === 'online' ||
+      (Array.isArray(booking.payments) && booking.payments.length > 0)
+
+    let paymentBlockReason = ''
+    if (!paymentGateSkipped) {
+      const ps = booking.paymentSummary
+      if (!ps && booking.paymentStatus !== 'held') {
+        paymentBlockReason = 'Payment must be secured before completion'
+      } else if (ps && unlockedSessions <= 0) {
+        paymentBlockReason = 'Collect at least one installment before completing any session.'
+      }
+    }
+
+    return physioPageContext(booking, {
+      sessionsCount,
+      unlockedSessions,
+      isOfflinePlan,
+      paymentGateSkipped,
+      paymentBlockReason,
+      showInstallments,
+      canMarkComplete: booking.sessionStatus !== 'completed' && !paymentBlockReason,
+      sessionPaymentMap: buildSessionPaymentMap(
+        booking,
+        Array.isArray(booking.payments) ? booking.payments : [],
+        booking.paymentSummary,
+      ),
+    })
   }, [booking])
 
-  const hasSchedulePlan = useMemo(
-    () => Array.isArray(booking?.schedule) && booking.schedule.length > 0,
-    [booking],
-  )
+  const steps = useMemo(() => (pageCtx ? buildPhysioWorkflowSteps(pageCtx) : []), [pageCtx])
 
-  const paymentSummary = booking?.paymentSummary || null
-  const paymentsList = useMemo(
-    () => (Array.isArray(booking?.payments) ? booking.payments : []),
-    [booking],
-  )
-
-  const sessionsCount = paymentSummary?.sessionsCount || (hasSchedulePlan ? booking.schedule.length : 1)
-  const unlockedSessions = Number(
-    paymentSummary?.unlockedSessions ?? paymentSummary?.coveredSessions ?? 0,
-  )
-  const isOfflinePlan =
-    booking?.serviceType === 'home' && booking?.homePlanPaymentMode === 'offline'
-  const outstanding = Number(paymentSummary?.outstanding || 0)
-  const showInstallments =
-    isPlanLive(booking?.planStatus) ||
-    booking?.serviceType === 'online' ||
-    paymentsList.length > 0
-
-  /**
-   * Booking-level block reason. With the percentage-based unlock rule, only
-   * the extreme "nothing unlocked" case (e.g. N=1 unpaid) blocks at booking
-   * level; per-row gating handles partial coverage.
-   */
-  const isHomeCare = booking?.serviceType === 'home'
-  const paymentGateSkipped = Boolean(booking?.managerId || isHomeCare)
-
-  const paymentBlockReason = useMemo(() => {
-    if (!booking) return 'Booking not loaded'
-    if (paymentGateSkipped) return ''
-    if (!paymentSummary) {
-      if (booking.paymentStatus !== 'held') return 'Payment must be secured before completion'
-      return ''
-    }
-    if (unlockedSessions <= 0) {
-      return 'Collect at least one installment before completing any session.'
-    }
-    return ''
-  }, [booking, paymentSummary, unlockedSessions])
-
-  const canMarkComplete = useMemo(() => {
-    if (!booking || booking.sessionStatus === 'completed') return false
-    return !paymentBlockReason
-  }, [booking, paymentBlockReason])
-
-  const showPlanPending = useMemo(() => {
-    if (!booking) return false
-    return booking.serviceType === 'home' && booking.planStatus === 'proposed'
-  }, [booking])
+  useEffect(() => {
+    if (!steps.length || stepReady) return
+    setOpenStep(defaultPhysioOpenStep(steps))
+    setStepReady(true)
+  }, [steps, stepReady])
 
   async function completeSession(bookingId) {
     setBusyId(bookingId)
@@ -137,8 +184,7 @@ export default function PhysioBookingDetailPage() {
 
   async function completeOneSession(row) {
     if (!booking || !row?.sessionId) return
-    const key = String(row.sessionId)
-    setBusySessionKey(key)
+    setBusySessionKey(String(row.sessionId))
     try {
       await api.post(`/physio/sessions/${booking._id}/${row.sessionId}/complete`)
       toast.success(`Session #${row.n} marked complete`)
@@ -152,8 +198,7 @@ export default function PhysioBookingDetailPage() {
 
   async function submitNoShow() {
     if (!booking || !noShowRow?.sessionId) return
-    const key = String(noShowRow.sessionId)
-    setBusySessionKey(key)
+    setBusySessionKey(String(noShowRow.sessionId))
     try {
       await api.post(`/physio/sessions/${booking._id}/${noShowRow.sessionId}/no-show`, {
         reason: noShowReason.trim(),
@@ -175,6 +220,7 @@ export default function PhysioBookingDetailPage() {
       await api.patch(`/bookings/${bookingId}/create-plan`, payload)
       toast.success('Plan submitted to patient')
       await load()
+      setOpenStep('sessions')
     } catch (e) {
       toast.error(e.response?.data?.message || 'Could not create plan')
     } finally {
@@ -183,318 +229,324 @@ export default function PhysioBookingDetailPage() {
   }
 
   if (loading) {
-    return (
-      <div className="space-y-4">
-        <div className="h-8 w-48 animate-pulse rounded-lg bg-gray-100" />
-        <div className="h-40 animate-pulse rounded-2xl bg-white shadow-sm ring-1 ring-gray-100" />
-      </div>
-    )
+    return <div className="h-48 animate-pulse rounded-2xl bg-slate-100" />
   }
 
-  if (error || !booking) {
+  if (error || !pageCtx) {
     return (
-      <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50/80 px-6 py-10 text-center">
-        <p className="text-sm font-medium text-gray-800">{error || 'Unable to load booking.'}</p>
+      <Card hover={false} className="p-6">
+        <p className="text-slate-600">{error || 'Unable to load booking.'}</p>
         <Button className="mt-4" variant="outline" onClick={() => navigate('/physio/bookings')}>
           Back to bookings
         </Button>
-      </div>
+      </Card>
     )
   }
 
-  const b = booking
+  const {
+    b,
+    isOnline,
+    planLive,
+    hasSchedulePlan,
+    showCreatePlan,
+    showPlanPending,
+    paymentSummary,
+    payments,
+    outstanding,
+    sessionsCount,
+    unlockedSessions,
+    isOfflinePlan,
+    paymentGateSkipped,
+    paymentBlockReason,
+    showInstallments,
+    canMarkComplete,
+    sessionPaymentMap,
+    workflowMeta,
+  } = pageCtx
+
   const busy = busyId === b._id
   const canStartNavigation = Boolean(b.userId?.coordinates || String(b.userId?.location || '').trim())
+  const activeStepMeta = steps.find((s) => s.id === openStep)
+  const stepColumns = isOnline ? 3 : 4
 
   return (
-    <div className="space-y-6">
-      <Link
-        to="/physio/bookings"
-        className="inline-flex w-fit items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-800"
-      >
-        ← Back to bookings
-      </Link>
-
-      <Card hover={false} className="p-5 sm:p-6">
-        <h1 className="sr-only">Booking details</h1>
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Visit</p>
-        <p className="type-page-title mt-1 text-gray-900">{formatBookingDateAndSlot(b.date, b.timeSlot)}</p>
-        <div className="mt-4 flex flex-wrap gap-2">
-          <span
-            className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ring-1 ${
-              b.sessionStatus === 'completed'
-                ? 'bg-emerald-50 text-emerald-900 ring-emerald-200'
-                : 'bg-amber-50 text-amber-900 ring-amber-200'
-            }`}
-          >
-            {sessionStatusLabel(b)}
-          </span>
-          <span className="inline-flex rounded-full bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-800 ring-1 ring-slate-200">
-            Payment hold: {paymentStatusLabel(b.paymentStatus)}
-          </span>
-          {b.payment?.status != null && (
-            <span className="inline-flex rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-900 ring-1 ring-indigo-200">
-              Pay: {marketplacePaymentStatusLabel(b.payment.status)}
-            </span>
-          )}
-        </div>
-      </Card>
-
-      <SessionProgressTracker booking={b} variant="full" />
-
-      <Card hover={false} className="p-5 sm:p-6">
-        <h2 className="text-sm font-semibold text-gray-900">Participants</h2>
-        <div className="mt-4 grid gap-6 sm:grid-cols-2">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Patient</p>
-            <p className="mt-1 font-medium text-gray-900">{b.userId?.name ?? '—'}</p>
-            <p className="mt-0.5 text-sm text-gray-600">{b.userId?.phone ?? '—'}</p>
-            <button
-              type="button"
-              onClick={() =>
-                openGoogleMapsDestination({
-                  coordinates: b.userId?.coordinates,
-                  address: b.userId?.location,
-                })
-              }
-              disabled={!canStartNavigation}
-              title={canStartNavigation ? 'Start navigation' : 'Address not available'}
-              className="mt-2 inline-flex items-center rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Start
-            </button>
+    <div className="min-w-0 max-w-full space-y-3 overflow-x-hidden sm:space-y-4">
+      {/* Header — mirrors manager / patient case detail */}
+      <div className="rounded-2xl border border-slate-200/80 bg-white p-3 shadow-sm sm:p-4 md:p-5">
+        <Link to="/physio/bookings" className="text-sm font-medium text-teal-700 hover:text-teal-800">
+          ← All bookings
+        </Link>
+        <div className="mt-3 flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-xl font-semibold text-slate-900">{b.userId?.name || 'Patient'}</h1>
+            <p className="mt-0.5 text-sm text-slate-600">{b.issue || '—'}</p>
+            <p className="mt-2 text-sm text-slate-500">
+              {formatBookingDateAndSlot(b.date, b.timeSlot)}
+              {b.userId?.location ? ` · ${b.userId.location}` : ''}
+            </p>
           </div>
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">You</p>
-            <p className="mt-1 font-medium text-gray-900">{b.physioId?.name ?? '—'}</p>
-            {b.physioId?.phone && <p className="mt-0.5 text-sm text-gray-600">{b.physioId.phone}</p>}
-            {b.physioId?.specialization && (
-              <p className="mt-1 text-xs text-gray-500">{b.physioId.specialization}</p>
+          <span
+            className={`inline-flex shrink-0 rounded-full px-3 py-1 text-xs font-semibold ring-1 ${badgeToneClass(
+              workflowMeta.tone,
+            )}`}
+          >
+            {workflowMeta.label}
+          </span>
+        </div>
+      </div>
+
+      {/* Checklist */}
+      <div className="rounded-2xl border border-slate-200/80 bg-white p-2.5 shadow-sm sm:p-3 md:p-4">
+        <p className="mb-2 px-0.5 text-xs font-semibold uppercase tracking-wide text-slate-500 sm:mb-3">
+          Your checklist
+        </p>
+        <BookingWorkflowStepRail
+          steps={steps}
+          openStep={openStep}
+          onSelect={setOpenStep}
+          columns={stepColumns}
+        />
+      </div>
+
+      {/* Active step panel */}
+      <div className="min-w-0 overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-3 shadow-sm sm:p-4 md:p-5">
+        <div className="mb-4 border-b border-slate-100 pb-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-teal-700">
+            Step {activeStepMeta?.num || 1} of {steps.length}
+          </p>
+          <h2 className="mt-0.5 text-lg font-semibold text-slate-900">{activeStepMeta?.label}</h2>
+          {activeStepMeta?.state === 'waiting' ? (
+            <p className="mt-1 text-sm text-blue-800">Waiting on the patient to approve the care plan.</p>
+          ) : null}
+        </div>
+
+        {openStep === 'patient' && (
+          <div className="space-y-4">
+            <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Contact</p>
+              <p className="mt-1 text-base font-semibold text-slate-900">{b.userId?.name ?? '—'}</p>
+              <p className="mt-0.5 text-sm text-slate-600">{b.userId?.phone ?? '—'}</p>
+              {b.userId?.location ? (
+                <p className="mt-2 text-sm text-slate-600">{b.userId.location}</p>
+              ) : null}
+              {b.serviceType === 'home' ? (
+                <button
+                  type="button"
+                  onClick={() =>
+                    openGoogleMapsDestination({
+                      coordinates: b.userId?.coordinates,
+                      address: b.userId?.location,
+                    })
+                  }
+                  disabled={!canStartNavigation}
+                  title={canStartNavigation ? 'Start navigation' : 'Address not available'}
+                  className="mt-3 inline-flex items-center rounded-lg border border-teal-200 bg-teal-50 px-3 py-1.5 text-xs font-semibold text-teal-800 transition hover:bg-teal-100 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Start navigation
+                </button>
+              ) : null}
+            </div>
+            <div className="rounded-xl border border-slate-200 bg-white p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Condition</p>
+              <p className="mt-1 text-sm leading-relaxed text-slate-800">{b.issue || '—'}</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <span className="inline-flex rounded-full bg-slate-50 px-2.5 py-0.5 text-[11px] font-semibold text-slate-700 ring-1 ring-slate-200">
+                {b.serviceType === 'online' ? 'Online' : 'Home visit'}
+              </span>
+              <span className="inline-flex rounded-full bg-slate-50 px-2.5 py-0.5 text-[11px] font-semibold text-slate-700 ring-1 ring-slate-200">
+                Hold: {paymentStatusLabel(b.paymentStatus)}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {openStep === 'plan' && !isOnline && (
+          <div className="space-y-4">
+            {showPlanPending ? (
+              <p className="rounded-xl bg-blue-50 px-4 py-3 text-sm text-blue-950">
+                Plan sent — waiting for the patient to consent before sessions can proceed.
+              </p>
+            ) : null}
+
+            {showCreatePlan ? (
+              <HomePlanForm booking={b} busy={busy} onSubmit={(payload) => createPlan(b._id, payload)} embedded />
+            ) : null}
+
+            {planLive && !showCreatePlan ? (
+              <>
+                <p className="text-sm text-slate-600">Active care plan for this patient.</p>
+                <PlanSummaryGrid b={b} />
+              </>
+            ) : null}
+
+            {!planLive && !showCreatePlan && !showPlanPending ? (
+              <p className="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-950">
+                {b.managerId
+                  ? 'Care manager will prepare the plan after assessment.'
+                  : 'Create a home plan when you are ready to propose sessions and pricing.'}
+              </p>
+            ) : null}
+          </div>
+        )}
+
+        {openStep === 'sessions' && (
+          <div className="space-y-4">
+            {!planLive && !isOnline && !hasSchedulePlan ? (
+              <p className="text-sm text-slate-600">Sessions open after the care plan is live.</p>
+            ) : null}
+
+            <SessionProgressTracker
+              booking={b}
+              variant="full"
+              className="border-slate-200 bg-slate-50/50 ring-1 ring-slate-100"
+            />
+
+            {paymentSummary && !paymentGateSkipped && unlockedSessions < sessionsCount ? (
+              <div className="rounded-lg border border-blue-100 bg-blue-50/70 px-3 py-2 text-xs text-blue-950">
+                {unlockedSessions === 0
+                  ? 'Collect at least one installment to unlock session #1.'
+                  : `You can mark up to session #${unlockedSessions} of ${sessionsCount}. Collect the next installment to open more.`}
+              </div>
+            ) : null}
+
+            <div className="rounded-xl border border-slate-200 bg-slate-50/40 p-4">
+              <h3 className="text-sm font-semibold text-slate-900">Visit schedule</h3>
+              <p className="mt-0.5 text-xs text-slate-500">
+                Mark complete, add session notes, or reschedule after each visit.
+              </p>
+              <div className="mt-3">
+                <BookingSessionTimeline
+                  booking={b}
+                  sessionPayments={sessionPaymentMap}
+                  reschedule={{
+                    enabled: true,
+                    onReschedule: (row) => setRescheduleRow(row),
+                  }}
+                  physioActions={{
+                    enabled: true,
+                    canAct: true,
+                    blockedReason: paymentBlockReason,
+                    busySessionId: busySessionKey,
+                    rowBlockedReason: (row) => {
+                      if (paymentGateSkipped) return ''
+                      if (!paymentSummary) return ''
+                      const ordinal = row?.perSession ? Number(row.n || 0) : 1
+                      if (ordinal <= 0) return ''
+                      if (ordinal > unlockedSessions) {
+                        return unlockedSessions === 0
+                          ? `Session #${ordinal} is locked. Collect at least one installment to open it.`
+                          : `Session #${ordinal} is locked. Currently unlocked: up to #${unlockedSessions} of ${sessionsCount}.`
+                      }
+                      return ''
+                    },
+                    onComplete: (row) => {
+                      if (paymentBlockReason) {
+                        toast.error(paymentBlockReason)
+                        return
+                      }
+                      if (row.perSession) completeOneSession(row)
+                      else completeSession(b._id)
+                    },
+                    onNoShow: (row) => {
+                      if (paymentBlockReason) {
+                        toast.error(paymentBlockReason)
+                        return
+                      }
+                      if (row.perSession) {
+                        setNoShowReason('')
+                        setNoShowRow(row)
+                      }
+                    },
+                    onNotes: (row) => setNotesRow(row),
+                  }}
+                />
+              </div>
+            </div>
+
+            {!hasSchedulePlan && b.sessionStatus !== 'completed' ? (
+              <Button
+                type="button"
+                disabled={busy || !canMarkComplete}
+                title={!canMarkComplete ? paymentBlockReason : undefined}
+                onClick={() => completeSession(b._id)}
+              >
+                {busy ? 'Saving…' : 'Mark visit complete'}
+              </Button>
+            ) : null}
+          </div>
+        )}
+
+        {openStep === 'payment' && (
+          <div className="space-y-4">
+            {!planLive && !isOnline ? (
+              <p className="text-sm text-slate-600">Payment details appear after the plan goes live.</p>
+            ) : (
+              <>
+                <dl className="grid grid-cols-2 gap-x-3 gap-y-3 rounded-xl border border-slate-200 bg-slate-50/50 p-4 text-sm">
+                  <div className="min-w-0">
+                    <dt className="text-slate-500">Mode</dt>
+                    <dd className="mt-0.5 font-medium text-slate-900">{paymentModeLabel(b)}</dd>
+                  </div>
+                  <div className="min-w-0">
+                    <dt className="text-slate-500">Amount</dt>
+                    <dd className="mt-0.5 font-semibold text-slate-900">{paymentAmountLabel(b)}</dd>
+                  </div>
+                  <div className="min-w-0">
+                    <dt className="text-slate-500">Hold</dt>
+                    <dd className="mt-0.5 font-medium text-slate-900">{paymentStatusLabel(b.paymentStatus)}</dd>
+                  </div>
+                  <div className="min-w-0">
+                    <dt className="text-slate-500">Status</dt>
+                    <dd className="mt-0.5 font-medium text-slate-900">
+                      {marketplacePaymentStatusLabel(b.payment?.status)}
+                    </dd>
+                  </div>
+                  {outstanding > 0.009 ? (
+                    <div className="min-w-0 col-span-2">
+                      <dt className="text-slate-500">Outstanding</dt>
+                      <dd className="mt-0.5 text-base font-semibold tabular-nums text-rose-700">
+                        ₹{outstanding.toFixed(0)}
+                      </dd>
+                    </div>
+                  ) : null}
+                </dl>
+
+                {b.offlinePaymentRejectReason && b.payment?.status === 'pending' ? (
+                  <div className="rounded-lg border border-rose-200 bg-rose-50/90 px-3 py-2 text-sm text-rose-950">
+                    <p className="font-medium">Admin note</p>
+                    <p className="mt-0.5 text-xs">{b.offlinePaymentRejectReason}</p>
+                  </div>
+                ) : null}
+
+                {showInstallments ? (
+                  <InstallmentsCard
+                    title={isOfflinePlan ? 'Collections' : 'Installments'}
+                    subtitle={
+                      isOfflinePlan
+                        ? 'Record each cash/UPI hand-off from the patient.'
+                        : 'Patient pays online per installment.'
+                    }
+                    summary={paymentSummary}
+                    payments={payments}
+                    emptyMessage={
+                      isOfflinePlan ? 'No collections recorded yet.' : 'No online installments yet.'
+                    }
+                  >
+                    {isOfflinePlan && outstanding > 0.009 && planLive && !b.managerId ? (
+                      <Button type="button" onClick={() => setRecordCollectionOpen(true)}>
+                        Record collection
+                      </Button>
+                    ) : null}
+                  </InstallmentsCard>
+                ) : null}
+              </>
             )}
           </div>
-        </div>
-        <div className="mt-4 border-t border-gray-100 pt-4">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Issue</p>
-          <p className="mt-1 text-sm leading-relaxed text-gray-800">{b.issue}</p>
-        </div>
-      </Card>
-
-      {showInstallments && (
-        <InstallmentsCard
-          title={isOfflinePlan ? 'Collections' : 'Installments'}
-          subtitle={
-            isOfflinePlan
-              ? 'Record each cash/UPI hand-off. Admin verifies before it unlocks a session.'
-              : 'Patient pays online per installment. Each verified payment unlocks the next session.'
-          }
-          summary={paymentSummary}
-          payments={paymentsList}
-          emptyMessage={
-            isOfflinePlan
-              ? 'No collections recorded yet. Record the first one after the patient pays you.'
-              : 'No online installments yet.'
-          }
-        >
-          {isOfflinePlan && outstanding > 0.009 && isPlanLive(b.planStatus) && !b.managerId ? (
-            <Button type="button" onClick={() => setRecordCollectionOpen(true)}>
-              Record collection
-            </Button>
-          ) : null}
-        </InstallmentsCard>
-      )}
-
-      <Card hover={false} className="p-5 sm:p-6">
-        <h2 className="text-sm font-semibold text-gray-900">Session timeline</h2>
-        <p className="mt-1 text-xs text-gray-500">
-          Mark each session complete after you finish the visit. No-show is for sessions the patient
-          missed.
-        </p>
-        {paymentSummary && !paymentGateSkipped && unlockedSessions < sessionsCount && (
-          <div className="mt-3 rounded-lg border border-blue-100 bg-blue-50/70 px-3 py-2 text-xs text-blue-950">
-            {unlockedSessions === 0
-              ? `Collect at least one installment to unlock session #1.`
-              : `You can mark up to session #${unlockedSessions} of ${sessionsCount}. Collect the next installment to open more.`}
-          </div>
         )}
-        <div className="mt-4">
-          <BookingSessionTimeline
-            booking={b}
-            reschedule={{
-              enabled: true,
-              onReschedule: (row) => setRescheduleRow(row),
-            }}
-            physioActions={{
-              enabled: true,
-              /**
-               * Keep actions visible for all rows; rowBlockedReason enforces
-               * coverage gate per session number so already-covered sessions
-               * remain actionable (e.g. 2/5 paid allows #1 and #2).
-               */
-              canAct: true,
-              blockedReason: paymentBlockReason,
-              busySessionId: busySessionKey,
-              rowBlockedReason: (row) => {
-                if (paymentGateSkipped) return ''
-                if (!paymentSummary) return ''
-                const ordinal = row?.perSession ? Number(row.n || 0) : 1
-                if (ordinal <= 0) return ''
-                if (ordinal > unlockedSessions) {
-                  return unlockedSessions === 0
-                    ? `Session #${ordinal} is locked. Collect at least one installment to open it.`
-                    : `Session #${ordinal} is locked. Currently unlocked: up to #${unlockedSessions} of ${sessionsCount}. Collect the next installment to open more.`
-                }
-                return ''
-              },
-              onComplete: (row) => {
-                if (paymentBlockReason) {
-                  toast.error(paymentBlockReason)
-                  return
-                }
-                if (row.perSession) {
-                  completeOneSession(row)
-                } else {
-                  completeSession(b._id)
-                }
-              },
-              onNoShow: (row) => {
-                if (paymentBlockReason) {
-                  toast.error(paymentBlockReason)
-                  return
-                }
-                if (row.perSession) {
-                  setNoShowReason('')
-                  setNoShowRow(row)
-                }
-              },
-            }}
-          />
-        </div>
-      </Card>
+      </div>
 
-      <Card hover={false} className="p-5 sm:p-6">
-        <h2 className="text-sm font-semibold text-gray-900">Session notes</h2>
-        <p className="mt-1 text-xs text-gray-500">Saved notes are visible to the patient (read-only).</p>
-        <div className="mt-4">
-          <SessionNotesEditor booking={b} onSaved={load} />
-        </div>
-      </Card>
-
-      <Card hover={false} className="p-5 sm:p-6">
-        <h2 className="text-sm font-semibold text-gray-900">Plan details</h2>
-        <dl className="mt-4 grid gap-4 text-sm sm:grid-cols-2">
-          <div>
-            <dt className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Sessions</dt>
-            <dd className="mt-0.5 font-medium text-gray-900">{b.sessions != null ? b.sessions : '—'}</dd>
-          </div>
-          <div>
-            <dt className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Price / session</dt>
-            <dd className="mt-0.5 font-medium text-gray-900">
-              {b.amountPerSession != null ? `₹${b.amountPerSession}` : '—'}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Plan status</dt>
-            <dd className="mt-0.5 capitalize text-gray-900">{b.planStatus || '—'}</dd>
-          </div>
-          {b.discountPercent != null && b.discountPercent > 0 && (
-            <div>
-              <dt className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Discount</dt>
-              <dd className="mt-0.5 font-medium text-gray-900">{b.discountPercent}%</dd>
-            </div>
-          )}
-          {billingTypeLabel(b) ? (
-            <div>
-              <dt className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Payment type</dt>
-              <dd className="mt-0.5 font-medium text-gray-900">{billingTypeLabel(b)}</dd>
-            </div>
-          ) : null}
-          <div>
-            <dt className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Total</dt>
-            <dd className="mt-0.5 font-semibold text-gray-900">{paymentAmountLabel(b)}</dd>
-          </div>
-          <div>
-            <dt className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Distance at assign</dt>
-            <dd className="mt-0.5 font-medium text-gray-900">
-              {b.distanceKmAtAssign != null
-                ? `${Number(b.distanceKmAtAssign) < 10 ? Number(b.distanceKmAtAssign).toFixed(1) : Math.round(Number(b.distanceKmAtAssign))} km`
-                : '—'}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Distance surcharge</dt>
-            <dd className="mt-0.5 font-medium text-gray-900">
-              ₹{Number(b.distanceSurchargeAmount || 0).toFixed(2)}
-              {Number(b.distanceExtraKm || 0) > 0 && Number(b.distanceSurchargePerKm || 0) > 0
-                ? ` (${Number(b.distanceExtraKm)} km × ₹${Number(b.distanceSurchargePerKm)}/km)`
-                : ''}
-            </dd>
-          </div>
-        </dl>
-      </Card>
-
-      <Card hover={false} className="p-5 sm:p-6">
-        <h2 className="text-sm font-semibold text-gray-900">Payment</h2>
-        <dl className="mt-4 space-y-3 text-sm">
-          <div className="flex justify-between gap-4">
-            <dt className="text-gray-500">Mode</dt>
-            <dd className="font-medium text-gray-900">{paymentModeLabel(b)}</dd>
-          </div>
-          <div className="flex justify-between gap-4">
-            <dt className="text-gray-500">Payment hold</dt>
-            <dd className="font-medium text-gray-900">{paymentStatusLabel(b.paymentStatus)}</dd>
-          </div>
-          <div className="flex justify-between gap-4">
-            <dt className="text-gray-500">Payment step</dt>
-            <dd className="font-medium text-gray-900">{marketplacePaymentStatusLabel(b.payment?.status)}</dd>
-          </div>
-          <div className="flex justify-between gap-4">
-            <dt className="text-gray-500">Amount</dt>
-            <dd className="font-semibold text-gray-900">{paymentAmountLabel(b)}</dd>
-          </div>
-        </dl>
-        {b.offlinePaymentRejectReason && b.payment?.status === 'pending' && (
-          <div className="mt-4 rounded-lg border border-rose-200 bg-rose-50/90 px-3 py-2 text-sm text-rose-950">
-            <p className="font-medium">Admin note</p>
-            <p className="mt-0.5 text-xs">{b.offlinePaymentRejectReason}</p>
-          </div>
-        )}
-      </Card>
-
-      {showPlanPending && (
-        <div className="rounded-2xl border border-blue-100 bg-blue-50/90 px-5 py-4 text-sm text-blue-950">
-          <p className="font-medium">Awaiting patient approval</p>
-        </div>
-      )}
-
-      {showCreatePlan && (
-        <Card hover={false} className="p-5 sm:p-6">
-          <h2 className="text-sm font-semibold text-gray-900">Create home plan</h2>
-          <div className="mt-4">
-            <HomePlanForm booking={b} busy={busy} onSubmit={(payload) => createPlan(b._id, payload)} />
-          </div>
-        </Card>
-      )}
-
-      {!hasSchedulePlan && (
-        <Card hover={false} className="p-5 sm:p-6">
-          <h2 className="mb-4 text-sm font-semibold text-gray-900">Actions</h2>
-          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-3">
-            <button
-              type="button"
-              disabled={busy || b.sessionStatus === 'completed' || !canMarkComplete}
-              onClick={() => completeSession(b._id)}
-              title={
-                !canMarkComplete && b.sessionStatus !== 'completed' ? paymentBlockReason : undefined
-              }
-              className={`${actionBtn} w-full bg-blue-600 text-white hover:bg-blue-700 sm:w-auto`}
-            >
-              {b.sessionStatus === 'completed' ? 'Completed' : 'Mark complete'}
-            </button>
-          </div>
-        </Card>
-      )}
-
-      {rescheduleRow != null && (
+      {rescheduleRow != null ? (
         <RescheduleModal
           key={rescheduleRow.key}
           booking={b}
@@ -503,16 +555,16 @@ export default function PhysioBookingDetailPage() {
           onClose={() => setRescheduleRow(null)}
           onUpdated={load}
         />
-      )}
+      ) : null}
 
-      {noShowRow && (
+      {noShowRow ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal>
           <Card hover={false} className="w-full max-w-md shadow-xl">
-            <h3 className="type-page-title text-gray-900">Mark session as no-show</h3>
-            <p className="mt-2 text-sm text-gray-700">
+            <h3 className="type-page-title text-slate-900">Mark session as no-show</h3>
+            <p className="mt-2 text-sm text-slate-700">
               Session #{noShowRow.n} · {formatBookingDateAndSlot(noShowRow.date, noShowRow.time)}
             </p>
-            <label htmlFor="no-show-reason" className="mt-4 block text-sm font-medium text-gray-800">
+            <label htmlFor="no-show-reason" className="mt-4 block text-sm font-medium text-slate-800">
               Reason (optional)
             </label>
             <textarea
@@ -522,7 +574,7 @@ export default function PhysioBookingDetailPage() {
               onChange={(e) => setNoShowReason(e.target.value)}
               maxLength={500}
               placeholder="e.g. Patient was not at home; could not reach by phone."
-              className="mt-1.5 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm text-gray-900 shadow-sm outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20"
+              className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 shadow-sm outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20"
             />
             <div className="mt-5 flex justify-end gap-2">
               <Button
@@ -546,7 +598,7 @@ export default function PhysioBookingDetailPage() {
             </div>
           </Card>
         </div>
-      )}
+      ) : null}
 
       <RecordCollectionModal
         open={recordCollectionOpen}
@@ -554,6 +606,14 @@ export default function PhysioBookingDetailPage() {
         summary={paymentSummary}
         onClose={() => setRecordCollectionOpen(false)}
         onRecorded={load}
+      />
+
+      <SessionNotesModal
+        open={notesRow != null}
+        row={notesRow}
+        booking={b}
+        onClose={() => setNotesRow(null)}
+        onSaved={load}
       />
     </div>
   )

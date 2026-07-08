@@ -14,13 +14,11 @@ const funnelIcon = (
   </svg>
 )
 
-export default function PhysioBookingsToolbar({
+export default function ManagerBookingsToolbar({
   search,
   onSearchChange,
   sort,
   onSortChange,
-  view,
-  onViewChange,
   onFilterClick,
   filtersActive,
 }) {
@@ -33,9 +31,9 @@ export default function PhysioBookingsToolbar({
             type="search"
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
-            placeholder="Search by patient name or phone..."
+            placeholder="Search by patient name, phone, or issue..."
             autoComplete="off"
-            className="w-full rounded-lg border border-gray-200 bg-white py-2 pl-10 pr-3.5 text-sm text-gray-900 shadow-sm ring-1 ring-gray-100/80 transition-shadow placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/25"
+            className="w-full rounded-lg border border-gray-200 bg-white py-2 pl-10 pr-3.5 text-sm text-gray-900 shadow-sm ring-1 ring-gray-100/80 transition-shadow placeholder:text-gray-400 focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/25"
           />
         </div>
         <div className="flex flex-wrap items-center gap-3">
@@ -44,7 +42,7 @@ export default function PhysioBookingsToolbar({
             <select
               value={sort}
               onChange={(e) => onSortChange(e.target.value)}
-              className="w-full min-w-0 cursor-pointer rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-800 shadow-sm ring-1 ring-gray-100/80 transition-colors focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/25 sm:w-auto sm:min-w-40"
+              className="w-full min-w-0 cursor-pointer rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-800 shadow-sm ring-1 ring-gray-100/80 transition-colors focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/25 sm:w-auto sm:min-w-40"
             >
               <option value="priority">Priority first</option>
               <option value="latest">Latest first</option>
@@ -60,37 +58,9 @@ export default function PhysioBookingsToolbar({
           >
             {funnelIcon}
             {filtersActive && (
-              <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-blue-600 ring-2 ring-white" />
+              <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-teal-600 ring-2 ring-white" />
             )}
           </button>
-          <div
-            className="flex shrink-0 rounded-lg border border-gray-200 bg-gray-100/80 p-0.5 shadow-inner"
-            role="group"
-            aria-label="View mode"
-          >
-            <button
-              type="button"
-              onClick={() => onViewChange('list')}
-              className={`cursor-pointer rounded-md px-2.5 py-1.5 text-xs font-semibold transition-all duration-200 sm:px-3 sm:text-sm ${
-                view === 'list'
-                  ? 'bg-white text-blue-700 shadow-sm ring-1 ring-gray-200/80'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              List
-            </button>
-            <button
-              type="button"
-              onClick={() => onViewChange('calendar')}
-              className={`cursor-pointer rounded-md px-2.5 py-1.5 text-xs font-semibold transition-all duration-200 sm:px-3 sm:text-sm ${
-                view === 'calendar'
-                  ? 'bg-white text-blue-700 shadow-sm ring-1 ring-gray-200/80'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              Calendar
-            </button>
-          </div>
         </div>
       </div>
     </div>

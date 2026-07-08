@@ -36,25 +36,50 @@ export const FALLBACK_PRICING_SETTINGS = {
     },
   ],
   planMilestones: {},
+  pricingUpdatedAt: null,
+  planTiersUpdatedAt: null,
 }
+
+const CACHE_TTL_MS = 60_000
 
 let sharedCache = null
 let sharedPromise = null
 
-async function fetchPricingSettings() {
-  if (sharedCache) return sharedCache
-  if (!sharedPromise) {
-    sharedPromise = api
-      .get('/platform/pricing-settings')
-      .then((res) => {
-        sharedCache = res.data
-        return sharedCache
-      })
-      .catch(() => {
-        sharedPromise = null
-        return FALLBACK_PRICING_SETTINGS
-      })
-  }
+function cacheKey(data) {
+  if (!data) return ''
+  return `${data.planTiersUpdatedAt || data.pricingUpdatedAt || ''}:${JSON.stringify(data.planTiers || [])}`
+}
+
+function isCacheFresh(entry) {
+  if (!entry?.data) return false
+  if (Date.now() - entry.fetchedAt > CACHE_TTL_MS) return false
+  return true
+}
+
+async function fetchPricingSettings({ force = false } = {}) {
+  if (!force && isCacheFresh(sharedCache)) return sharedCache.data
+  if (!force && sharedPromise) return sharedPromise
+
+  sharedPromise = api
+    .get('/platform/pricing-settings')
+    .then((res) => {
+      const data = res.data
+      const nextKey = cacheKey(data)
+      if (!sharedCache || sharedCache.key !== nextKey || !isCacheFresh(sharedCache)) {
+        sharedCache = { data, fetchedAt: Date.now(), key: nextKey }
+      } else {
+        sharedCache.fetchedAt = Date.now()
+      }
+      return sharedCache.data
+    })
+    .catch(() => {
+      sharedPromise = null
+      return FALLBACK_PRICING_SETTINGS
+    })
+    .finally(() => {
+      sharedPromise = null
+    })
+
   return sharedPromise
 }
 
@@ -64,17 +89,17 @@ export function invalidatePricingSettingsCache() {
 }
 
 /**
- * Load platform pricing settings (public API). Cached for the session.
+ * Load platform pricing settings (public API). Cached briefly for the session.
  */
 export function usePricingSettings() {
-  const [settings, setSettings] = useState(sharedCache || FALLBACK_PRICING_SETTINGS)
+  const [settings, setSettings] = useState(sharedCache?.data || FALLBACK_PRICING_SETTINGS)
   const [loading, setLoading] = useState(!sharedCache)
 
   const reload = useCallback(async () => {
     invalidatePricingSettingsCache()
     setLoading(true)
     try {
-      const data = await fetchPricingSettings()
+      const data = await fetchPricingSettings({ force: true })
       setSettings(data)
     } finally {
       setLoading(false)
@@ -83,11 +108,6 @@ export function usePricingSettings() {
 
   useEffect(() => {
     let cancelled = false
-    if (sharedCache) {
-      setSettings(sharedCache)
-      setLoading(false)
-      return undefined
-    }
     fetchPricingSettings().then((data) => {
       if (!cancelled) {
         setSettings(data)

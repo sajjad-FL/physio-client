@@ -4,20 +4,17 @@ import { api } from '../../config/api'
 import { formatBookingDateAndSlot } from '../../utils/date'
 import {
   managerWorkflowMeta,
-  managerNeedsAction,
-  managerMatchesFilter,
   managerOutstanding,
-  MANAGER_WAITING_STATUSES,
-  MANAGER_ACTIVE_STATUSES,
+  matchesManagerListFilters,
+  compareManagerCases,
 } from '../../utils/managerWorkflow'
+import ManagerBookingsToolbar from '../../components/manager/ManagerBookingsToolbar'
+import ManagerBookingsFilterDrawer, {
+  DEFAULT_MANAGER_FILTERS,
+} from '../../components/manager/ManagerBookingsFilterDrawer'
+import { normalizeIndianPhone } from '../../utils/phoneIndia'
+import { openGoogleMapsDestination } from '../../utils/googleMaps'
 import Card from '../../components/ui/Card'
-
-const FILTER_TABS = [
-  { id: 'all', label: 'All cases' },
-  { id: 'action', label: 'Needs action' },
-  { id: 'waiting', label: 'Waiting on patient' },
-  { id: 'active', label: 'In treatment' },
-]
 
 function badgeClass(tone) {
   switch (tone) {
@@ -34,7 +31,7 @@ function badgeClass(tone) {
   }
 }
 
-function accentClass(tone) {
+function rowAccentClass(tone) {
   switch (tone) {
     case 'urgent':
       return 'border-l-amber-500'
@@ -49,29 +46,32 @@ function accentClass(tone) {
   }
 }
 
+function servicePillClass(serviceType) {
+  return serviceType === 'online'
+    ? 'bg-violet-50 text-violet-800 ring-violet-200/80'
+    : 'bg-teal-50 text-teal-800 ring-teal-200/80'
+}
+
 function patientInitial(name) {
   const s = (name || '?').trim()
   return s ? s.slice(0, 1).toUpperCase() : '?'
-}
-
-function matchesFilter(b, filterId) {
-  return managerMatchesFilter(b, filterId)
-}
-
-function isActiveCase(b) {
-  const ws = b.workflowStatus
-  if (MANAGER_ACTIVE_STATUSES.has(ws)) return true
-  return managerOutstanding(b) <= 0.009 && Number(b.paymentSummary?.totalPaid || b.totalPaid || 0) > 0
 }
 
 export default function ManagerBookingsPage() {
   const [items, setItems] = useState([])
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState('all')
+  const [filters, setFilters] = useState(() => ({ ...DEFAULT_MANAGER_FILTERS }))
+  const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [search, setSearch] = useState('')
+  const [sort, setSort] = useState('priority')
 
   const deferredSearch = useDeferredValue(search)
+
+  const filtersActive = useMemo(
+    () => filters.workflow !== 'all' || filters.date !== 'all',
+    [filters],
+  )
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -91,105 +91,92 @@ export default function ManagerBookingsPage() {
     load()
   }, [load])
 
-  const stats = useMemo(() => {
-    const needsAction = items.filter((b) => managerNeedsAction(b)).length
-    const waiting = items.filter((b) => MANAGER_WAITING_STATUSES.has(b.workflowStatus)).length
-    const active = items.filter((b) => isActiveCase(b)).length
-    return { needsAction, waiting, active }
-  }, [items])
-
   const displayItems = useMemo(() => {
+    let list = items.filter((b) => matchesManagerListFilters(b, filters))
     const q = deferredSearch.trim().toLowerCase()
-    return items.filter((b) => {
-      if (!matchesFilter(b, filter)) return false
-      if (!q) return true
-      const blob = [
-        b.userId?.name,
-        b.userId?.phone,
-        b.issue,
-        b.pincode,
-        b.userId?.location,
-      ]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase()
-      return blob.includes(q)
-    })
-  }, [items, filter, deferredSearch])
-
-  if (loading) {
-    return (
-      <div className="space-y-4">
-        <div className="grid gap-3 sm:grid-cols-3">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="h-24 animate-pulse rounded-2xl bg-slate-100" />
-          ))}
-        </div>
-        <div className="h-64 animate-pulse rounded-2xl bg-slate-100" />
-      </div>
-    )
-  }
+    if (q) {
+      const digits = q.replace(/\D/g, '')
+      const qNorm = normalizeIndianPhone(q)
+      list = list.filter((b) => {
+        const blob = [
+          b.userId?.name,
+          b.userId?.phone,
+          b.issue,
+          b.pincode,
+          b.userId?.location,
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase()
+        if (blob.includes(q)) return true
+        const phone = String(b.userId?.phone || '')
+        const phoneDigits = phone.replace(/\D/g, '')
+        const phoneNorm = normalizeIndianPhone(phone) || phoneDigits
+        if (qNorm && qNorm.length === 10 && phoneNorm === qNorm) return true
+        return digits.length > 0 && phoneDigits.includes(digits)
+      })
+    }
+    const arr = [...list]
+    if (sort === 'priority') {
+      arr.sort(compareManagerCases)
+    } else {
+      arr.sort((a, b) => {
+        const ta = new Date(a.createdAt).getTime()
+        const tb = new Date(b.createdAt).getTime()
+        if (Number.isNaN(ta) && Number.isNaN(tb)) return 0
+        if (Number.isNaN(ta)) return 1
+        if (Number.isNaN(tb)) return -1
+        return sort === 'latest' ? tb - ta : ta - tb
+      })
+    }
+    return arr
+  }, [items, filters, deferredSearch, sort])
 
   return (
     <div className="space-y-6">
-      {/* Summary stats */}
-      <div className="grid gap-3 sm:grid-cols-3">
-        <Card hover={false} className="border-amber-100 bg-amber-50/40 p-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-amber-800/80">Needs your action</p>
-          <p className="mt-1 text-2xl font-bold tabular-nums text-amber-950">{stats.needsAction}</p>
-          <p className="mt-0.5 text-xs text-amber-900/70">Visit, plan, assign, or collect</p>
-        </Card>
-        <Card hover={false} className="border-blue-100 bg-blue-50/40 p-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-blue-800/80">Awaiting patient</p>
-          <p className="mt-1 text-2xl font-bold tabular-nums text-blue-950">{stats.waiting}</p>
-          <p className="mt-0.5 text-xs text-blue-900/70">Consent pending in app</p>
-        </Card>
-        <Card hover={false} className="border-emerald-100 bg-emerald-50/40 p-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-emerald-800/80">In treatment</p>
-          <p className="mt-1 text-2xl font-bold tabular-nums text-emerald-950">{stats.active}</p>
-          <p className="mt-0.5 text-xs text-emerald-900/70">Active recovery plans</p>
-        </Card>
+      <div>
+        <h1 className="type-page-title text-gray-900">Your cases</h1>
+        <p className="mt-1 max-w-2xl text-sm leading-relaxed text-gray-500">
+          Search, filter — open a row for assessment, care plan, physio assignment, and payment actions.
+        </p>
       </div>
 
-      {/* Toolbar */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-wrap gap-2">
-          {FILTER_TABS.map((tab) => {
-            const count =
-              tab.id === 'all'
-                ? items.length
-                : items.filter((b) => matchesFilter(b, tab.id)).length
-            const active = filter === tab.id
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setFilter(tab.id)}
-                className={`rounded-xl px-3 py-1.5 text-sm font-medium transition ${
-                  active
-                    ? 'bg-teal-600 text-white shadow-sm'
-                    : 'bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50'
-                }`}
-              >
-                {tab.label}
-                <span className={`ml-1.5 tabular-nums ${active ? 'text-teal-100' : 'text-slate-400'}`}>
-                  {count}
-                </span>
-              </button>
-            )
-          })}
-        </div>
-        <input
-          type="search"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search patient, phone, issue…"
-          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm placeholder:text-slate-400 focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20 sm:max-w-xs"
+      {!loading && items.length > 0 && (
+        <section
+          className="rounded-xl border border-gray-100 bg-white p-3 shadow-sm ring-1 ring-gray-100/80 sm:p-4"
+          aria-label="Search and display"
+        >
+          <ManagerBookingsToolbar
+            search={search}
+            onSearchChange={setSearch}
+            sort={sort}
+            onSortChange={setSort}
+            onFilterClick={() => setIsFilterOpen(true)}
+            filtersActive={filtersActive}
+          />
+          <p className="mt-3 text-xs text-gray-500">
+            Showing <span className="font-semibold text-gray-800">{displayItems.length}</span> of {total || items.length}
+            {filtersActive && <span className="text-gray-400"> · Filters on</span>}
+          </p>
+        </section>
+      )}
+
+      {isFilterOpen && (
+        <ManagerBookingsFilterDrawer
+          appliedFilters={filters}
+          onClose={() => setIsFilterOpen(false)}
+          onApply={(next) => setFilters({ ...next })}
+          onReset={() => setFilters({ ...DEFAULT_MANAGER_FILTERS })}
         />
-      </div>
+      )}
 
-      {/* Case list */}
-      {!items.length ? (
+      {loading ? (
+        <div className="space-y-2">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-[4.5rem] animate-pulse rounded-xl bg-white shadow-sm ring-1 ring-gray-100" />
+          ))}
+        </div>
+      ) : !items.length ? (
         <Card hover={false} className="border-dashed p-10 text-center">
           <p className="text-base font-semibold text-slate-800">No assigned cases yet</p>
           <p className="mt-2 text-sm text-slate-500">
@@ -198,71 +185,99 @@ export default function ManagerBookingsPage() {
           </p>
         </Card>
       ) : !displayItems.length ? (
-        <Card hover={false} className="p-8 text-center">
-          <p className="text-sm text-slate-600">
-            {search.trim() ? `No cases match "${search.trim()}".` : 'No cases in this filter.'}
-          </p>
-        </Card>
+        <p className="rounded-2xl border border-dashed border-gray-200 bg-gray-50/80 px-4 py-8 text-center text-sm text-gray-500">
+          No cases match your filters or search.
+        </p>
       ) : (
-        <div className="space-y-2">
-          <p className="text-xs font-medium text-slate-500">
-            Showing {displayItems.length} of {total || items.length} case{(total || items.length) === 1 ? '' : 's'}
-          </p>
+        <ul className="flex flex-col gap-2">
           {displayItems.map((b) => {
             const meta = managerWorkflowMeta(b)
             const due = managerOutstanding(b)
-            const physioName =
-              b.physioId && typeof b.physioId === 'object' ? b.physioId.name : null
-            const visitLine = formatBookingDateAndSlot(b.date, b.timeSlot)
-            const showHintAsPrimary =
-              meta.tone === 'urgent' || meta.tone === 'action' || meta.tone === 'waiting'
-            const secondaryParts = showHintAsPrimary
-              ? [meta.hint, physioName].filter(Boolean)
-              : [visitLine || null, physioName].filter(Boolean)
-            const secondaryLine = secondaryParts.join(' · ')
+            const canStart = Boolean(b.userId?.coordinates || String(b.userId?.location || '').trim())
+            const dueAlreadyInMeta =
+              meta.label.toLowerCase().includes('pending') ||
+              (meta.hint && /₹|pending/i.test(meta.hint))
 
             return (
-              <Link key={b._id} to={`/manager/bookings/${b._id}`} className="block">
-                <Card
-                  hover={false}
-                  className={`!p-0 overflow-hidden border-l-[3px] shadow-none transition hover:border-teal-200 hover:shadow-sm ${accentClass(meta.tone)}`}
+              <li key={b._id}>
+                <div
+                  className={[
+                    'group flex gap-3 rounded-xl border border-gray-100 bg-white py-3 pl-3 pr-3 shadow-sm ring-1 ring-gray-100/90 transition-all duration-200',
+                    'border-l-4 hover:bg-slate-50/90 hover:shadow-md hover:ring-slate-200/80',
+                    rowAccentClass(meta.tone),
+                  ].join(' ')}
                 >
-                  <div className="flex items-center gap-2.5 px-3 py-2.5 sm:px-3.5">
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-teal-100 text-xs font-bold text-teal-800">
-                      {patientInitial(b.userId?.name)}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="min-w-0 truncate text-sm font-semibold leading-tight text-slate-900">
-                          <span>{b.userId?.name || 'Patient'}</span>
-                          <span className="font-normal text-slate-500">
-                            {' · '}
-                            {b.issue || 'Home visit'}
-                          </span>
-                        </p>
-                        <span
-                          className={`inline-flex shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold leading-none ring-1 ${badgeClass(meta.tone)}`}
-                        >
-                          {meta.label}
-                        </span>
-                      </div>
-                      {(secondaryLine || due > 0.009) && (
-                        <p className="mt-0.5 truncate text-[11px] leading-tight text-slate-500">
-                          {secondaryLine}
-                          {due > 0.009 && !meta.label.includes('pending') ? (
-                            <span className="font-semibold text-rose-700">
-                              {secondaryLine ? ' · ' : ''}₹{due.toFixed(0)} pending
-                            </span>
-                          ) : null}
-                        </p>
-                      )}
-                    </div>
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-slate-100 to-slate-200/90 text-sm font-bold text-slate-600 ring-1 ring-slate-200/80">
+                    {patientInitial(b.userId?.name)}
                   </div>
-                </Card>
-              </Link>
+                  <Link
+                    to={`/manager/bookings/${b._id}`}
+                    aria-label={`${formatBookingDateAndSlot(b.date, b.timeSlot)}, ${b.userId?.name || 'Patient'}, ${meta.label}`}
+                    className="min-w-0 flex-1"
+                  >
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                      <p className="text-sm font-semibold text-gray-900">{formatBookingDateAndSlot(b.date, b.timeSlot)}</p>
+                      <span
+                        className={`inline-flex rounded-md px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ring-1 ${servicePillClass(
+                          b.serviceType || 'home',
+                        )}`}
+                      >
+                        {b.serviceType === 'online' ? 'Online' : 'Home'}
+                      </span>
+                    </div>
+                    <p className="mt-0.5 truncate text-xs text-gray-600">
+                      <span className="font-medium text-gray-800">{b.userId?.name ?? '—'}</span>
+                      {b.userId?.phone ? (
+                        <>
+                          <span className="text-gray-300"> · </span>
+                          <span className="tabular-nums text-gray-500">{b.userId.phone}</span>
+                        </>
+                      ) : null}
+                    </p>
+                    <p className="mt-0.5 line-clamp-1 text-xs leading-snug text-gray-500">
+                      {b.issue || 'Home visit'}
+                      {due > 0.009 && !dueAlreadyInMeta ? (
+                        <span className="font-semibold text-rose-700"> · ₹{due.toFixed(0)} pending</span>
+                      ) : null}
+                    </p>
+                  </Link>
+                  <div className="flex shrink-0 flex-col items-end justify-center gap-2 sm:flex-row sm:items-center sm:gap-3">
+                    {(b.serviceType || 'home') === 'home' ? (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          openGoogleMapsDestination({
+                            coordinates: b.userId?.coordinates,
+                            address: b.userId?.location,
+                          })
+                        }
+                        disabled={!canStart}
+                        title={canStart ? 'Start navigation' : 'Address not available'}
+                        className="inline-flex items-center rounded-md border border-blue-200 bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700 transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        Start
+                      </button>
+                    ) : null}
+                    <span
+                      className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-semibold ring-1 ${badgeClass(meta.tone)}`}
+                    >
+                      {meta.label}
+                    </span>
+                    <Link
+                      to={`/manager/bookings/${b._id}`}
+                      className="inline-flex items-center gap-0.5 text-xs font-semibold text-teal-600 transition hover:text-teal-700"
+                    >
+                      Details
+                      <svg className="h-4 w-4 transition-transform group-hover:translate-x-0.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                      </svg>
+                    </Link>
+                  </div>
+                </div>
+              </li>
             )
           })}
-        </div>
+        </ul>
       )}
     </div>
   )

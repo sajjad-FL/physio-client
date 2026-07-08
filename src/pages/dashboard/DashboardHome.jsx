@@ -5,7 +5,8 @@ import { getProfileCached } from '../../utils/profileCache'
 import toast from 'react-hot-toast'
 import Skeleton from '../../components/ui/Skeleton'
 import { bookingStatusBadge } from './dashboardUtils'
-import { formatBookingDateAndSlot, formatBookingTimeSlot } from '../../utils/date'
+import { formatBookingDateAndSlot } from '../../utils/date'
+import { bookingConditionLabel } from '../../utils/bookingDisplay'
 import { pickNextSession, todayYmd } from '../../components/physio/physioBookingHelpers'
 import ServicesSection from '../../components/dashboard/ServicesSection'
 
@@ -128,10 +129,14 @@ export default function DashboardHome() {
                     <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
                     Upcoming session
                   </span>
-                  <p className="mt-2 text-sm font-bold text-white">
-                    {isToday
-                      ? formatBookingTimeSlot(nextSession.row.time)
-                      : formatBookingDateAndSlot(nextSession.row.date, nextSession.row.time)}
+                  <p className="mt-2 text-sm font-bold leading-snug text-white">
+                    {formatBookingDateAndSlot(nextSession.row.date, nextSession.row.time)}
+                    {bookingConditionLabel(nextSession.booking) ? (
+                      <span className="font-semibold text-teal-100/95">
+                        {' '}
+                        ({bookingConditionLabel(nextSession.booking)})
+                      </span>
+                    ) : null}
                   </p>
                 </div>
                 <span className="flex shrink-0 items-center gap-1 rounded-md bg-emerald-500/20 px-2 py-1">
@@ -232,6 +237,7 @@ export default function DashboardHome() {
               <ul className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm">
                 {recentActivity.map((b, idx) => {
                   const st = bookingStatusBadge(b.status, b.sessionStatus, b.paymentStatus, b.planStatus)
+                  const condition = bookingConditionLabel(b)
                   return (
                     <li key={b._id} className={idx < recentActivity.length - 1 ? 'border-b border-slate-100' : ''}>
                       <Link
@@ -242,10 +248,13 @@ export default function DashboardHome() {
                           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0d9488" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-bold text-slate-900">
+                          <p className="text-[13px] font-bold leading-snug text-slate-900">
                             {formatBookingDateAndSlot(b.date, b.timeSlot)}
+                            {condition ? (
+                              <span className="font-normal text-slate-500"> ({condition})</span>
+                            ) : null}
                           </p>
-                          <p className="truncate text-xs text-slate-500">{b.physioId?.name ?? 'Physiotherapist'}</p>
+                          <p className="mt-0.5 truncate text-xs text-slate-500">{b.physioId?.name ?? 'Physiotherapist'}</p>
                         </div>
                         <div className="flex shrink-0 items-center gap-2">
                           <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ${st.cls}`}>{st.label}</span>

@@ -7,9 +7,46 @@ export function todayYmd() {
   return ymdFromDate(new Date())
 }
 
+/** Manager-led home bookings include a complimentary assessment on booking.date. */
+export function hasComplimentaryAssessmentVisit(b) {
+  return (
+    b?.serviceType === 'home' &&
+    Boolean(b?.managerId || b?.assessmentCompletedAt) &&
+    b?.planCreatedByRole !== 'physio' &&
+    Boolean(b?.date)
+  )
+}
+
+function buildComplimentaryAssessmentRow(b) {
+  if (!hasComplimentaryAssessmentVisit(b)) return null
+  const assessmentDate = String(b.date || '').trim()
+  if (!assessmentDate) return null
+  const scheduleHasAssessmentDate =
+    Array.isArray(b.schedule) && b.schedule.some((s) => String(s?.date || '').trim() === assessmentDate)
+  if (scheduleHasAssessmentDate) return null
+  return {
+    key: `${b._id}-assessment`,
+    sessionId: null,
+    date: assessmentDate,
+    time: b.timeSlot,
+    n: null,
+    label: 'Assessment',
+    complimentary: true,
+    notes: b.assessmentNotes || null,
+    status: b.assessmentCompletedAt ? 'completed' : 'scheduled',
+    completedAt: b.assessmentCompletedAt || null,
+    noShowReason: '',
+    patientConfirmed: false,
+    paymentAtCompletion: 0,
+    perSession: false,
+  }
+}
+
 export function normalizeSessionRows(b) {
+  const assessmentRow = buildComplimentaryAssessmentRow(b)
+
   if (Array.isArray(b.schedule) && b.schedule.length > 0) {
-    return b.schedule
+    const scheduleRows = b.schedule
       .map((s, i) => ({
         key: `${b._id}-s-${i}`,
         sessionId: s._id != null ? String(s._id) : null,
@@ -24,9 +61,15 @@ export function normalizeSessionRows(b) {
         paymentAtCompletion: Number(s.paymentAtCompletion || 0),
         /** Multi-session plan rows carry their own per-session status. */
         perSession: true,
+        complimentary: false,
       }))
       .sort((a, b) => String(a.date || '').localeCompare(String(b.date || '')))
+    if (assessmentRow) return [assessmentRow, ...scheduleRows]
+    return scheduleRows
   }
+
+  if (assessmentRow) return [assessmentRow]
+
   return [
     {
       key: `${b._id}-s-0`,
@@ -47,6 +90,7 @@ export function normalizeSessionRows(b) {
       patientConfirmed: false,
       paymentAtCompletion: 0,
       perSession: false,
+      complimentary: false,
     },
   ]
 }

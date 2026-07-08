@@ -94,6 +94,11 @@ export default function AdminPricingSettingsPage() {
   async function onSave(e) {
     e.preventDefault()
     setSaving(true)
+    const maxDisc = Number(homePlanMaxDiscountPercent) || 0
+    const tiersForSave = planTiers.map((t) => ({
+      ...t,
+      defaultDiscountPercent: Math.min(maxDisc, Math.max(0, Number(t.defaultDiscountPercent) || 0)),
+    }))
     try {
       const { data } = await api.patch(
         '/admin/pricing/settings',
@@ -102,10 +107,10 @@ export default function AdminPricingSettingsPage() {
           platformCommissionPerSessionRupees: Number(platformCommissionPerSessionRupees),
           distanceSurchargeBaseKm: Number(distanceSurchargeBaseKm),
           distanceSurchargePerKmRupees: Number(distanceSurchargePerKmRupees),
-          homePlanMaxDiscountPercent: Number(homePlanMaxDiscountPercent),
+          homePlanMaxDiscountPercent: maxDisc,
           defaultPhysioPricePerSession: Number(defaultPhysioPricePerSession),
           managerCommissionPerSessionRupees: Number(managerCommissionPerSessionRupees),
-          planTiers,
+          planTiers: tiersForSave,
           planMilestones,
         },      )
       applyPayload(data)

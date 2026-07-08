@@ -1,6 +1,8 @@
+import { useState } from 'react'
 import { formatBookingDateAndSlot } from '../../utils/date'
 import { normalizeSessionRows, todayYmd } from '../physio/physioBookingHelpers'
 import { StarRatingDisplay } from '../reviews/StarRating'
+import { SessionNoteReadOnlyBlock } from './SessionNotesReadOnly'
 
 function statusBadgeClass(status) {
   if (status === 'completed') return 'bg-emerald-50 text-emerald-900 ring-emerald-200'
@@ -32,6 +34,7 @@ function statusLabel(status) {
  *     enabled: boolean,
  *     onComplete: (row) => void,
  *     onNoShow?: (row) => void,
+ *     onNotes?: (row) => void,
  *     busySessionId?: string | null,
  *     canAct?: boolean,
  *     blockedReason?: string,
@@ -60,6 +63,7 @@ export default function BookingSessionTimeline({
   const bookingDone = booking.sessionStatus === 'completed'
   const bookingRescheduled = Boolean(booking.rescheduled)
   const showAddSession = Boolean(adminSessions?.enabled && adminSessions?.onAdd && !bookingDone)
+  const [openNotesKey, setOpenNotesKey] = useState(null)
 
   return (
     <div
@@ -81,6 +85,7 @@ export default function BookingSessionTimeline({
       ) : null}
       <ul className="space-y-2">
         {rows.map((r) => {
+          const isComplimentary = Boolean(r.complimentary)
           const rowStatus =
             r.status === 'completed' || r.status === 'no_show'
               ? r.status
@@ -90,12 +95,16 @@ export default function BookingSessionTimeline({
           const rowDone = r.status === 'completed'
           const rowNoShow = r.status === 'no_show'
           const showReschedule = Boolean(
-            reschedule?.enabled && reschedule?.onReschedule && !rowDone && !rowNoShow,
+            reschedule?.enabled && reschedule?.onReschedule && !rowDone && !rowNoShow && !isComplimentary,
           )
 
           let rowCls =
             'rounded-lg border px-3 py-2 text-sm transition-colors duration-150 flex flex-wrap items-center justify-between gap-2 '
-          if (rowDone) {
+          if (isComplimentary) {
+            rowCls += rowDone
+              ? 'border-teal-200 bg-teal-50/90 text-teal-950'
+              : 'border-teal-200/80 bg-teal-50/40 text-teal-950'
+          } else if (rowDone) {
             rowCls += 'border-emerald-200 bg-emerald-50/90 text-emerald-950'
           } else if (rowNoShow) {
             rowCls += 'border-rose-200 bg-rose-50/80 text-rose-950'
@@ -112,6 +121,7 @@ export default function BookingSessionTimeline({
               adminSessions?.onDelete &&
               !rowDone &&
               !rowNoShow &&
+              !isComplimentary &&
               (adminSessions?.canDelete ? adminSessions.canDelete(r, rows) : rows.length > 1),
           )
           const deleting = String(adminSessions?.deletingSessionId || '') === String(r.sessionId || '')
@@ -123,7 +133,7 @@ export default function BookingSessionTimeline({
            * physio always sees them; disable (with tooltip) when payment
            * coverage isn't sufficient or the date is in the future. */
           const showPhysioButtons =
-            Boolean(physioActions?.enabled) && !rowDone && !rowNoShow
+            Boolean(physioActions?.enabled) && !rowDone && !rowNoShow && !isComplimentary
           const perRowReason =
             typeof physioActions?.rowBlockedReason === 'function'
               ? physioActions.rowBlockedReason(r) || ''
@@ -150,29 +160,47 @@ export default function BookingSessionTimeline({
             ? patientActions?.ratingsBySessionId?.[String(r.sessionId)]
             : patientActions?.ratingsBySessionId?.__primary__
           const showRateBtn =
-            Boolean(patientActions?.enabled && patientActions?.onRate) && rowDone && !reviewed
-          const showRatedBadge = Boolean(patientActions?.enabled) && rowDone && reviewed
+            Boolean(patientActions?.enabled && patientActions?.onRate) &&
+            rowDone &&
+            !reviewed &&
+            !isComplimentary
+          const showRatedBadge =
+            Boolean(patientActions?.enabled) && rowDone && reviewed && !isComplimentary
 
           const payKey = r.sessionId ? String(r.sessionId) : '__primary__'
           const payEntry = sessionPayments?.[payKey]
-          const hasPaymentInfo = Boolean(sessionPayments)
+          const hasPaymentInfo = Boolean(sessionPayments) && !isComplimentary
+          const notesOpen = openNotesKey === r.key
+          const showPatientNotesBtn = Boolean(patientActions?.enabled)
+          const showPhysioNotesBtn = Boolean(physioActions?.onNotes) && !isComplimentary
+          const physioHasNotes = Boolean(r.notes?.text?.trim())
 
           return (
-            <li key={r.key} className={rowCls}>
+            <li key={r.key} className={`${rowCls} !flex-col !items-stretch`}>
+              <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                   <div className="min-w-0">
-                    <span className="font-medium">#{r.n}</span>
+                    {isComplimentary ? (
+                      <>
+                        <span className="font-medium">{r.label || 'Assessment'}</span>
+                        <span className="ml-2 inline-flex rounded-md bg-teal-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-teal-800 ring-1 ring-teal-200">
+                          Complimentary
+                        </span>
+                      </>
+                    ) : (
+                      <span className="font-medium">#{r.n}</span>
+                    )}
                     <span className="text-gray-500"> · </span>
                     {formatBookingDateAndSlot(r.date, r.time)}
                     {rowDone && <span className="ml-2 text-xs font-semibold text-emerald-800">Done</span>}
                     {rowNoShow && (
                       <span className="ml-2 text-xs font-semibold text-rose-800">No-show</span>
                     )}
-                    {!rowDone && !rowNoShow && r.date === tday && (
+                    {!rowDone && !rowNoShow && r.date === tday && !isComplimentary && (
                       <span className="ml-2 text-xs font-semibold text-blue-800">Today</span>
                     )}
-                    {!rowDone && !rowNoShow && lockBadgeReason && (
+                    {!rowDone && !rowNoShow && lockBadgeReason && !isComplimentary && (
                       <span
                         title={lockBadgeReason}
                         className="ml-2 inline-flex items-center gap-1 rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-700 ring-1 ring-slate-200"
@@ -224,6 +252,33 @@ export default function BookingSessionTimeline({
                       Rate session
                     </button>
                   )}
+                  {showPhysioNotesBtn && (
+                    <button
+                      type="button"
+                      onClick={() => physioActions.onNotes(r)}
+                      className={`tap-feedback shrink-0 rounded-lg border px-2.5 py-1 text-[11px] font-semibold transition-colors ${
+                        physioHasNotes
+                          ? 'border-indigo-300 bg-indigo-100 text-indigo-900 hover:bg-indigo-200/80'
+                          : 'border-indigo-200 bg-indigo-50 text-indigo-800 hover:border-indigo-300 hover:bg-indigo-100'
+                      }`}
+                    >
+                      {physioHasNotes ? 'Edit session notes' : 'Add session notes'}
+                    </button>
+                  )}
+                  {showPatientNotesBtn && (
+                    <button
+                      type="button"
+                      onClick={() => setOpenNotesKey(notesOpen ? null : r.key)}
+                      aria-expanded={notesOpen}
+                      className={`tap-feedback shrink-0 rounded-lg border px-2.5 py-1 text-[11px] font-semibold transition-all ${
+                        notesOpen
+                          ? 'border-teal-600/80 bg-teal-700 text-white shadow-sm hover:bg-teal-800'
+                          : 'border-teal-600/60 bg-teal-700/95 text-teal-50 shadow-sm hover:border-teal-600 hover:bg-teal-800 hover:text-white'
+                      }`}
+                    >
+                      {notesOpen ? 'Hide details' : 'View details'}
+                    </button>
+                  )}
                   {showRatedBadge && submittedRating && (
                     <span className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-900 ring-1 ring-amber-200">
                       <StarRatingDisplay value={Number(submittedRating.rating) || 0} size="sm" />
@@ -265,6 +320,15 @@ export default function BookingSessionTimeline({
               >
                 {statusLabel(rowStatus)}
               </span>
+              </div>
+              {showPatientNotesBtn && notesOpen ? (
+                <div className="mt-2 w-full">
+                  <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-teal-700">
+                    From your physiotherapist
+                  </p>
+                  <SessionNoteReadOnlyBlock row={r} showLabel={false} />
+                </div>
+              ) : null}
             </li>
           )
         })}

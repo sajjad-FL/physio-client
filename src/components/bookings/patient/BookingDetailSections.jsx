@@ -1,5 +1,6 @@
 import {
   formatPaidAt,
+  formatBookingVisitWithCondition,
   marketplacePaymentStatusLabel,
   paymentAmountLabel,
   paymentModeLabel,
@@ -23,7 +24,7 @@ export default function BookingDetailHeader({ booking: b, onRaiseDispute }) {
     <>
       <Card hover={false} className="border-border-subtle p-5 sm:p-6">
         <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-muted">Visit</p>
-        <p className="type-page-title mt-1 text-ink">{formatBookingDateAndSlot(b.date, b.timeSlot)}</p>
+        <p className="type-page-title mt-1 text-ink">{formatBookingVisitWithCondition(b)}</p>
         {b.rescheduled && b.previousDate ? (
           <p className="mt-2 text-xs text-amber-800">
             Rescheduled from {formatBookingDateAndSlot(b.previousDate, b.previousTimeSlot)}

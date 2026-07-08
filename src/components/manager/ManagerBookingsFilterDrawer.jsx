@@ -9,7 +9,7 @@ function useSlideInOnMount() {
   return entered
 }
 
-export const DEFAULT_PHYSIO_FILTERS = { workflow: 'all', status: 'all', service: 'all', date: 'all' }
+export const DEFAULT_MANAGER_FILTERS = { workflow: 'all', date: 'all' }
 
 function OptionPill({ active, children, onClick }) {
   return (
@@ -18,7 +18,7 @@ function OptionPill({ active, children, onClick }) {
       onClick={onClick}
       className={`cursor-pointer rounded-full px-3 py-1.5 text-xs font-semibold transition-all duration-200 sm:text-sm ${
         active
-          ? 'bg-blue-600 text-white shadow-sm ring-2 ring-blue-500/30'
+          ? 'bg-teal-600 text-white shadow-sm ring-2 ring-teal-500/30'
           : 'bg-gray-100 text-gray-700 ring-1 ring-gray-200/80 hover:bg-gray-200/80'
       }`}
     >
@@ -27,7 +27,7 @@ function OptionPill({ active, children, onClick }) {
   )
 }
 
-export default function PhysioBookingsFilterDrawer({ onClose, appliedFilters, onApply, onReset }) {
+export default function ManagerBookingsFilterDrawer({ onClose, appliedFilters, onApply, onReset }) {
   const [draft, setDraft] = useState(() => ({ ...appliedFilters }))
   const entered = useSlideInOnMount()
 
@@ -50,7 +50,7 @@ export default function PhysioBookingsFilterDrawer({ onClose, appliedFilters, on
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end" role="dialog" aria-modal="true" aria-labelledby="filter-drawer-title">
+    <div className="fixed inset-0 z-50 flex justify-end" role="dialog" aria-modal="true" aria-labelledby="manager-filter-drawer-title">
       <button
         type="button"
         className={`absolute inset-0 bg-gray-900/40 backdrop-blur-[2px] transition-opacity duration-300 ${
@@ -66,7 +66,7 @@ export default function PhysioBookingsFilterDrawer({ onClose, appliedFilters, on
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex shrink-0 items-center justify-between border-b border-gray-100 px-4 py-4 sm:px-5">
-          <h2 id="filter-drawer-title" className="type-page-title text-gray-900">
+          <h2 id="manager-filter-drawer-title" className="type-page-title text-gray-900">
             Filters
           </h2>
           <button
@@ -90,7 +90,7 @@ export default function PhysioBookingsFilterDrawer({ onClose, appliedFilters, on
                   active={draft.workflow === 'all'}
                   onClick={() => setDraft((d) => ({ ...d, workflow: 'all' }))}
                 >
-                  All bookings
+                  All cases
                 </OptionPill>
                 <OptionPill
                   active={draft.workflow === 'action'}
@@ -113,56 +113,7 @@ export default function PhysioBookingsFilterDrawer({ onClose, appliedFilters, on
               </div>
             </div>
             <div>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Status</p>
-              <div className="flex flex-wrap gap-2">
-                <OptionPill active={draft.status === 'all'} onClick={() => setDraft((d) => ({ ...d, status: 'all' }))}>
-                  All
-                </OptionPill>
-                <OptionPill
-                  active={draft.status === 'scheduled'}
-                  onClick={() => setDraft((d) => ({ ...d, status: 'scheduled' }))}
-                >
-                  Scheduled
-                </OptionPill>
-                <OptionPill
-                  active={draft.status === 'completed'}
-                  onClick={() => setDraft((d) => ({ ...d, status: 'completed' }))}
-                >
-                  Completed
-                </OptionPill>
-                <OptionPill
-                  active={draft.status === 'rescheduled'}
-                  onClick={() => setDraft((d) => ({ ...d, status: 'rescheduled' }))}
-                >
-                  Rescheduled
-                </OptionPill>
-              </div>
-            </div>
-            <div>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Service</p>
-              <div className="flex flex-wrap gap-2">
-                <OptionPill
-                  active={draft.service === 'all'}
-                  onClick={() => setDraft((d) => ({ ...d, service: 'all' }))}
-                >
-                  All
-                </OptionPill>
-                <OptionPill
-                  active={draft.service === 'online'}
-                  onClick={() => setDraft((d) => ({ ...d, service: 'online' }))}
-                >
-                  Online
-                </OptionPill>
-                <OptionPill
-                  active={draft.service === 'home'}
-                  onClick={() => setDraft((d) => ({ ...d, service: 'home' }))}
-                >
-                  Home
-                </OptionPill>
-              </div>
-            </div>
-            <div>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Date</p>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Visit date</p>
               <div className="flex flex-wrap gap-2">
                 <OptionPill active={draft.date === 'all'} onClick={() => setDraft((d) => ({ ...d, date: 'all' }))}>
                   All
@@ -196,7 +147,7 @@ export default function PhysioBookingsFilterDrawer({ onClose, appliedFilters, on
             <button
               type="button"
               onClick={handleApply}
-              className="cursor-pointer rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700"
+              className="cursor-pointer rounded-lg bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-teal-700"
             >
               Apply
             </button>

@@ -1,4 +1,5 @@
 import { formatBookingDateAndSlot } from '../../../utils/date'
+import { hasComplimentaryAssessmentVisit } from '../../physio/physioBookingHelpers'
 import Button from '../../ui/Button'
 import Card from '../../ui/Card'
 
@@ -43,6 +44,13 @@ export default function PlanProposedCard({ booking: b, onApprove, approving }) {
       {Array.isArray(b.schedule) && b.schedule.length > 0 ? (
         <div className="mt-5 rounded-xl bg-white p-4 ring-1 ring-slate-200/80">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Scheduled Sessions</p>
+          {hasComplimentaryAssessmentVisit(b) ? (
+            <p className="mt-2 text-sm text-teal-800">
+              Includes 1 complimentary assessment visit on{' '}
+              <span className="font-medium">{formatBookingDateAndSlot(b.date, b.timeSlot)}</span>
+              {b.assessmentCompletedAt ? ' (already completed by your care manager)' : ' (Care Manager)'}.
+            </p>
+          ) : null}
           <ul className="mt-3 space-y-2">
             {b.schedule.slice(0, 3).map((s, i) => (
               <li key={i} className="flex items-center gap-2 text-sm text-slate-700">

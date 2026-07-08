@@ -45,9 +45,11 @@ const WEEKDAY = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
  * @param {(updater: Date[] | ((prev: Date[]) => Date[])) => void} props.onDatesChange — supports React setState functional updates
  * @param {Date} props.minDate
  * @param {number} props.maxSelectable — cap when mode is "add" (e.g. session count)
+ * @param {Date[]} [props.disabledDates] — dates that cannot be selected (e.g. complimentary assessment)
  */
-export default function DragSelectCalendar({ selectedDates, onDatesChange, minDate, maxSelectable }) {
+export default function DragSelectCalendar({ selectedDates, onDatesChange, minDate, maxSelectable, disabledDates = [] }) {
   const min = startOfDay(minDate)
+  const disabledKeys = useMemo(() => new Set(disabledDates.map((d) => toYMD(d))), [disabledDates])
   const minMonthStart = useMemo(
     () => new Date(min.getFullYear(), min.getMonth(), 1).getTime(),
     [min.getTime()],
@@ -88,7 +90,7 @@ export default function DragSelectCalendar({ selectedDates, onDatesChange, minDa
   function handleDayMouseDown(e, date) {
     e.preventDefault()
     const ymd = toYMD(date)
-    if (startOfDay(date) < min) return
+    if (startOfDay(date) < min || disabledKeys.has(ymd)) return
 
     const isSel = selectedKeys.has(ymd)
     const mode = isSel ? 'remove' : 'add'
@@ -110,7 +112,7 @@ export default function DragSelectCalendar({ selectedDates, onDatesChange, minDa
     if (!dragRef.current.active) return
     const ymd = toYMD(date)
     if (ymd === dragRef.current.lastKey) return
-    if (startOfDay(date) < min) return
+    if (startOfDay(date) < min || disabledKeys.has(ymd)) return
 
     dragRef.current = { ...dragRef.current, lastKey: ymd }
     const mode = dragRef.current.mode
@@ -138,7 +140,7 @@ export default function DragSelectCalendar({ selectedDates, onDatesChange, minDa
   const title = view.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })
 
   return (
-    <div className="select-none rounded-2xl border border-gray-200 bg-white p-4 shadow-sm ring-1 ring-gray-100/80">
+    <div className="select-none rounded-2xl border border-gray-200 bg-white p-3 shadow-sm ring-1 ring-gray-100/80 sm:p-4">
       <div className="mb-4 flex items-center justify-between gap-2">
         <button
           type="button"
@@ -171,13 +173,15 @@ export default function DragSelectCalendar({ selectedDates, onDatesChange, minDa
         {cells.map((date) => {
           const ymd = toYMD(date)
           const inMonth = date.getMonth() === viewMonth
-          const disabled = startOfDay(date) < min
+          const disabled = startOfDay(date) < min || disabledKeys.has(ymd)
           const selected = selectedKeys.has(ymd)
 
           let cellCls =
             'flex aspect-square max-h-11 cursor-pointer items-center justify-center rounded-xl text-sm font-medium transition-all duration-150 '
           if (disabled) {
-            cellCls += 'cursor-not-allowed text-gray-300 '
+            cellCls += disabledKeys.has(ymd)
+              ? 'cursor-not-allowed bg-gray-100 text-gray-400 line-through '
+              : 'cursor-not-allowed text-gray-300 '
           } else if (selected) {
             cellCls +=
               'bg-blue-600 text-white shadow-md shadow-blue-600/25 ring-2 ring-blue-500/30 hover:bg-blue-700 '

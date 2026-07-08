@@ -2,8 +2,9 @@ import { useEffect } from 'react'
 
 /**
  * Simple accessible dialog shell — pass `open`, `onClose`, and children.
+ * @param {{ open: boolean, onClose?: () => void, title?: string, description?: string, children?: React.ReactNode, className?: string, centered?: boolean }} props
  */
-export default function Modal({ open, onClose, title, description, children, className = '' }) {
+export default function Modal({ open, onClose, title, description, children, className = '', centered = false }) {
   useEffect(() => {
     if (!open) return
     function onKey(e) {
@@ -22,7 +23,9 @@ export default function Modal({ open, onClose, title, description, children, cla
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-end justify-center bg-slate-900/45 p-4 backdrop-blur-[2px] sm:items-center"
+      className={`fixed inset-0 z-[100] flex justify-center bg-slate-900/45 p-4 backdrop-blur-[2px] ${
+        centered ? 'items-center' : 'items-end sm:items-center'
+      }`}
       role="presentation"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose?.()

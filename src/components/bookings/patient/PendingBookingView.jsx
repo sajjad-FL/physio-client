@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { formatBookingDateAndSlot } from '../../../utils/date'
+import { formatBookingVisitWithCondition } from '../../../utils/bookingDisplay'
 import { openSupportWhatsApp } from '../../../utils/physioContact'
 
 export default function PendingBookingView({ booking: b }) {
@@ -38,7 +38,7 @@ export default function PendingBookingView({ booking: b }) {
         <dl className="divide-y divide-slate-100 text-sm">
           <div className="flex justify-between gap-4 py-3 first:pt-0">
             <dt className="text-slate-500">Date &amp; Time</dt>
-            <dd className="font-medium text-slate-900">{formatBookingDateAndSlot(b.date, b.timeSlot) || '—'}</dd>
+            <dd className="text-right font-medium text-slate-900">{formatBookingVisitWithCondition(b) || '—'}</dd>
           </div>
           {managerName ? (
             <div className="flex justify-between gap-4 py-3">
@@ -49,10 +49,6 @@ export default function PendingBookingView({ booking: b }) {
           <div className="flex justify-between gap-4 py-3">
             <dt className="text-slate-500">Service</dt>
             <dd className="font-medium text-slate-900">{serviceLabel}</dd>
-          </div>
-          <div className="flex justify-between gap-4 py-3 last:pb-0">
-            <dt className="shrink-0 text-slate-500">Condition</dt>
-            <dd className="text-right font-medium text-slate-900">{b.issue || '—'}</dd>
           </div>
         </dl>
       </div>

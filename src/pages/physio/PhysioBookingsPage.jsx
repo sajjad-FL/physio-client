@@ -2,6 +2,7 @@ import { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'rea
 import { Link } from 'react-router-dom'
 import { api } from '../../config/api'
 import { formatBookingDateAndSlot } from '../../utils/date'
+import { physioWorkflowMeta, physioMatchesFilter, comparePhysioCases } from '../../utils/physioWorkflow'
 import PhysioBookingsToolbar from '../../components/physio/PhysioBookingsToolbar'
 import PhysioBookingsFilterDrawer, {
   DEFAULT_PHYSIO_FILTERS,
@@ -11,22 +12,34 @@ import { matchesFilters } from '../../components/physio/physioBookingHelpers'
 import { openGoogleMapsDestination } from '../../utils/googleMaps'
 import { normalizeIndianPhone } from '../../utils/phoneIndia'
 
-function listStatusLabel(b) {
-  if (b.sessionStatus === 'completed') return 'Completed'
-  if (b.rescheduled) return 'Rescheduled'
-  return 'Scheduled'
+function badgeClass(tone) {
+  switch (tone) {
+    case 'urgent':
+      return 'bg-amber-50 text-amber-900 ring-amber-200'
+    case 'action':
+      return 'bg-teal-50 text-teal-900 ring-teal-200'
+    case 'waiting':
+      return 'bg-blue-50 text-blue-900 ring-blue-200'
+    case 'progress':
+      return 'bg-emerald-50 text-emerald-900 ring-emerald-200'
+    default:
+      return 'bg-slate-50 text-slate-800 ring-slate-200'
+  }
 }
 
-function listStatusClass(b) {
-  if (b.sessionStatus === 'completed') return 'bg-emerald-50 text-emerald-900 ring-emerald-200'
-  if (b.rescheduled) return 'bg-amber-50 text-amber-900 ring-amber-200'
-  return 'bg-slate-50 text-slate-800 ring-slate-200'
-}
-
-function rowAccentClass(b) {
-  if (b.sessionStatus === 'completed') return 'border-l-emerald-500'
-  if (b.rescheduled) return 'border-l-amber-500'
-  return 'border-l-blue-500'
+function rowAccentClass(tone) {
+  switch (tone) {
+    case 'urgent':
+      return 'border-l-amber-500'
+    case 'action':
+      return 'border-l-teal-500'
+    case 'waiting':
+      return 'border-l-blue-500'
+    case 'progress':
+      return 'border-l-emerald-500'
+    default:
+      return 'border-l-slate-300'
+  }
 }
 
 function patientInitial(name) {
@@ -48,19 +61,24 @@ export default function PhysioBookingsPage() {
   const [filters, setFilters] = useState(() => ({ ...DEFAULT_PHYSIO_FILTERS }))
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [search, setSearch] = useState('')
-  const [sort, setSort] = useState('latest')
+  const [sort, setSort] = useState('priority')
   const [view, setView] = useState('list')
 
   const filtersActive = useMemo(
     () =>
-      filters.status !== 'all' || filters.service !== 'all' || filters.date !== 'all',
+      filters.workflow !== 'all' ||
+      filters.status !== 'all' ||
+      filters.service !== 'all' ||
+      filters.date !== 'all',
     [filters],
   )
 
   const deferredSearch = useDeferredValue(search)
 
   const displayBookings = useMemo(() => {
-    let list = bookings.filter((b) => matchesFilters(b, filters))
+    let list = bookings.filter(
+      (b) => matchesFilters(b, filters) && physioMatchesFilter(b, filters.workflow),
+    )
     const q = deferredSearch.trim().toLowerCase()
     if (q) {
       const digits = q.replace(/\D/g, '')
@@ -75,14 +93,18 @@ export default function PhysioBookingsPage() {
       })
     }
     const arr = [...list]
-    arr.sort((a, b) => {
-      const ta = new Date(a.createdAt).getTime()
-      const tb = new Date(b.createdAt).getTime()
-      if (Number.isNaN(ta) && Number.isNaN(tb)) return 0
-      if (Number.isNaN(ta)) return 1
-      if (Number.isNaN(tb)) return -1
-      return sort === 'latest' ? tb - ta : ta - tb
-    })
+    if (sort === 'priority') {
+      arr.sort(comparePhysioCases)
+    } else {
+      arr.sort((a, b) => {
+        const ta = new Date(a.createdAt).getTime()
+        const tb = new Date(b.createdAt).getTime()
+        if (Number.isNaN(ta) && Number.isNaN(tb)) return 0
+        if (Number.isNaN(ta)) return 1
+        if (Number.isNaN(tb)) return -1
+        return sort === 'latest' ? tb - ta : ta - tb
+      })
+    }
     return arr
   }, [bookings, filters, deferredSearch, sort])
 
@@ -177,6 +199,7 @@ export default function PhysioBookingsPage() {
       ) : (
         <ul className="flex flex-col gap-2">
           {displayBookings.map((b) => {
+            const meta = physioWorkflowMeta(b)
             const canStart = Boolean(b.userId?.coordinates || String(b.userId?.location || '').trim())
             return (
               <li key={b._id}>
@@ -184,7 +207,7 @@ export default function PhysioBookingsPage() {
                   className={[
                     'group flex gap-3 rounded-xl border border-gray-100 bg-white py-3 pl-3 pr-3 shadow-sm ring-1 ring-gray-100/90 transition-all duration-200',
                     'border-l-4 hover:bg-slate-50/90 hover:shadow-md hover:ring-slate-200/80',
-                    rowAccentClass(b),
+                    rowAccentClass(meta.tone),
                   ].join(' ')}
                 >
                   <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-slate-100 to-slate-200/90 text-sm font-bold text-slate-600 ring-1 ring-slate-200/80">
@@ -192,7 +215,7 @@ export default function PhysioBookingsPage() {
                   </div>
                   <Link
                     to={`/physio/bookings/${b._id}`}
-                    aria-label={`${formatBookingDateAndSlot(b.date, b.timeSlot)}, ${b.userId?.name || 'Patient'}, ${listStatusLabel(b)}`}
+                    aria-label={`${formatBookingDateAndSlot(b.date, b.timeSlot)}, ${b.userId?.name || 'Patient'}, ${meta.label}`}
                     className="min-w-0 flex-1"
                   >
                     <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -217,24 +240,26 @@ export default function PhysioBookingsPage() {
                     <p className="mt-0.5 line-clamp-1 text-xs leading-snug text-gray-500">{b.issue}</p>
                   </Link>
                   <div className="flex shrink-0 flex-col items-end justify-center gap-2 sm:flex-row sm:items-center sm:gap-3">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        openGoogleMapsDestination({
-                          coordinates: b.userId?.coordinates,
-                          address: b.userId?.location,
-                        })
-                      }
-                      disabled={!canStart}
-                      title={canStart ? 'Start navigation' : 'Address not available'}
-                      className="inline-flex items-center rounded-md border border-blue-200 bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700 transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      Start
-                    </button>
+                    {b.serviceType === 'home' ? (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          openGoogleMapsDestination({
+                            coordinates: b.userId?.coordinates,
+                            address: b.userId?.location,
+                          })
+                        }
+                        disabled={!canStart}
+                        title={canStart ? 'Start navigation' : 'Address not available'}
+                        className="inline-flex items-center rounded-md border border-blue-200 bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700 transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        Start
+                      </button>
+                    ) : null}
                     <span
-                      className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-semibold ring-1 ${listStatusClass(b)}`}
+                      className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-semibold ring-1 ${badgeClass(meta.tone)}`}
                     >
-                      {listStatusLabel(b)}
+                      {meta.label}
                     </span>
                     <Link
                       to={`/physio/bookings/${b._id}`}
