@@ -174,7 +174,9 @@ function installRequestFilter(page, allowedOrigin) {
 }
 
 async function captureRoute(page, target, { timeoutMs = 60_000 } = {}) {
-  await page.goto(target, { waitUntil: 'load', timeout: timeoutMs })
+  // domcontentloaded, not load: we only need the DOM (gated on the h1 below),
+  // not every hero/illustration image (some are 500-900KB) to finish decoding.
+  await page.goto(target, { waitUntil: 'domcontentloaded', timeout: timeoutMs })
   // 10s is plenty for a local static server; a longer wait just burns CI build
   // minutes on routes whose h1 will never appear (e.g. blocked API data).
   await page.waitForSelector('h1', { timeout: Math.min(timeoutMs, 10_000) })
@@ -279,44 +281,55 @@ async function main() {
       server.close()
       process.exit(0)
     }
-    let page = await browser.newPage()
-    await page.setViewport({ width: 1280, height: 900 })
-    await page.setUserAgent('PhysiOkhomPrerender/1.0 (+static-build)')
-    await installRequestFilter(page, origin)
-
-    let routeIndex = 0
-    let consecutiveFailures = 0
-    for (const route of routes) {
-      const outFile = routeToOutputPath(route)
-      const outDir = path.dirname(outFile)
-      fs.mkdirSync(outDir, { recursive: true })
-      const target = `${origin}${route}`
-      console.log(`[prerender] ${route} -> ${path.relative(clientRoot, outFile)}`)
-      try {
-        // Recycle the tab periodically to avoid Chromium slowdown on long runs.
-        if (routeIndex > 0 && routeIndex % 25 === 0) {
-          await page.close()
-          const fresh = await browser.newPage()
-          await fresh.setViewport({ width: 1280, height: 900 })
-          await fresh.setUserAgent('PhysiOkhomPrerender/1.0 (+static-build)')
-          await installRequestFilter(fresh, origin)
-          page = fresh
-        }
-        const html = await captureRoute(page, target)
-        fs.writeFileSync(outFile, html, 'utf8')
-        consecutiveFailures = 0
-      } catch (err) {
-        console.warn(`[prerender] failed ${route}: ${err?.message || err}`)
-        consecutiveFailures += 1
-        // A dead browser (e.g. OOM-killed on a small CI machine) makes every
-        // remaining route fail too — bail out instead of burning build minutes.
-        if (consecutiveFailures >= 8) {
-          console.warn('[prerender] 8 consecutive failures — aborting the rest of the run. Routes already written are kept.')
-          break
-        }
-      }
-      routeIndex += 1
+    async function makePage() {
+      const p = await browser.newPage()
+      await p.setViewport({ width: 1280, height: 900 })
+      await p.setUserAgent('PhysiOkhomPrerender/1.0 (+static-build)')
+      await installRequestFilter(p, origin)
+      return p
     }
+
+    const queue = routes.slice()
+    let failures = 0
+    let aborted = false
+
+    // ponytail: fixed pool size — bump PRERENDER_CONCURRENCY on a beefier build
+    // box, drop it if Chromium OOMs on a small one.
+    const concurrency = Math.max(1, Math.min(Number(process.env.PRERENDER_CONCURRENCY) || 4, routes.length))
+
+    async function worker() {
+      let page = await makePage()
+      let count = 0
+      while (queue.length && !aborted) {
+        const route = queue.shift()
+        const outFile = routeToOutputPath(route)
+        fs.mkdirSync(path.dirname(outFile), { recursive: true })
+        const target = `${origin}${route}`
+        console.log(`[prerender] ${route} -> ${path.relative(clientRoot, outFile)}`)
+        try {
+          // Recycle the tab periodically to avoid Chromium slowdown on long runs.
+          if (count > 0 && count % 25 === 0) {
+            await page.close()
+            page = await makePage()
+          }
+          const html = await captureRoute(page, target)
+          fs.writeFileSync(outFile, html, 'utf8')
+        } catch (err) {
+          console.warn(`[prerender] failed ${route}: ${err?.message || err}`)
+          failures += 1
+          // A dead browser (e.g. OOM-killed on a small CI machine) makes every
+          // remaining route fail too — bail out instead of burning build minutes.
+          if (failures >= 8) {
+            console.warn('[prerender] 8 failures — aborting the rest of the run. Routes already written are kept.')
+            aborted = true
+          }
+        }
+        count += 1
+      }
+      await page.close()
+    }
+
+    await Promise.all(Array.from({ length: concurrency }, worker))
   } finally {
     if (browser) await browser.close()
     server.close()
