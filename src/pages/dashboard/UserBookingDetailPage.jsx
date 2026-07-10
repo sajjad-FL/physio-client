@@ -395,7 +395,9 @@ export default function UserBookingDetailPage() {
                   {isOnline ? 'Your sessions' : 'Visit schedule'}
                 </h3>
                 <p className="mt-0.5 text-xs text-slate-500">
-                  {isOnline ? 'Session dates and physio notes' : 'Assessment and treatment sessions'}
+                  {isOnline
+                    ? 'Session dates — tap View details for physio notes'
+                    : 'Assessment and treatment — tap View details for physio notes'}
                 </p>
                 <div className="mt-3">
                   <BookingSessionTimeline

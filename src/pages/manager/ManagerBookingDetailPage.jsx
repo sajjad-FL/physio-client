@@ -536,6 +536,32 @@ export default function ManagerBookingDetailPage() {
                 </Button>
               </div>
             ) : null}
+
+            {hasPlan ? (
+              <div className="rounded-xl border border-slate-200 bg-slate-50/40 p-4">
+                <h3 className="text-sm font-semibold text-slate-900">Visit schedule</h3>
+                <p className="mt-0.5 text-xs text-slate-500">
+                  Sessions and notes from the physiotherapist — tap View details on a row.
+                </p>
+                <div className="mt-3">
+                  <BookingSessionTimeline
+                    booking={b}
+                    sessionPayments={sessionPaymentMap}
+                    notesViewer={{ enabled: true }}
+                    reschedule={{
+                      enabled: true,
+                      onReschedule: (row) => setRescheduleRow(row),
+                    }}
+                    adminSessions={{
+                      enabled: true,
+                      onDelete: handleDeleteSession,
+                      canDelete: (row) => Boolean(row.sessionId),
+                      deletingSessionId: sessionBusy,
+                    }}
+                  />
+                </div>
+              </div>
+            ) : null}
           </div>
         )}
 
@@ -579,30 +605,6 @@ export default function ManagerBookingDetailPage() {
           </div>
         )}
       </div>
-
-      {/* Visit schedule — always visible once a plan exists */}
-      {hasPlan ? (
-        <div className="min-w-0 overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-3 shadow-sm sm:p-4 md:p-5">
-          <h3 className="text-base font-semibold text-slate-900">Visit schedule</h3>
-          <p className="mt-1 text-sm text-slate-500">Complimentary assessment + treatment sessions.</p>
-          <div className="mt-4">
-            <BookingSessionTimeline
-              booking={b}
-              sessionPayments={sessionPaymentMap}
-              reschedule={{
-                enabled: true,
-                onReschedule: (row) => setRescheduleRow(row),
-              }}
-              adminSessions={{
-                enabled: true,
-                onDelete: handleDeleteSession,
-                canDelete: (row) => Boolean(row.sessionId),
-                deletingSessionId: sessionBusy,
-              }}
-            />
-          </div>
-        </div>
-      ) : null}
 
       {rescheduleRow != null ? (
         <RescheduleModal

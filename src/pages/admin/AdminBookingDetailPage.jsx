@@ -9,11 +9,10 @@ import {
   paymentModeLabel,
   billingTypeLabel,
   paymentStatusLabel,
-  sessionStatusLabel,
 } from '../../utils/bookingDisplay'
 import toast from 'react-hot-toast'
 import BookingSessionTimeline from '../../components/bookings/BookingSessionTimeline'
-import SessionNotesReadOnly from '../../components/bookings/SessionNotesReadOnly'
+import BookingWorkflowStepRail from '../../components/bookings/BookingWorkflowStepRail'
 import SessionProgressTracker from '../../components/bookings/SessionProgressTracker'
 import InstallmentsCard from '../../components/payments/InstallmentsCard'
 import Card from '../../components/ui/Card'
@@ -26,6 +25,29 @@ import { distanceKm, parseLatLng } from '../../utils/geoDistance'
 import { usePricingSettings, computeTravelSurchargePreview } from '../../hooks/usePricingSettings'
 import { DAILY_SLOTS } from '../../constants/slots'
 import { buildSessionPaymentMap } from '../../utils/sessionPaymentMap'
+import {
+  adminPageContext,
+  buildAdminWorkflowSteps,
+  defaultAdminOpenStep,
+} from '../../utils/adminBookingWorkflow'
+
+function badgeToneClass(tone) {
+  switch (tone) {
+    case 'urgent':
+      return 'bg-amber-50 text-amber-900 ring-amber-200/80'
+    case 'action':
+      return 'bg-teal-50 text-teal-900 ring-teal-200/80'
+    case 'waiting':
+      return 'bg-blue-50 text-blue-900 ring-blue-200/80'
+    case 'progress':
+      return 'bg-emerald-50 text-emerald-900 ring-emerald-200/80'
+    default:
+      return 'bg-slate-50 text-slate-700 ring-slate-200/80'
+  }
+}
+
+const actionBtn =
+  'cursor-pointer rounded-xl px-4 py-2.5 text-sm font-semibold shadow-sm transition-all duration-200 hover:shadow-md disabled:pointer-events-none disabled:opacity-50'
 
 export default function AdminBookingDetailPage() {
   const { id } = useParams()
@@ -56,6 +78,8 @@ export default function AdminBookingDetailPage() {
   const [careManagers, setCareManagers] = useState([])
   const [assignManagerId, setAssignManagerId] = useState('')
   const [assignManagerModalOpen, setAssignManagerModalOpen] = useState(false)
+  const [openStep, setOpenStep] = useState('case')
+  const [stepReady, setStepReady] = useState(false)
 
   const load = useCallback(async () => {
     if (!id) return
@@ -87,9 +111,28 @@ export default function AdminBookingDetailPage() {
     load()
   }, [load])
 
-  const b = booking
-  const activeDispute = useMemo(() => disputes.find((d) => d.status === 'open' || d.status === 'under_review'), [disputes])
+  useEffect(() => {
+    setStepReady(false)
+    setOpenStep('case')
+  }, [id])
 
+  const pageCtx = useMemo(() => adminPageContext(booking, { disputes }), [booking, disputes])
+  const steps = useMemo(() => (pageCtx ? buildAdminWorkflowSteps(pageCtx) : []), [pageCtx])
+
+  useEffect(() => {
+    if (!steps.length || stepReady) return
+    setOpenStep(defaultAdminOpenStep(steps))
+    setStepReady(true)
+  }, [steps, stepReady])
+
+  useEffect(() => {
+    if (!steps.length) return
+    if (!steps.some((s) => s.id === openStep)) {
+      setOpenStep(defaultAdminOpenStep(steps))
+    }
+  }, [steps, openStep])
+
+  const b = booking
   const selectedPhysioForAssign = useMemo(
     () => physios.find((p) => String(p._id) === String(assignPhysioId)),
     [physios, assignPhysioId],
@@ -129,14 +172,6 @@ export default function AdminBookingDetailPage() {
     return { sessions, subtotal, extraKm, surcharge, total }
   }, [assignPrice, selectedPhysioDistanceKm, b?.sessions, pricingSettings])
 
-  /**
-   * When admin picks a physio (or the booking already has one they are
-   * revising), prefill the price-per-session input with a sensible default so
-   * the admin rarely has to type it from scratch:
-   *  1. existing booking.amountPerSession (if already set)
-   *  2. otherwise the selected physio's profile pricePerSession
-   * The admin is still free to override before hitting Assign.
-   */
   useEffect(() => {
     if (!selectedPhysioForAssign) return
     if (assignPrice) return
@@ -151,36 +186,6 @@ export default function AdminBookingDetailPage() {
     }
   }, [selectedPhysioForAssign, booking?.amountPerSession, assignPrice])
 
-  /** Admin assigns physio; allow before or after patient payment (escrow may still be pending). */
-  const canAssign = useMemo(() => {
-    if (!b) return false
-    if (b.physioId) return false
-    if (b.status === 'completed') return false
-    if (b.paymentStatus === 'refunded') return false
-    return true
-  }, [b])
-
-  const canComplete = useMemo(() => {
-    if (!b) return false
-    return b.paymentStatus === 'held' && b.status !== 'completed'
-  }, [b])
-
-  const canRelease = useMemo(() => {
-    if (!b) return false
-    return b.paymentStatus === 'held' && b.sessionStatus === 'completed'
-  }, [b])
-
-  const canVerifyOffline = useMemo(() => {
-    if (!b) return false
-    return (
-      b.serviceType === 'home' &&
-      b.homePlanPaymentMode === 'offline' &&
-      b.planStatus === 'approved' &&
-      !b.offlinePaymentVerified &&
-      b.payment?.status === 'collected'
-    )
-  }, [b])
-
   async function handleAssignManager() {
     if (!b || !assignManagerId) {
       toast.error('Choose a care manager.')
@@ -191,6 +196,7 @@ export default function AdminBookingDetailPage() {
       await api.patch(`/admin/bookings/${b._id}/assign-manager`, { managerId: assignManagerId })
       toast.success('Care manager assigned')
       await load()
+      setOpenStep('staffing')
     } catch (err) {
       toast.error(err.response?.data?.message || 'Assign manager failed')
     } finally {
@@ -210,12 +216,15 @@ export default function AdminBookingDetailPage() {
     }
     setRowBusy('assign')
     try {
-      await api.patch(
-        `/bookings/${b._id}`,
-        { physioId: assignPhysioId, status: 'assigned', amountPerSession: priceNum },      )
+      await api.patch(`/bookings/${b._id}`, {
+        physioId: assignPhysioId,
+        status: 'assigned',
+        amountPerSession: priceNum,
+      })
       toast.success('Assigned')
       setAssignPrice('')
       await load()
+      setOpenStep('sessions')
     } catch (err) {
       toast.error(err.response?.data?.message || 'Assign failed')
     } finally {
@@ -306,11 +315,7 @@ export default function AdminBookingDetailPage() {
       const res = await api.get(`/notes/${b._id}`)
       setNotesModal(res.data)
     } catch (err) {
-      if (err.response?.status === 404) {
-        toast.error('No notes yet')
-      } else {
-        toast.error(err.response?.data?.message || 'Failed to load notes')
-      }
+      toast.error(err.response?.data?.message || 'Failed to load notes')
     }
   }
 
@@ -322,14 +327,15 @@ export default function AdminBookingDetailPage() {
     }
     setResolveSubmitting(true)
     try {
-      await api.patch(
-        `/admin/disputes/${resolveOpen._id}`,
-        { resolution: resolution.trim(), action: resolveAction },      )
+      await api.patch(`/admin/disputes/${resolveOpen._id}`, {
+        resolution: resolution.trim(),
+        action: resolveAction,
+      })
       toast.success('Dispute updated')
       setResolveOpen(null)
       await load()
-    } catch (e) {
-      toast.error(e.response?.data?.message || 'Failed')
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed')
     } finally {
       setResolveSubmitting(false)
     }
@@ -344,9 +350,10 @@ export default function AdminBookingDetailPage() {
     }
     setSessionBusy('add')
     try {
-      await api.post(
-        `/admin/bookings/${b._id}/sessions`,
-        { date: addSessionDate, timeSlot: addSessionTime },      )
+      await api.post(`/admin/bookings/${b._id}/sessions`, {
+        date: addSessionDate,
+        timeSlot: addSessionTime,
+      })
       toast.success('Session added')
       setAddSessionOpen(false)
       await load()
@@ -373,394 +380,143 @@ export default function AdminBookingDetailPage() {
     }
   }
 
-  const actionBtn =
-    'cursor-pointer rounded-xl px-4 py-2.5 text-sm font-semibold shadow-sm transition-all duration-200 hover:shadow-md disabled:pointer-events-none disabled:opacity-50'
-
   if (loading) {
-    return (
-      <div className="flex items-center gap-3">
-        <div className="h-5 w-5 animate-spin rounded-full border-2 border-border-subtle border-t-brand" aria-hidden />
-        <p className="text-sm font-medium text-ink-muted" role="status">
-          Loading booking…
-        </p>
-      </div>
-    )
+    return <div className="h-48 animate-pulse rounded-2xl bg-slate-100" />
   }
 
-  if (error || !b) {
+  if (error || !pageCtx || !b) {
     return (
-      <div className="rounded-2xl border border-dashed border-border-subtle bg-canvas/80 px-6 py-10 text-center">
-        <p className="text-sm font-medium text-ink">{error || 'Unable to load booking.'}</p>
+      <Card hover={false} className="p-6">
+        <p className="text-slate-600">{error || 'Unable to load booking.'}</p>
         <Button className="mt-4" variant="outline" onClick={() => navigate('/admin')}>
           Back to bookings
         </Button>
-      </div>
+      </Card>
     )
   }
 
+  const {
+    isHome,
+    canAssign,
+    canComplete,
+    canRelease,
+    canVerifyOffline,
+    activeDispute,
+    paymentSummary,
+    payments,
+    workflowMeta,
+  } = pageCtx
+
   const paidLine = formatPaidAt(b)
-  const sessionPaymentMap = buildSessionPaymentMap(b, b.payments || [], b.paymentSummary || null)
+  const sessionPaymentMap = buildSessionPaymentMap(b, payments, paymentSummary)
+  const activeStepMeta = steps.find((s) => s.id === openStep)
+  const stepColumns = steps.length >= 5 ? 5 : steps.length === 3 ? 3 : 4
+  const managerName = typeof b.managerId === 'object' ? b.managerId?.name : null
 
   return (
-    <div className="space-y-6">
-      <Link
-        to="/admin"
-        className="inline-flex w-fit items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-800"
-      >
-        ← Back to bookings
-      </Link>
+    <div className="min-w-0 max-w-full space-y-3 overflow-x-hidden sm:space-y-4">
+      {/* Header */}
+      <div className="rounded-2xl border border-slate-200/80 bg-white p-3 shadow-sm sm:p-4 md:p-5">
+        <Link to="/admin" className="text-sm font-medium text-teal-700 hover:text-teal-800">
+          ← All bookings
+        </Link>
+        <div className="mt-3 flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-xl font-semibold text-slate-900">{b.userId?.name || 'Patient'}</h1>
+            <p className="mt-0.5 text-sm text-slate-600">{b.issue || '—'}</p>
+            <p className="mt-2 text-sm text-slate-500">
+              {formatBookingDateAndSlot(b.date, b.timeSlot)}
+              {b.userId?.location ? ` · ${b.userId.location}` : ''}
+            </p>
+          </div>
+          <span
+            className={`inline-flex shrink-0 rounded-full px-3 py-1 text-xs font-semibold ring-1 ${badgeToneClass(
+              workflowMeta.tone,
+            )}`}
+          >
+            {workflowMeta.label}
+          </span>
+        </div>
+      </div>
 
-      {notesModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <button
-            type="button"
-            className="absolute inset-0 bg-ink/40"
-            aria-label="Close"
-            onClick={() => setNotesModal(null)}
-          />
-          <div className="relative max-h-[80vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
-            <h3 className="font-semibold text-ink">Clinical notes</h3>
-            <dl className="mt-4 space-y-2 text-sm">
-              <div>
-                <dt className="text-ink-muted">Symptoms</dt>
-                <dd className="text-ink">{notesModal.symptoms || '—'}</dd>
+      {/* Checklist */}
+      <div className="rounded-2xl border border-slate-200/80 bg-white p-2.5 shadow-sm sm:p-3 md:p-4">
+        <p className="mb-2 px-0.5 text-xs font-semibold uppercase tracking-wide text-slate-500 sm:mb-3">
+          Admin checklist
+        </p>
+        <BookingWorkflowStepRail
+          steps={steps}
+          openStep={openStep}
+          onSelect={setOpenStep}
+          columns={stepColumns}
+        />
+      </div>
+
+      {/* Active step panel */}
+      <div className="min-w-0 overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-3 shadow-sm sm:p-4 md:p-5">
+        <div className="mb-4 border-b border-slate-100 pb-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-teal-700">
+            Step {activeStepMeta?.num || 1} of {steps.length}
+          </p>
+          <h2 className="mt-0.5 text-lg font-semibold text-slate-900">{activeStepMeta?.label}</h2>
+          {activeStepMeta?.state === 'waiting' ? (
+            <p className="mt-1 text-sm text-blue-800">Action needed on this step.</p>
+          ) : null}
+        </div>
+
+        {openStep === 'case' && (
+          <div className="space-y-4">
+            <SessionProgressTracker
+              booking={b}
+              variant="full"
+              className="border-slate-200 bg-slate-50/50 ring-1 ring-slate-100"
+            />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Patient</p>
+                <p className="mt-1 font-semibold text-slate-900">{b.userId?.name ?? '—'}</p>
+                <p className="mt-0.5 text-sm text-slate-600">{b.userId?.phone ?? '—'}</p>
+                {b.userId?.location ? (
+                  <p className="mt-2 text-sm text-slate-600">{b.userId.location}</p>
+                ) : null}
               </div>
-              <div>
-                <dt className="text-ink-muted">Diagnosis</dt>
-                <dd className="text-ink">{notesModal.diagnosis || '—'}</dd>
+              <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Team</p>
+                <p className="mt-1 text-sm text-slate-800">
+                  <span className="font-medium">Manager:</span> {managerName || '—'}
+                </p>
+                <p className="mt-1 text-sm text-slate-800">
+                  <span className="font-medium">Physio:</span> {b.physioId?.name || '—'}
+                </p>
+                {b.physioId?.specialization ? (
+                  <p className="mt-1 text-xs text-slate-500">{b.physioId.specialization}</p>
+                ) : null}
               </div>
-              <div>
-                <dt className="text-ink-muted">Treatment plan</dt>
-                <dd className="text-ink">{notesModal.treatmentPlan || '—'}</dd>
-              </div>
-              <div>
-                <dt className="text-ink-muted">Notes</dt>
-                <dd className="text-ink">{notesModal.notes || '—'}</dd>
-              </div>
-            </dl>
+            </div>
+            <div className="rounded-xl border border-slate-200 bg-white p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Condition</p>
+              <p className="mt-1 text-sm leading-relaxed text-slate-800">{b.issue || '—'}</p>
+              <p className="mt-2 text-xs capitalize text-slate-500">
+                Service: {b.serviceType || 'home'}
+              </p>
+            </div>
             <button
               type="button"
-              className="mt-4 cursor-pointer rounded-lg bg-ink px-4 py-2 text-sm text-white shadow-sm hover:bg-ink/90"
-              onClick={() => setNotesModal(null)}
+              onClick={openNotes}
+              className={`${actionBtn} border border-slate-200 bg-white text-slate-800 hover:bg-slate-50`}
             >
-              Close
+              View clinical notes
             </button>
           </div>
-        </div>
-      )}
+        )}
 
-      {resolveOpen && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center bg-ink/40 p-4 backdrop-blur-sm">
-          <form
-            onSubmit={submitResolve}
-            className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl ring-1 ring-border-subtle"
-          >
-            <h3 className="type-page-title text-ink">Resolve dispute</h3>
-            <p className="mt-1 text-xs text-ink-muted">{resolveOpen.reason}</p>
-            <label className="mt-4 block text-sm font-medium text-ink">Resolution</label>
-            <textarea
-              value={resolution}
-              onChange={(e) => setResolution(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-border-subtle px-3 py-2 text-sm"
-              rows={3}
-              required
-            />
-            <label className="mt-3 block text-sm font-medium text-ink">Action</label>
-            <select
-              value={resolveAction}
-              onChange={(e) => setResolveAction(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-border-subtle px-3 py-2 text-sm"
-            >
-              <option value="reject">Reject</option>
-              <option value="refund">Refund</option>
-              <option value="release">Release</option>
-            </select>
-            <div className="mt-4 flex gap-2">
-              <button
-                type="button"
-                className="flex-1 rounded-xl border border-border-subtle py-2 text-sm font-medium"
-                onClick={() => setResolveOpen(null)}
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={resolveSubmitting}
-                className="flex-1 rounded-xl bg-blue-600 py-2 text-sm font-semibold text-white disabled:opacity-50"
-              >
-                {resolveSubmitting ? '…' : 'Submit'}
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {addSessionOpen && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center bg-ink/40 p-4 backdrop-blur-sm">
-          <form
-            onSubmit={submitAddSession}
-            className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl ring-1 ring-border-subtle"
-          >
-            <h3 className="type-page-title text-ink">Add session</h3>
-            <p className="mt-1 text-xs text-ink-muted">Choose a new date and time slot for this booking schedule.</p>
-            <label className="mt-4 block text-sm font-medium text-ink">Date</label>
-            <input
-              type="date"
-              value={addSessionDate}
-              onChange={(e) => setAddSessionDate(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-border-subtle px-3 py-2 text-sm"
-              required
-            />
-            <label className="mt-3 block text-sm font-medium text-ink">Time slot</label>
-            <select
-              value={addSessionTime}
-              onChange={(e) => setAddSessionTime(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-border-subtle px-3 py-2 text-sm"
-            >
-              {DAILY_SLOTS.map((slot) => (
-                <option key={slot} value={slot}>
-                  {slot}
-                </option>
-              ))}
-            </select>
-            <div className="mt-4 flex gap-2">
-              <button
-                type="button"
-                className="flex-1 rounded-xl border border-border-subtle py-2 text-sm font-medium"
-                onClick={() => setAddSessionOpen(false)}
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={sessionBusy === 'add'}
-                className="flex-1 rounded-xl bg-emerald-600 py-2 text-sm font-semibold text-white disabled:opacity-50"
-              >
-                {sessionBusy === 'add' ? 'Adding…' : 'Add session'}
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      <Card hover={false} className="border-border-subtle p-5 sm:p-6">
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-muted">Visit</p>
-        <p className="type-page-title mt-1 text-ink">{formatBookingDateAndSlot(b.date, b.timeSlot)}</p>
-        <div className="mt-4 flex flex-wrap gap-2">
-          <span className="inline-flex rounded-full bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-800 ring-1 ring-slate-200">
-            Booking: {b.status}
-          </span>
-          <span className="inline-flex rounded-full bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-800 ring-1 ring-slate-200">
-            Session: {sessionStatusLabel(b)}
-          </span>
-          <span className="inline-flex rounded-full bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-800 ring-1 ring-slate-200">
-            Payment: {paymentStatusLabel(b.paymentStatus)}
-          </span>
-        </div>
-      </Card>
-
-      <SessionProgressTracker
-        booking={b}
-        variant="full"
-        className="border-border-subtle bg-white ring-1 ring-border-subtle/80"
-      />
-
-      <Card hover={false} className="border-border-subtle p-5 sm:p-6">
-        <h2 className="text-sm font-semibold text-ink">Participants</h2>
-        <div className="mt-4 grid gap-6 sm:grid-cols-2">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-muted">Patient</p>
-            <p className="mt-1 font-medium text-ink">{b.userId?.name ?? '—'}</p>
-            <p className="mt-0.5 text-sm text-ink-muted">{b.userId?.phone ?? '—'}</p>
-          </div>
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-muted">Physiotherapist</p>
-            <p className="mt-1 font-medium text-ink">{b.physioId?.name ?? '—'}</p>
-            {b.physioId?.phone && <p className="mt-0.5 text-sm text-ink-muted">{b.physioId.phone}</p>}
-            {b.physioId?.specialization && (
-              <p className="mt-1 text-xs text-ink-muted">{b.physioId.specialization}</p>
-            )}
-          </div>
-        </div>
-        <div className="mt-4 border-t border-border-subtle/80 pt-4">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-muted">Issue</p>
-          <p className="mt-1 text-sm leading-relaxed text-ink">{b.issue}</p>
-        </div>
-        <p className="mt-3 text-xs capitalize text-ink-muted">Service: {b.serviceType || 'home'}</p>
-      </Card>
-
-      {(b.paymentSummary || (Array.isArray(b.payments) && b.payments.length > 0)) && (
-        <InstallmentsCard
-          title="Installments"
-          subtitle="Verify each collected offline installment so it counts toward the coverage gate."
-          summary={b.paymentSummary}
-          payments={b.payments}
-          showSessionColumn
-          renderRowActions={(p) => {
-            if (p.mode !== 'offline' || p.status !== 'collected') return null
-            const busy = paymentBusyId === String(p._id)
-            return (
-              <div className="flex justify-end gap-2">
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => handleVerifyInstallment(p._id)}
-                  className="rounded-lg border border-emerald-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-emerald-800 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {busy ? '…' : 'Verify'}
-                </button>
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => {
-                    setRejectPayment(p)
-                    setRejectPaymentReason('')
-                  }}
-                  className="rounded-lg border border-rose-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-rose-800 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Reject
-                </button>
-              </div>
-            )
-          }}
-        />
-      )}
-
-      <Card hover={false} className="border-border-subtle p-5 sm:p-6">
-        <h2 className="text-sm font-semibold text-ink">Session timeline</h2>
-        <div className="mt-4">
-          <BookingSessionTimeline
-            booking={b}
-            sessionPayments={sessionPaymentMap}
-            reschedule={{
-              enabled: true,
-              onReschedule: (row) => setRescheduleRow(row),
-            }}
-            adminSessions={{
-              enabled: true,
-              onAdd: () => {
-                setAddSessionDate(b?.date || '')
-                setAddSessionTime(b?.timeSlot || DAILY_SLOTS[0] || '10:00-11:00')
-                setAddSessionOpen(true)
-              },
-              onDelete: handleDeleteSession,
-              canDelete: (row) => Boolean(row.sessionId),
-              deletingSessionId: sessionBusy && sessionBusy !== 'add' ? sessionBusy : null,
-              disableAdd: sessionBusy === 'add',
-            }}
-          />
-        </div>
-      </Card>
-
-      {rescheduleRow != null && (
-        <RescheduleModal
-          key={rescheduleRow.key}
-          booking={b}
-          sessionRow={rescheduleRow}
-          title="Reschedule session (admin)"
-          patchReschedule={(body) => api.patch(`/admin/bookings/${b._id}/reschedule`, body)}
-          onClose={() => setRescheduleRow(null)}
-          onUpdated={load}
-        />
-      )}
-
-      <Card hover={false} className="border-border-subtle p-5 sm:p-6">
-        <h2 className="text-sm font-semibold text-ink">Session notes</h2>
-        <p className="mt-1 text-xs text-ink-muted">Written by the physiotherapist. Read-only for admin.</p>
-        <div className="mt-4">
-          <SessionNotesReadOnly booking={b} />
-        </div>
-      </Card>
-
-      <Card hover={false} className="border-border-subtle p-5 sm:p-6">
-        <h2 className="text-sm font-semibold text-ink">Plan details</h2>
-        <dl className="mt-4 grid gap-4 text-sm sm:grid-cols-2">
-          <div>
-            <dt className="text-[11px] font-semibold uppercase tracking-wide text-ink-muted">Sessions</dt>
-            <dd className="mt-0.5 font-medium text-ink">{b.sessions != null ? b.sessions : '—'}</dd>
-          </div>
-          <div>
-            <dt className="text-[11px] font-semibold uppercase tracking-wide text-ink-muted">Price / session</dt>
-            <dd className="mt-0.5 font-medium text-ink">
-              {b.amountPerSession != null ? `₹${b.amountPerSession}` : '—'}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-[11px] font-semibold uppercase tracking-wide text-ink-muted">Plan status</dt>
-            <dd className="mt-0.5 capitalize text-ink">{b.planStatus || '—'}</dd>
-          </div>
-          <div>
-            <dt className="text-[11px] font-semibold uppercase tracking-wide text-ink-muted">Total</dt>
-            <dd className="mt-0.5 font-semibold text-ink">{b.totalAmount != null ? `₹${b.totalAmount}` : '—'}</dd>
-          </div>
-          <div>
-            <dt className="text-[11px] font-semibold uppercase tracking-wide text-ink-muted">Distance at assign</dt>
-            <dd className="mt-0.5 font-medium text-ink">
-              {b.distanceKmAtAssign != null
-                ? `${Number(b.distanceKmAtAssign) < 10 ? Number(b.distanceKmAtAssign).toFixed(1) : Math.round(Number(b.distanceKmAtAssign))} km`
-                : '—'}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-[11px] font-semibold uppercase tracking-wide text-ink-muted">Distance surcharge</dt>
-            <dd className="mt-0.5 font-medium text-ink">
-              ₹{Number(b.distanceSurchargeAmount || 0).toFixed(2)}
-              {Number(b.distanceExtraKm || 0) > 0 && Number(b.distanceSurchargePerKm || 0) > 0
-                ? ` (${Number(b.distanceExtraKm)} km × ₹${Number(b.distanceSurchargePerKm)}/km)`
-                : ''}
-            </dd>
-          </div>
-        </dl>
-      </Card>
-
-      <Card hover={false} className="border-border-subtle p-5 sm:p-6">
-        <h2 className="text-sm font-semibold text-ink">Payment</h2>
-        <dl className="mt-4 space-y-3 text-sm">
-          <div className="flex justify-between gap-4">
-            <dt className="text-ink-muted">Mode</dt>
-            <dd className="font-medium text-ink">{paymentModeLabel(b)}</dd>
-          </div>
-          {billingTypeLabel(b) ? (
-            <div className="flex justify-between gap-4">
-              <dt className="text-ink-muted">Payment type</dt>
-              <dd className="font-medium text-ink">{billingTypeLabel(b)}</dd>
-            </div>
-          ) : null}
-          <div className="flex justify-between gap-4">
-            <dt className="text-ink-muted">Payment hold</dt>
-            <dd className="font-medium text-ink">{paymentStatusLabel(b.paymentStatus)}</dd>
-          </div>
-          <div className="flex justify-between gap-4">
-            <dt className="text-ink-muted">Payment step</dt>
-            <dd className="font-medium text-ink">{marketplacePaymentStatusLabel(b.payment?.status)}</dd>
-          </div>
-          <div className="flex justify-between gap-4">
-            <dt className="text-ink-muted">Amount</dt>
-            <dd className="font-semibold tabular-nums text-ink">{paymentAmountLabel(b)}</dd>
-          </div>
-          <div className="flex justify-between gap-4">
-            <dt className="text-ink-muted">Paid at</dt>
-            <dd className="text-ink">{paidLine || '—'}</dd>
-          </div>
-        </dl>
-      </Card>
-
-      {activeDispute && (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-950">
-          <p className="font-medium">Open dispute</p>
-          <p className="mt-1 text-xs">{activeDispute.reason}</p>
-        </div>
-      )}
-
-      <Card hover={false} className="border-border-subtle p-5 sm:p-6">
-        <h2 className="mb-4 text-sm font-semibold text-ink">Actions — manage booking</h2>
-        <div className="flex flex-col gap-4">
-          {b.serviceType === 'home' ? (
-            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
-              <div className="min-w-0 flex-1 space-y-2">
-                <label className="text-xs font-medium text-ink-muted">Care manager</label>
+        {openStep === 'staffing' && (
+          <div className="space-y-6">
+            {isHome ? (
+              <div className="space-y-3">
+                <p className="text-sm font-semibold text-slate-900">Care manager</p>
                 {b.managerId && !selectedManagerForAssign ? (
-                  <p className="text-sm text-ink">
+                  <p className="text-sm text-slate-700">
                     {typeof b.managerId === 'object' ? b.managerId.name : 'Assigned'} ·{' '}
                     {b.workflowStatus || '—'}
                   </p>
@@ -769,8 +525,8 @@ export default function AdminBookingDetailPage() {
                   <p className="text-xs text-amber-800">No care manager assigned yet</p>
                 ) : null}
                 {selectedManagerForAssign ? (
-                  <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border-subtle bg-white p-3 ring-1 ring-border-subtle/60">
-                    <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-slate-100 ring-1 ring-border-subtle">
+                  <div className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white p-3">
+                    <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-slate-100">
                       {resolveFileUrl(selectedManagerForAssign.avatarUrl) ? (
                         <img
                           src={resolveFileUrl(selectedManagerForAssign.avatarUrl)}
@@ -784,8 +540,8 @@ export default function AdminBookingDetailPage() {
                       )}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-semibold text-ink">{selectedManagerForAssign.name}</p>
-                      <p className="truncate text-xs text-ink-muted">
+                      <p className="text-sm font-semibold text-slate-900">{selectedManagerForAssign.name}</p>
+                      <p className="truncate text-xs text-slate-500">
                         {selectedManagerForAssign.phone || '—'}
                         {selectedManagerForAssign.zones?.length
                           ? ` · ${selectedManagerForAssign.zones.length} zone${selectedManagerForAssign.zones.length === 1 ? '' : 's'}`
@@ -796,7 +552,7 @@ export default function AdminBookingDetailPage() {
                       type="button"
                       disabled={rowBusy === 'manager'}
                       onClick={() => setAssignManagerModalOpen(true)}
-                      className="tap-feedback shrink-0 rounded-lg border border-border-subtle bg-white px-3 py-2 text-xs font-semibold text-ink hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                      className="tap-feedback shrink-0 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 hover:bg-slate-50 disabled:opacity-60"
                     >
                       Change
                     </button>
@@ -806,10 +562,10 @@ export default function AdminBookingDetailPage() {
                     type="button"
                     disabled={rowBusy === 'manager'}
                     onClick={() => setAssignManagerModalOpen(true)}
-                    className="tap-feedback w-full rounded-xl border border-dashed border-border-subtle bg-slate-50/80 px-4 py-4 text-left text-sm font-medium text-ink hover:border-teal-300 hover:bg-teal-50/40 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:min-w-[240px]"
+                    className="tap-feedback w-full rounded-xl border border-dashed border-slate-300 bg-slate-50/80 px-4 py-4 text-left text-sm font-medium hover:border-teal-300 hover:bg-teal-50/40 disabled:opacity-60 sm:w-auto sm:min-w-[240px]"
                   >
-                    <span className="block text-ink">Choose care manager…</span>
-                    <span className="mt-0.5 block text-xs font-normal text-ink-muted">
+                    <span className="block text-slate-900">Choose care manager…</span>
+                    <span className="mt-0.5 block text-xs font-normal text-slate-500">
                       Browse zone coverage, distance &amp; contact details
                     </span>
                   </button>
@@ -824,27 +580,26 @@ export default function AdminBookingDetailPage() {
                   selectedId={assignManagerId}
                   onConfirmSelect={(managerId) => setAssignManagerId(managerId)}
                 />
+                <Button
+                  type="button"
+                  disabled={rowBusy === 'manager' || !assignManagerId}
+                  onClick={handleAssignManager}
+                >
+                  {rowBusy === 'manager' ? '…' : b.managerId ? 'Reassign manager' : 'Assign manager'}
+                </Button>
               </div>
-              <Button
-                type="button"
-                disabled={rowBusy === 'manager' || !assignManagerId}
-                onClick={handleAssignManager}
-              >
-                {rowBusy === 'manager' ? '…' : b.managerId ? 'Reassign manager' : 'Assign manager'}
-              </Button>
-            </div>
-          ) : null}
-          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
-            <div className="min-w-0 flex-1 space-y-2">
-              <label className="text-xs font-medium text-ink-muted">Assign physiotherapist</label>
+            ) : null}
+
+            <div className="space-y-3 border-t border-slate-100 pt-4">
+              <p className="text-sm font-semibold text-slate-900">Physiotherapist</p>
               {canAssign && b.paymentStatus !== 'held' && (
                 <p className="text-[11px] text-amber-800/90">
                   Patient has not paid yet. You can still assign now, and ask the patient to complete payment.
                 </p>
               )}
               {selectedPhysioForAssign ? (
-                <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border-subtle bg-white p-3 ring-1 ring-border-subtle/60">
-                  <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-slate-100 ring-1 ring-border-subtle">
+                <div className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white p-3">
+                  <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-slate-100">
                     {resolveFileUrl(selectedPhysioForAssign.avatar) ? (
                       <img
                         src={resolveFileUrl(selectedPhysioForAssign.avatar)}
@@ -858,9 +613,10 @@ export default function AdminBookingDetailPage() {
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-ink">{selectedPhysioForAssign.name}</p>
-                    <p className="truncate text-xs text-ink-muted">
-                      {selectedPhysioForAssign.specialization || '—'} · {selectedPhysioForAssign.experience ?? 0} yrs
+                    <p className="text-sm font-semibold text-slate-900">{selectedPhysioForAssign.name}</p>
+                    <p className="truncate text-xs text-slate-500">
+                      {selectedPhysioForAssign.specialization || '—'} ·{' '}
+                      {selectedPhysioForAssign.experience ?? 0} yrs
                     </p>
                   </div>
                   <button
@@ -868,7 +624,7 @@ export default function AdminBookingDetailPage() {
                     disabled={rowBusy === 'assign' || !canAssign}
                     title={!canAssign && b?.physioId ? 'Booking already has a physiotherapist' : undefined}
                     onClick={() => setAssignModalOpen(true)}
-                    className="tap-feedback shrink-0 rounded-lg border border-border-subtle bg-white px-3 py-2 text-xs font-semibold text-ink hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="tap-feedback shrink-0 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 hover:bg-slate-50 disabled:opacity-60"
                   >
                     Change
                   </button>
@@ -889,10 +645,12 @@ export default function AdminBookingDetailPage() {
                       : undefined
                   }
                   onClick={() => setAssignModalOpen(true)}
-                  className="tap-feedback w-full rounded-xl border border-dashed border-border-subtle bg-slate-50/80 px-4 py-4 text-left text-sm font-medium text-ink hover:border-teal-300 hover:bg-teal-50/40 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:min-w-[240px]"
+                  className="tap-feedback w-full rounded-xl border border-dashed border-slate-300 bg-slate-50/80 px-4 py-4 text-left text-sm font-medium hover:border-teal-300 hover:bg-teal-50/40 disabled:opacity-60 sm:w-auto sm:min-w-[240px]"
                 >
-                  <span className="block text-ink">Choose physiotherapist…</span>
-                  <span className="mt-0.5 block text-xs font-normal text-ink-muted">Browse photos, ratings &amp; experience</span>
+                  <span className="block text-slate-900">Choose physiotherapist…</span>
+                  <span className="mt-0.5 block text-xs font-normal text-slate-500">
+                    Browse photos, ratings &amp; experience
+                  </span>
                 </button>
               )}
               <AdminAssignPhysioModal
@@ -902,13 +660,13 @@ export default function AdminBookingDetailPage() {
                 physios={physios}
                 patientCoords={b?.userId?.coordinates}
                 selectedId={assignPhysioId}
-                onConfirmSelect={(id) => setAssignPhysioId(id)}
+                onConfirmSelect={(physioId) => setAssignPhysioId(physioId)}
               />
               {assignPhysioId && canAssign && (
-                <div className="rounded-xl border border-border-subtle bg-white p-3 ring-1 ring-border-subtle/60">
+                <div className="rounded-xl border border-slate-200 bg-white p-3">
                   <label
                     htmlFor="assign-price-input"
-                    className="block text-xs font-semibold uppercase tracking-wide text-ink-muted"
+                    className="block text-xs font-semibold uppercase tracking-wide text-slate-500"
                   >
                     Price per session (₹)
                   </label>
@@ -930,105 +688,431 @@ export default function AdminBookingDetailPage() {
                       className="w-full min-w-0 rounded-lg bg-transparent px-2 py-2 text-sm text-slate-900 outline-none placeholder:text-slate-400"
                     />
                   </div>
-                  <p className="mt-1.5 text-[11px] text-ink-muted">
+                  <p className="mt-1.5 text-[11px] text-slate-500">
                     The patient will be charged this amount
-                    {b?.sessions > 1 ? ` × ${b.sessions} session${b.sessions === 1 ? '' : 's'}` : ''}.
-                    Physiotherapist earning and platform commission are recalculated automatically.
+                    {b?.sessions > 1 ? ` × ${b.sessions} sessions` : ''}.
                   </p>
                   {assignPreview && (
                     <div className="mt-2 rounded-lg bg-slate-50 px-3 py-2 text-[11px] text-slate-700 ring-1 ring-slate-200">
                       <p>Base total: ₹{assignPreview.subtotal.toFixed(2)}</p>
                       <p className="mt-0.5">
-                        Distance surcharge (₹{pricingSettings.distanceSurchargePerKmRupees}/km beyond {pricingSettings.distanceSurchargeBaseKm} km, floor):
-                        {' '}
-                        ₹{assignPreview.surcharge.toFixed(2)}
+                        Distance surcharge (₹{pricingSettings.distanceSurchargePerKmRupees}/km beyond{' '}
+                        {pricingSettings.distanceSurchargeBaseKm} km): ₹{assignPreview.surcharge.toFixed(2)}
                         {selectedPhysioDistanceKm != null && (
                           <span className="text-slate-500">
                             {' '}
-                            ({selectedPhysioDistanceKm < 10 ? selectedPhysioDistanceKm.toFixed(1) : Math.round(selectedPhysioDistanceKm)} km, extra {assignPreview.extraKm} km)
+                            (
+                            {selectedPhysioDistanceKm < 10
+                              ? selectedPhysioDistanceKm.toFixed(1)
+                              : Math.round(selectedPhysioDistanceKm)}{' '}
+                            km, extra {assignPreview.extraKm} km)
                           </span>
                         )}
                       </p>
-                      <p className="mt-0.5 font-semibold text-slate-900">Estimated final total: ₹{assignPreview.total.toFixed(2)}</p>
+                      <p className="mt-0.5 font-semibold text-slate-900">
+                        Estimated final total: ₹{assignPreview.total.toFixed(2)}
+                      </p>
                     </div>
                   )}
                 </div>
               )}
+              <button
+                type="button"
+                disabled={
+                  rowBusy === 'assign' || !canAssign || !assignPhysioId || !(Number(assignPrice) > 0)
+                }
+                onClick={handleAssign}
+                className={`${actionBtn} bg-teal-600 text-white hover:bg-teal-700 disabled:opacity-50`}
+              >
+                {rowBusy === 'assign' ? '…' : 'Assign physio'}
+              </button>
+              {!canAssign && b.physioId ? (
+                <p className="text-sm text-emerald-800">
+                  Physio already assigned: <span className="font-semibold">{b.physioId.name}</span>
+                </p>
+              ) : null}
             </div>
-            <button
-              type="button"
-              disabled={
-                rowBusy === 'assign' ||
-                !canAssign ||
-                !assignPhysioId ||
-                !(Number(assignPrice) > 0)
-              }
-              onClick={handleAssign}
-              className={`${actionBtn} bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50`}
-            >
-              {rowBusy === 'assign' ? '…' : 'Assign'}
-            </button>
           </div>
+        )}
 
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              disabled={rowBusy === 'complete' || !canComplete}
-              onClick={handleComplete}
-              className={`${actionBtn} border border-border-subtle bg-white text-ink hover:bg-gray-50`}
-            >
-              {rowBusy === 'complete' ? '…' : 'Mark booking complete'}
-            </button>
-            {canVerifyOffline && (
+        {openStep === 'sessions' && (
+          <div className="space-y-4">
+            <SessionProgressTracker
+              booking={b}
+              variant="full"
+              className="border-slate-200 bg-slate-50/50 ring-1 ring-slate-100"
+            />
+            <div className="rounded-xl border border-slate-200 bg-slate-50/40 p-4">
+              <h3 className="text-sm font-semibold text-slate-900">Visit schedule</h3>
+              <p className="mt-0.5 text-xs text-slate-500">
+                Add, reschedule, or delete sessions. Tap View details for physio notes on a row.
+              </p>
+              <div className="mt-3">
+                <BookingSessionTimeline
+                  booking={b}
+                  sessionPayments={sessionPaymentMap}
+                  notesViewer={{ enabled: true }}
+                  reschedule={{
+                    enabled: true,
+                    onReschedule: (row) => setRescheduleRow(row),
+                  }}
+                  adminSessions={{
+                    enabled: true,
+                    onAdd: () => {
+                      setAddSessionDate(b?.date || '')
+                      setAddSessionTime(b?.timeSlot || DAILY_SLOTS[0] || '10:00-11:00')
+                      setAddSessionOpen(true)
+                    },
+                    onDelete: handleDeleteSession,
+                    canDelete: (row) => Boolean(row.sessionId),
+                    deletingSessionId: sessionBusy && sessionBusy !== 'add' ? sessionBusy : null,
+                    disableAdd: sessionBusy === 'add',
+                  }}
+                />
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
               <button
                 type="button"
-                disabled={rowBusy === 'verifyOff'}
-                onClick={handleVerifyOffline}
-                className={`${actionBtn} bg-amber-600 text-white hover:bg-amber-700`}
+                disabled={rowBusy === 'complete' || !canComplete}
+                onClick={handleComplete}
+                className={`${actionBtn} border border-slate-200 bg-white text-slate-800 hover:bg-slate-50`}
               >
-                {rowBusy === 'verifyOff' ? '…' : 'Verify payment'}
+                {rowBusy === 'complete' ? '…' : 'Mark booking complete'}
               </button>
-            )}
-            <button
-              type="button"
-              onClick={openNotes}
-              className={`${actionBtn} border border-border-subtle bg-white text-ink hover:bg-gray-50`}
-            >
-              View notes
-            </button>
-            <button
-              type="button"
-              disabled={!canRelease || rowBusy === 'release'}
-              onClick={handleRelease}
-              className={`${actionBtn} bg-green-600 text-white hover:bg-green-700`}
-            >
-              {rowBusy === 'release' ? '…' : 'Release payment'}
-            </button>
-            {activeDispute && (
               <button
                 type="button"
-                onClick={() => {
-                  setResolveOpen(activeDispute)
-                  setResolution('')
-                  setResolveAction('reject')
+                onClick={openNotes}
+                className={`${actionBtn} border border-slate-200 bg-white text-slate-800 hover:bg-slate-50`}
+              >
+                View clinical notes
+              </button>
+            </div>
+          </div>
+        )}
+
+        {openStep === 'payments' && (
+          <div className="space-y-4">
+            <dl className="grid grid-cols-2 gap-x-3 gap-y-3 rounded-xl bg-slate-50/80 p-4 text-sm">
+              <div className="min-w-0">
+                <dt className="text-slate-500">Sessions</dt>
+                <dd className="mt-0.5 font-semibold text-slate-900">{b.sessions != null ? b.sessions : '—'}</dd>
+              </div>
+              <div className="min-w-0">
+                <dt className="text-slate-500">Price / session</dt>
+                <dd className="mt-0.5 font-semibold tabular-nums text-slate-900">
+                  {b.amountPerSession != null ? `₹${b.amountPerSession}` : '—'}
+                </dd>
+              </div>
+              <div className="min-w-0">
+                <dt className="text-slate-500">Plan status</dt>
+                <dd className="mt-0.5 capitalize font-semibold text-slate-900">{b.planStatus || '—'}</dd>
+              </div>
+              <div className="min-w-0">
+                <dt className="text-slate-500">Total</dt>
+                <dd className="mt-0.5 font-semibold tabular-nums text-slate-900">{paymentAmountLabel(b)}</dd>
+              </div>
+              <div className="min-w-0">
+                <dt className="text-slate-500">Distance</dt>
+                <dd className="mt-0.5 font-semibold text-slate-900">
+                  {b.distanceKmAtAssign != null
+                    ? `${Number(b.distanceKmAtAssign) < 10 ? Number(b.distanceKmAtAssign).toFixed(1) : Math.round(Number(b.distanceKmAtAssign))} km`
+                    : '—'}
+                </dd>
+              </div>
+              <div className="min-w-0 col-span-2 sm:col-span-1">
+                <dt className="text-slate-500">Surcharge</dt>
+                <dd className="mt-0.5 wrap-break-word font-semibold text-slate-900">
+                  ₹{Number(b.distanceSurchargeAmount || 0).toFixed(2)}
+                  {Number(b.distanceExtraKm || 0) > 0 && Number(b.distanceSurchargePerKm || 0) > 0
+                    ? ` (${Number(b.distanceExtraKm)} km × ₹${Number(b.distanceSurchargePerKm)}/km)`
+                    : ''}
+                </dd>
+              </div>
+            </dl>
+
+            <dl className="grid grid-cols-2 gap-x-3 gap-y-3 rounded-xl border border-slate-200 bg-white p-4 text-sm">
+              <div className="min-w-0">
+                <dt className="text-slate-500">Mode</dt>
+                <dd className="mt-0.5 font-medium text-slate-900">{paymentModeLabel(b)}</dd>
+              </div>
+              {billingTypeLabel(b) ? (
+                <div className="min-w-0">
+                  <dt className="text-slate-500">Payment type</dt>
+                  <dd className="mt-0.5 font-medium text-slate-900">{billingTypeLabel(b)}</dd>
+                </div>
+              ) : null}
+              <div className="min-w-0">
+                <dt className="text-slate-500">Hold</dt>
+                <dd className="mt-0.5 font-medium text-slate-900">{paymentStatusLabel(b.paymentStatus)}</dd>
+              </div>
+              <div className="min-w-0">
+                <dt className="text-slate-500">Status</dt>
+                <dd className="mt-0.5 font-medium text-slate-900">
+                  {marketplacePaymentStatusLabel(b.payment?.status)}
+                </dd>
+              </div>
+              <div className="min-w-0 col-span-2">
+                <dt className="text-slate-500">Paid at</dt>
+                <dd className="mt-0.5 font-medium text-slate-900">{paidLine || '—'}</dd>
+              </div>
+            </dl>
+
+            {(paymentSummary || payments.length > 0) && (
+              <InstallmentsCard
+                title="Installments"
+                subtitle="Verify each collected offline installment so it counts toward the coverage gate."
+                summary={paymentSummary}
+                payments={payments}
+                showSessionColumn
+                renderRowActions={(p) => {
+                  if (p.mode !== 'offline' || p.status !== 'collected') return null
+                  const busy = paymentBusyId === String(p._id)
+                  return (
+                    <div className="flex justify-end gap-2">
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => handleVerifyInstallment(p._id)}
+                        className="rounded-lg border border-emerald-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-emerald-800 hover:bg-emerald-50 disabled:opacity-50"
+                      >
+                        {busy ? '…' : 'Verify'}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => {
+                          setRejectPayment(p)
+                          setRejectPaymentReason('')
+                        }}
+                        className="rounded-lg border border-rose-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-rose-800 hover:bg-rose-50 disabled:opacity-50"
+                      >
+                        Reject
+                      </button>
+                    </div>
+                  )
                 }}
-                className={`${actionBtn} border border-rose-200 bg-rose-50 text-rose-900 hover:bg-rose-100`}
-              >
-                Resolve dispute
-              </button>
+              />
             )}
+
+            <div className="flex flex-wrap gap-2">
+              {canVerifyOffline && (
+                <button
+                  type="button"
+                  disabled={rowBusy === 'verifyOff'}
+                  onClick={handleVerifyOffline}
+                  className={`${actionBtn} bg-amber-600 text-white hover:bg-amber-700`}
+                >
+                  {rowBusy === 'verifyOff' ? '…' : 'Verify offline payment'}
+                </button>
+              )}
+              <button
+                type="button"
+                disabled={!canRelease || rowBusy === 'release'}
+                onClick={handleRelease}
+                className={`${actionBtn} bg-emerald-600 text-white hover:bg-emerald-700`}
+              >
+                {rowBusy === 'release' ? '…' : 'Release payment'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {openStep === 'disputes' && (
+          <div className="space-y-4">
+            {activeDispute ? (
+              <>
+                <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+                  <p className="font-semibold">Open dispute</p>
+                  <p className="mt-1 text-xs">{activeDispute.reason}</p>
+                </div>
+                <Button
+                  type="button"
+                  onClick={() => {
+                    setResolveOpen(activeDispute)
+                    setResolution('')
+                    setResolveAction('reject')
+                  }}
+                  className="bg-rose-600 hover:bg-rose-700"
+                >
+                  Resolve dispute
+                </Button>
+              </>
+            ) : (
+              <p className="rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                No open disputes on this booking.
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Modals */}
+      {notesModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <button
+            type="button"
+            className="absolute inset-0 bg-slate-900/40"
+            aria-label="Close"
+            onClick={() => setNotesModal(null)}
+          />
+          <div className="relative max-h-[80vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
+            <h3 className="font-semibold text-slate-900">Clinical notes</h3>
+            {notesModal.empty ? (
+              <p className="mt-3 rounded-xl bg-slate-50 px-3 py-2.5 text-sm text-slate-600">
+                No SOAP clinical notes yet. The physiotherapist can add them from Clinical notes.
+                Per-visit notes are still available under Sessions → View details.
+              </p>
+            ) : null}
+            <dl className="mt-4 space-y-2 text-sm">
+              <div>
+                <dt className="text-slate-500">Symptoms</dt>
+                <dd className="text-slate-900">{notesModal.symptoms || '—'}</dd>
+              </div>
+              <div>
+                <dt className="text-slate-500">Diagnosis</dt>
+                <dd className="text-slate-900">{notesModal.diagnosis || '—'}</dd>
+              </div>
+              <div>
+                <dt className="text-slate-500">Treatment plan</dt>
+                <dd className="text-slate-900">{notesModal.treatmentPlan || '—'}</dd>
+              </div>
+              <div>
+                <dt className="text-slate-500">Notes</dt>
+                <dd className="text-slate-900">{notesModal.notes || '—'}</dd>
+              </div>
+            </dl>
+            <button
+              type="button"
+              className="mt-4 cursor-pointer rounded-lg bg-slate-900 px-4 py-2 text-sm text-white shadow-sm hover:bg-slate-800"
+              onClick={() => setNotesModal(null)}
+            >
+              Close
+            </button>
           </div>
         </div>
-      </Card>
+      )}
+
+      {resolveOpen && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm">
+          <form
+            onSubmit={submitResolve}
+            className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl ring-1 ring-slate-200"
+          >
+            <h3 className="type-page-title text-slate-900">Resolve dispute</h3>
+            <p className="mt-1 text-xs text-slate-500">{resolveOpen.reason}</p>
+            <label className="mt-4 block text-sm font-medium text-slate-800">Resolution</label>
+            <textarea
+              value={resolution}
+              onChange={(e) => setResolution(e.target.value)}
+              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+              rows={3}
+              required
+            />
+            <label className="mt-3 block text-sm font-medium text-slate-800">Action</label>
+            <select
+              value={resolveAction}
+              onChange={(e) => setResolveAction(e.target.value)}
+              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+            >
+              <option value="reject">Reject</option>
+              <option value="refund">Refund</option>
+              <option value="release">Release</option>
+            </select>
+            <div className="mt-4 flex gap-2">
+              <button
+                type="button"
+                className="flex-1 rounded-xl border border-slate-200 py-2 text-sm font-medium"
+                onClick={() => setResolveOpen(null)}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={resolveSubmitting}
+                className="flex-1 rounded-xl bg-teal-600 py-2 text-sm font-semibold text-white disabled:opacity-50"
+              >
+                {resolveSubmitting ? '…' : 'Submit'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {addSessionOpen && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm">
+          <form
+            onSubmit={submitAddSession}
+            className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl ring-1 ring-slate-200"
+          >
+            <h3 className="type-page-title text-slate-900">Add session</h3>
+            <p className="mt-1 text-xs text-slate-500">
+              Choose a new date and time slot for this booking schedule.
+            </p>
+            <label className="mt-4 block text-sm font-medium text-slate-800">Date</label>
+            <input
+              type="date"
+              value={addSessionDate}
+              onChange={(e) => setAddSessionDate(e.target.value)}
+              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+              required
+            />
+            <label className="mt-3 block text-sm font-medium text-slate-800">Time slot</label>
+            <select
+              value={addSessionTime}
+              onChange={(e) => setAddSessionTime(e.target.value)}
+              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+            >
+              {DAILY_SLOTS.map((slot) => (
+                <option key={slot} value={slot}>
+                  {slot}
+                </option>
+              ))}
+            </select>
+            <div className="mt-4 flex gap-2">
+              <button
+                type="button"
+                className="flex-1 rounded-xl border border-slate-200 py-2 text-sm font-medium"
+                onClick={() => setAddSessionOpen(false)}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={sessionBusy === 'add'}
+                className="flex-1 rounded-xl bg-emerald-600 py-2 text-sm font-semibold text-white disabled:opacity-50"
+              >
+                {sessionBusy === 'add' ? 'Adding…' : 'Add session'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {rescheduleRow != null && (
+        <RescheduleModal
+          key={rescheduleRow.key}
+          booking={b}
+          sessionRow={rescheduleRow}
+          title="Reschedule session (admin)"
+          patchReschedule={(body) => api.patch(`/admin/bookings/${b._id}/reschedule`, body)}
+          onClose={() => setRescheduleRow(null)}
+          onUpdated={load}
+        />
+      )}
 
       {rejectPayment && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal>
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          role="dialog"
+          aria-modal
+        >
           <Card hover={false} className="w-full max-w-md shadow-xl">
-            <h3 className="type-page-title text-ink">Reject installment</h3>
-            <p className="mt-2 text-sm text-ink-muted">
+            <h3 className="type-page-title text-slate-900">Reject installment</h3>
+            <p className="mt-2 text-sm text-slate-600">
               This will mark the collection as rejected; the physiotherapist can record a corrected one.
             </p>
-            <label htmlFor="reject-reason" className="mt-4 block text-sm font-medium text-ink">
+            <label htmlFor="reject-reason" className="mt-4 block text-sm font-medium text-slate-800">
               Reason
             </label>
             <textarea

@@ -5,7 +5,11 @@
  */
 export default function BookingWorkflowStepRail({ steps, openStep, onSelect, columns = 4 }) {
   const gridCols =
-    columns === 3 ? 'grid-cols-3' : columns === 4 ? 'grid-cols-4' : `grid-cols-${columns}`
+    columns === 3
+      ? 'grid-cols-3'
+      : columns === 5
+      ? 'grid-cols-5'
+      : 'grid-cols-4'
 
   return (
     <ol className={`grid gap-1 sm:gap-2 ${gridCols}`}>

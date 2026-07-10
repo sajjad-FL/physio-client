@@ -47,8 +47,10 @@ function statusLabel(status) {
  *     onRate: (row) => void,
  *     rowBlockedReason?: (row: object) => string,
  *   },
+ *   notesViewer?: { enabled: boolean },
  *   sessionPayments?: Record<string, { recorded: number, items?: Array }>,
  * }} props
+ * notesViewer — read-only expand of physio session notes (manager/admin)
  */
 export default function BookingSessionTimeline({
   booking,
@@ -56,6 +58,7 @@ export default function BookingSessionTimeline({
   adminSessions,
   physioActions,
   patientActions,
+  notesViewer,
   sessionPayments,
 }) {
   const rows = normalizeSessionRows(booking)
@@ -171,7 +174,7 @@ export default function BookingSessionTimeline({
           const payEntry = sessionPayments?.[payKey]
           const hasPaymentInfo = Boolean(sessionPayments) && !isComplimentary
           const notesOpen = openNotesKey === r.key
-          const showPatientNotesBtn = Boolean(patientActions?.enabled)
+          const showViewNotesBtn = Boolean(patientActions?.enabled || notesViewer?.enabled)
           const showPhysioNotesBtn = Boolean(physioActions?.onNotes) && !isComplimentary
           const physioHasNotes = Boolean(r.notes?.text?.trim())
 
@@ -265,7 +268,7 @@ export default function BookingSessionTimeline({
                       {physioHasNotes ? 'Edit session notes' : 'Add session notes'}
                     </button>
                   )}
-                  {showPatientNotesBtn && (
+                  {showViewNotesBtn && (
                     <button
                       type="button"
                       onClick={() => setOpenNotesKey(notesOpen ? null : r.key)}
@@ -321,10 +324,10 @@ export default function BookingSessionTimeline({
                 {statusLabel(rowStatus)}
               </span>
               </div>
-              {showPatientNotesBtn && notesOpen ? (
+              {showViewNotesBtn && notesOpen ? (
                 <div className="mt-2 w-full">
                   <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-teal-700">
-                    From your physiotherapist
+                    {patientActions?.enabled ? 'From your physiotherapist' : 'Session notes'}
                   </p>
                   <SessionNoteReadOnlyBlock row={r} showLabel={false} />
                 </div>
