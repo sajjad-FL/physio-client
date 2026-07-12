@@ -34,10 +34,14 @@ function buildDefaultDates(count, startYmd = todayISO()) {
   return Array.from({ length: count }, (_, i) => addDaysYmd(startYmd, i))
 }
 
+function buildDefaultTimes(count, slot = '') {
+  return Array.from({ length: count }, () => slot)
+}
+
 /**
- * Manager books a technique visit (cupping, etc.) for the patient on this case.
- * Creates a separate technique_managed booking under the same manager.
- * Multi-session: one booking with a visit schedule — manager picks each visit date.
+ * Manager books a technique visit for the patient on this case.
+ * Always technique_managed — patient pays totalAmount; payout uses with-manager split.
+ * Each session can have its own date and time slot.
  */
 export default function SuggestTechniquePanel({ sourceBookingId, disabled = false }) {
   const navigate = useNavigate()
@@ -46,7 +50,7 @@ export default function SuggestTechniquePanel({ sourceBookingId, disabled = fals
   const [issue, setIssue] = useState('')
   const [sessions, setSessions] = useState(1)
   const [visitDates, setVisitDates] = useState(() => buildDefaultDates(1))
-  const [timeSlot, setTimeSlot] = useState('')
+  const [visitTimes, setVisitTimes] = useState(() => buildDefaultTimes(1))
   const [busy, setBusy] = useState(false)
 
   const prices = settings?.techniquePrices || {}
@@ -56,8 +60,13 @@ export default function SuggestTechniquePanel({ sourceBookingId, disabled = fals
     () =>
       TECHNIQUES.map((t) => {
         const p = Number(prices[t.bookingIssue])
-        const priceLabel = Number.isFinite(p) && p > 0 ? `₹${p.toLocaleString('en-IN')}` : null
-        return { issue: t.bookingIssue, label: t.label, priceLabel }
+        const priceOk = Number.isFinite(p) && p > 0
+        return {
+          issue: t.bookingIssue,
+          label: t.label,
+          price: priceOk ? p : null,
+          priceLabel: priceOk ? `₹${p.toLocaleString('en-IN')}` : null,
+        }
       }),
     [prices],
   )
@@ -66,6 +75,7 @@ export default function SuggestTechniquePanel({ sourceBookingId, disabled = fals
   const unitOk = Number.isFinite(unitPrice) && unitPrice > 0
   const sessionCount = Math.min(15, Math.max(1, Math.round(Number(sessions) || 1)))
   const totalAmount = unitOk ? unitPrice * sessionCount : null
+  const selectedLabel = options.find((o) => o.issue === issue)?.label
 
   useEffect(() => {
     setVisitDates((prev) => {
@@ -79,6 +89,14 @@ export default function SuggestTechniquePanel({ sourceBookingId, disabled = fals
       }
       return prev.slice(0, sessionCount)
     })
+    setVisitTimes((prev) => {
+      if (prev.length === sessionCount) return prev
+      if (prev.length < sessionCount) {
+        const fill = prev[prev.length - 1] || ''
+        return [...prev, ...Array.from({ length: sessionCount - prev.length }, () => fill)]
+      }
+      return prev.slice(0, sessionCount)
+    })
   }, [sessionCount])
 
   function selectIssue(nextIssue) {
@@ -86,6 +104,7 @@ export default function SuggestTechniquePanel({ sourceBookingId, disabled = fals
     setIssue(nextIssue)
     setSessions(nextSessions)
     setVisitDates(buildDefaultDates(nextSessions))
+    setVisitTimes(buildDefaultTimes(nextSessions))
   }
 
   function setVisitDateAt(index, value) {
@@ -96,9 +115,22 @@ export default function SuggestTechniquePanel({ sourceBookingId, disabled = fals
     })
   }
 
+  function setVisitTimeAt(index, value) {
+    setVisitTimes((prev) => {
+      const next = [...prev]
+      next[index] = value
+      return next
+    })
+  }
+
+  function bumpSessions(delta) {
+    const next = Math.min(15, Math.max(1, sessionCount + delta))
+    setSessions(next)
+  }
+
   async function submit() {
-    if (!issue || !timeSlot) {
-      toast.error('Choose technique and time slot')
+    if (!issue) {
+      toast.error('Choose a technique')
       return
     }
     if (sessionCount < 1 || sessionCount > 15) {
@@ -109,13 +141,19 @@ export default function SuggestTechniquePanel({ sourceBookingId, disabled = fals
       toast.error('Pick a date for every session')
       return
     }
+    if (visitTimes.length !== sessionCount || visitTimes.some((t) => !t)) {
+      toast.error('Pick a time for every session')
+      return
+    }
     setBusy(true)
     try {
       const res = await api.post(`/manager/bookings/${sourceBookingId}/suggest-technique`, {
         issue,
-        timeSlot,
         sessions: sessionCount,
         dates: visitDates,
+        times: visitTimes,
+        // First session time kept for older API consumers
+        timeSlot: visitTimes[0],
       })
       toast.success(
         sessionCount > 1
@@ -131,33 +169,40 @@ export default function SuggestTechniquePanel({ sourceBookingId, disabled = fals
   }
 
   const allDatesFilled = visitDates.length === sessionCount && visitDates.every(Boolean)
+  const allTimesFilled = visitTimes.length === sessionCount && visitTimes.every(Boolean)
+  const canSubmit = !busy && !!issue && allDatesFilled && allTimesFilled && sessionCount >= 1
 
   return (
-    <div className="rounded-2xl border border-slate-200/80 bg-white p-3 shadow-sm sm:p-4">
-      <div className="flex flex-wrap items-start justify-between gap-2">
+    <div className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-sm">
+      <div className="flex flex-wrap items-start justify-between gap-3 px-4 py-3.5 sm:px-5">
         <div className="min-w-0">
-          <h2 className="text-sm font-semibold text-slate-900">Suggest technique</h2>
-          <p className="mt-0.5 text-xs text-slate-500">
-            Book cupping, dry needling, taping, or IASTM as a separate visit for this patient.
+          <h2 className="text-base font-semibold text-slate-900">Suggest technique</h2>
+          <p className="mt-0.5 text-sm text-slate-500">
+            Book a separate technique visit under your care. Each session can have its own date and
+            time.
           </p>
         </div>
         <button
           type="button"
           disabled={disabled || busy}
           onClick={() => setOpen((v) => !v)}
-          className="shrink-0 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-teal-800 hover:bg-teal-50 disabled:opacity-50"
+          className={`shrink-0 rounded-xl px-3.5 py-2 text-sm font-semibold transition ${
+            open
+              ? 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+              : 'bg-teal-600 text-white hover:bg-teal-700'
+          } disabled:opacity-50`}
         >
           {open ? 'Close' : 'Book technique'}
         </button>
       </div>
 
       {open ? (
-        <div className="mt-3 space-y-3 border-t border-slate-100 pt-3">
-          <div>
-            <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">
+        <div className="space-y-5 border-t border-slate-100 bg-slate-50/40 px-4 py-4 sm:px-5">
+          <section>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
               Technique
             </p>
-            <div className="flex flex-wrap gap-2">
+            <div className="grid gap-2 sm:grid-cols-2">
               {options.map((o) => {
                 const selected = issue === o.issue
                 return (
@@ -166,101 +211,139 @@ export default function SuggestTechniquePanel({ sourceBookingId, disabled = fals
                     type="button"
                     disabled={busy}
                     onClick={() => selectIssue(o.issue)}
-                    className={`rounded-xl border px-3 py-2 text-left text-sm transition ${
+                    className={`flex items-center justify-between gap-3 rounded-xl border px-3.5 py-3 text-left transition ${
                       selected
-                        ? 'border-teal-500 bg-teal-50 text-teal-900 ring-1 ring-teal-500/30'
-                        : 'border-slate-200 bg-white text-slate-800 hover:border-slate-300'
+                        ? 'border-teal-500 bg-teal-50 ring-1 ring-teal-500/25'
+                        : 'border-slate-200 bg-white hover:border-slate-300'
                     }`}
                   >
-                    <span className="font-medium">{o.label}</span>
-                    {o.priceLabel ? (
-                      <span className="mt-0.5 block text-xs text-slate-500">{o.priceLabel}/visit</span>
-                    ) : null}
+                    <span
+                      className={`text-sm font-semibold ${selected ? 'text-teal-900' : 'text-slate-900'}`}
+                    >
+                      {o.label}
+                    </span>
+                    <span
+                      className={`shrink-0 text-sm tabular-nums ${
+                        selected ? 'font-semibold text-teal-800' : 'text-slate-500'
+                      }`}
+                    >
+                      {o.priceLabel || '—'}
+                    </span>
                   </button>
                 )
               })}
             </div>
-          </div>
+          </section>
 
-          <label className="block max-w-xs">
-            <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Sessions
-            </span>
-            <input
-              type="number"
-              min={1}
-              max={15}
-              step={1}
-              value={sessions}
-              disabled={busy || !issue}
-              onChange={(e) => setSessions(e.target.value)}
-              onBlur={() => setSessions(sessionCount)}
-              className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20 disabled:bg-slate-50"
-            />
+          <section className="rounded-xl border border-slate-200 bg-white p-3.5 sm:p-4">
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Sessions</p>
+                <p className="mt-0.5 text-xs text-slate-500">1–15 visits · same technique</p>
+              </div>
+              <div className="inline-flex items-center rounded-xl border border-slate-200 bg-slate-50">
+                <button
+                  type="button"
+                  disabled={busy || !issue || sessionCount <= 1}
+                  onClick={() => bumpSessions(-1)}
+                  className="h-10 w-10 text-lg font-semibold text-slate-600 hover:bg-white disabled:opacity-40"
+                  aria-label="Fewer sessions"
+                >
+                  −
+                </button>
+                <input
+                  type="number"
+                  min={1}
+                  max={15}
+                  step={1}
+                  value={sessions}
+                  disabled={busy || !issue}
+                  onChange={(e) => setSessions(e.target.value)}
+                  onBlur={() => setSessions(sessionCount)}
+                  className="h-10 w-14 border-x border-slate-200 bg-white text-center text-sm font-semibold tabular-nums focus:outline-none disabled:bg-slate-50"
+                />
+                <button
+                  type="button"
+                  disabled={busy || !issue || sessionCount >= 15}
+                  onClick={() => bumpSessions(1)}
+                  className="h-10 w-10 text-lg font-semibold text-slate-600 hover:bg-white disabled:opacity-40"
+                  aria-label="More sessions"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+
             {totalAmount != null ? (
-              <p className="mt-1.5 text-xs font-medium text-slate-700">
-                Total {sessionCount} × ₹{unitPrice.toLocaleString('en-IN')} = ₹
-                {totalAmount.toLocaleString('en-IN')}
-              </p>
-            ) : null}
-          </label>
+              <div className="mt-3 rounded-lg bg-teal-50 px-3 py-2.5 text-sm text-teal-950">
+                <p className="font-semibold">
+                  Patient pays ₹{totalAmount.toLocaleString('en-IN')}
+                </p>
+                <p className="mt-0.5 text-xs text-teal-800/90">
+                  {sessionCount} × ₹{unitPrice.toLocaleString('en-IN')}
+                  {selectedLabel ? ` · ${selectedLabel}` : ''} · with-manager booking
+                </p>
+              </div>
+            ) : (
+              <p className="mt-3 text-xs text-slate-500">Select a technique to see the patient total.</p>
+            )}
+          </section>
 
-          <div>
-            <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Visit dates
+          <section>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Visit schedule
             </p>
-            <div className="grid gap-2 sm:grid-cols-2">
+            <div className="space-y-3">
               {Array.from({ length: sessionCount }, (_, i) => (
-                <label key={`visit-${i}`} className="block">
-                  <span className="mb-1 block text-xs font-medium text-slate-600">
-                    Session {i + 1}
-                  </span>
-                  <input
-                    type="date"
-                    min={minDate}
-                    value={visitDates[i] || ''}
-                    disabled={busy}
-                    onChange={(e) => setVisitDateAt(i, e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
-                  />
-                </label>
+                <div
+                  key={`visit-${i}`}
+                  className="rounded-xl border border-slate-200 bg-white p-3 sm:p-3.5"
+                >
+                  <p className="mb-2.5 text-sm font-semibold text-slate-900">Session {i + 1}</p>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <label className="block">
+                      <span className="mb-1 block text-xs font-medium text-slate-500">Date</span>
+                      <input
+                        type="date"
+                        min={minDate}
+                        value={visitDates[i] || ''}
+                        disabled={busy}
+                        onChange={(e) => setVisitDateAt(i, e.target.value)}
+                        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+                      />
+                    </label>
+                    <label className="block">
+                      <span className="mb-1 block text-xs font-medium text-slate-500">Time</span>
+                      <select
+                        value={visitTimes[i] || ''}
+                        disabled={busy}
+                        onChange={(e) => setVisitTimeAt(i, e.target.value)}
+                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+                      >
+                        <option value="">Select time…</option>
+                        {DAILY_SLOTS.map((s) => (
+                          <option key={s} value={s}>
+                            {formatBookingTimeSlot(s)}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+                </div>
               ))}
             </div>
-          </div>
+          </section>
 
-          <div>
-            <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Time slot (same for all visits)
-            </p>
-            <div className="flex flex-wrap gap-1.5">
-              {DAILY_SLOTS.map((s) => {
-                const selected = timeSlot === s
-                return (
-                  <button
-                    key={s}
-                    type="button"
-                    disabled={busy}
-                    onClick={() => setTimeSlot(s)}
-                    className={`rounded-lg border px-2.5 py-1.5 text-xs font-medium ${
-                      selected
-                        ? 'border-teal-500 bg-teal-50 text-teal-900'
-                        : 'border-slate-200 text-slate-700 hover:bg-slate-50'
-                    }`}
-                  >
-                    {formatBookingTimeSlot(s)}
-                  </button>
-                )
-              })}
-            </div>
+          <div className="flex flex-wrap items-center gap-3 border-t border-slate-200/80 pt-4">
+            <Button type="button" disabled={!canSubmit} onClick={submit}>
+              {busy ? 'Booking…' : 'Create technique booking'}
+            </Button>
+            {!canSubmit && !busy ? (
+              <p className="text-xs text-slate-500">
+                Choose technique, then a date and time for every session.
+              </p>
+            ) : null}
           </div>
-
-          <Button
-            type="button"
-            disabled={busy || !issue || !timeSlot || !allDatesFilled || sessionCount < 1}
-            onClick={submit}
-          >
-            {busy ? 'Booking…' : 'Create technique booking'}
-          </Button>
         </div>
       ) : null}
     </div>

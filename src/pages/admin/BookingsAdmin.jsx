@@ -8,7 +8,7 @@ import AdminBookingsFilterDrawer, {
   DEFAULT_ADMIN_BOOKING_FILTERS,
 } from '../../components/admin/AdminBookingsFilterDrawer'
 import SessionsCalendarView from '../../components/physio/SessionsCalendarView'
-import { bookingCodeBadge } from '../../utils/bookingDisplay'
+import { bookingCodeBadge, bookingConditionLabel } from '../../utils/bookingDisplay'
 
 function statusBadgeClass(status) {
   const map = {
@@ -199,6 +199,7 @@ export default function BookingsAdmin() {
           {displayBookings.map((b) => {
             const patient = b.userId?.name ?? '—'
             const physio = b.physioId?.name ?? 'Unassigned'
+            const bookedFor = bookingConditionLabel(b) || 'Home visit'
             return (
               <li key={b._id}>
                 <Link
@@ -213,6 +214,9 @@ export default function BookingsAdmin() {
                           {bookingCodeBadge(b)}
                         </span>
                       ) : null}
+                    </p>
+                    <p className="truncate text-xs font-medium text-ink">
+                      {bookedFor}
                     </p>
                     <p className="truncate text-xs text-ink-muted">
                       {patient}

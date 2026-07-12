@@ -131,59 +131,72 @@ function ServiceChip({ item }) {
   )
 }
 
-export default function ServicesSection() {
+export default function ServicesSection({
+  variant = 'full',
+  title = 'Book by Need',
+  intro = null,
+}) {
   const [viewMode, setViewMode] = useState('grid')
+  const compact = variant === 'compact'
 
   return (
-    <section aria-labelledby="services-heading" className="space-y-5">
-
-      {/* Header + Grid / Body Map toggle */}
+    <section aria-labelledby="services-heading" className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <div className="flex h-6 w-6 items-center justify-center rounded-md bg-teal-50">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0d9488" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-              <circle cx="12" cy="12" r="3"/>
-              <path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"/>
-            </svg>
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <div className="flex h-6 w-6 items-center justify-center rounded-md bg-teal-50">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0d9488" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"/>
+              </svg>
+            </div>
+            <h2 id="services-heading" className="text-sm font-bold text-slate-900">{title}</h2>
           </div>
-          <h2 id="services-heading" className="text-sm font-bold text-slate-900">Book by Need</h2>
+          {intro ? <p className="mt-1 text-xs text-slate-500">{intro}</p> : null}
         </div>
-        <PainViewModeToggle
-          mode={viewMode}
-          onChange={(mode) => setViewMode(mode)}
-        />
+        {!compact ? (
+          <PainViewModeToggle mode={viewMode} onChange={(mode) => setViewMode(mode)} />
+        ) : null}
       </div>
 
-      {viewMode === 'map' ? (
+      {!compact && viewMode === 'map' ? (
         <PainBodyMapPanel bookCtaLabel={(issue) => `Book for ${issue}`} />
       ) : (
         <>
-      {/* ── Techniques — highlighted first ── */}
-      <div>
-        <p className="mb-2.5 text-[10px] font-bold uppercase tracking-widest text-slate-400">Treatment Techniques</p>
-        <div className="flex gap-2.5">
-          {TECHNIQUES.map((t) => <TechniqueCard key={t.label} item={t} />)}
-        </div>
-      </div>
+          <div>
+            <p className="mb-2.5 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+              Treatment Techniques
+            </p>
+            <div className="flex gap-2.5">
+              {TECHNIQUES.map((t) => (
+                <TechniqueCard key={t.label} item={t} />
+              ))}
+            </div>
+          </div>
 
-      {/* ── Conditions — single horizontal scroll row ── */}
-      <div>
-        <p className="mb-2.5 text-[10px] font-bold uppercase tracking-widest text-slate-400">Conditions We Treat</p>
-        <div className="flex gap-2.5 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
-          {CONDITIONS.map((c) => <ConditionCard key={c.label} item={c} />)}
-        </div>
-      </div>
+          <div>
+            <p className="mb-2.5 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+              Conditions We Treat
+            </p>
+            <div className="flex gap-2.5 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
+              {CONDITIONS.map((c) => (
+                <ConditionCard key={c.label} item={c} />
+              ))}
+            </div>
+          </div>
 
-      {/* ── Specialties scroll ── */}
-      <div>
-        <p className="mb-2.5 text-[10px] font-bold uppercase tracking-widest text-slate-400">Care Specialties</p>
-        <div className="flex gap-4 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
-          {SPECIALTIES.map((s) => <ServiceChip key={s.label} item={s} />)}
-        </div>
-      </div>
+          <div>
+            <p className="mb-2.5 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+              Care Specialties
+            </p>
+            <div className="flex gap-4 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
+              {SPECIALTIES.map((s) => (
+                <ServiceChip key={s.label} item={s} />
+              ))}
+            </div>
+          </div>
         </>
       )}
-
     </section>
   )
 }
