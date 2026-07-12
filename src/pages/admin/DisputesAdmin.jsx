@@ -5,12 +5,7 @@ import { formatBookingTimeSlot } from '../../utils/date'
 import toast from 'react-hot-toast'
 import AdminPageHeader, { AdminLink } from '../../components/admin/AdminPageHeader'
 import Pagination from '../../components/Pagination'
-
-function idShort(id) {
-  if (!id) return '—'
-  const s = String(id)
-  return s.length > 10 ? s.slice(0, 6) + '…' + s.slice(-4) : s
-}
+import { bookingCodeBadge } from '../../utils/bookingDisplay'
 
 export default function DisputesAdmin() {
   const [list, setList] = useState([])
@@ -117,7 +112,7 @@ export default function DisputesAdmin() {
                           className="font-mono text-xs font-semibold text-teal-700 hover:underline"
                           title={String(bid)}
                         >
-                          {idShort(bid)}
+                          {bookingCodeBadge(d.bookingId) || '—'}
                         </Link>
                       ) : (
                         <span className="font-mono text-xs text-ink">—</span>
@@ -184,7 +179,7 @@ export default function DisputesAdmin() {
                       to={`/admin/bookings/${detail.bookingId._id}`}
                       className="font-semibold text-teal-700 hover:underline"
                     >
-                      Open booking {idShort(detail.bookingId._id)}
+                      Open booking {bookingCodeBadge(detail.bookingId) || '—'}
                     </Link>
                   ) : (
                     '—'

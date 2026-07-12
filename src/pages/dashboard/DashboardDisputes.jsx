@@ -5,17 +5,12 @@ import toast from 'react-hot-toast'
 import { disputeStatusBadge, paymentBadge } from './dashboardUtils'
 import Pagination from '../../components/Pagination'
 import { formatBookingTimeSlot } from '../../utils/date'
+import { bookingCodeBadge } from '../../utils/bookingDisplay'
 
 function RowSkeleton() {
   return (
     <div className="h-16 animate-pulse rounded-xl bg-white shadow-sm ring-1 ring-border-subtle/80" />
   )
-}
-
-function idTail(id) {
-  if (!id) return '—'
-  const s = String(id)
-  return s.length > 8 ? '…' + s.slice(-6) : s
 }
 
 export default function DashboardDisputes() {
@@ -73,7 +68,7 @@ export default function DashboardDisputes() {
                   <div>
                     <p className="font-semibold text-ink">{d.reason}</p>
                     <p className="mt-1 type-caption text-ink-muted">
-                      Booking <span className="font-mono text-xs">{idTail(b?._id)}</span> ·{' '}
+                      Booking <span className="font-mono text-xs">{bookingCodeBadge(b) || '—'}</span> ·{' '}
                       {d.raisedBy === 'physio' ? 'Raised by physiotherapist' : 'Raised by you'} ·{' '}
                       {b?.date} {formatBookingTimeSlot(b?.timeSlot)}
                     </p>

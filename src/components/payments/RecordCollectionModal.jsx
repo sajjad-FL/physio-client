@@ -123,7 +123,7 @@ export default function RecordCollectionModal({
       toast.success(
         successMessage ||
           (apiPath?.includes('/manager/')
-            ? 'Collection recorded — see Finance → Collections for settlement status.'
+            ? 'Collection recorded — see Finance for cash waiting on admin.'
             : 'Collection recorded. Awaiting admin verification.'),
       )
       onRecorded?.()
@@ -143,7 +143,7 @@ export default function RecordCollectionModal({
     <>
       Pending:{' '}
       <strong className="font-semibold text-slate-800">{outstandingLabel}</strong>. This updates the
-      patient plan and adds an entry under Finance → Collections until admin batch settlement.
+      patient plan and shows under Finance as cash waiting for admin.
     </>
   ) : (
     <>

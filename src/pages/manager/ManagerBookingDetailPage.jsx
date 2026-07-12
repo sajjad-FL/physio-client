@@ -13,7 +13,7 @@ import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import { resolveFileUrl } from '../../utils/serverOrigin'
 import { buildSessionPaymentMap } from '../../utils/sessionPaymentMap'
-import { billingTypeLabel, paymentAmountLabel } from '../../utils/bookingDisplay'
+import { billingTypeLabel, paymentAmountLabel, bookingCodeBadge } from '../../utils/bookingDisplay'
 import { managerWorkflowMeta } from '../../utils/managerWorkflow'
 
 function badgeToneClass(tone) {
@@ -378,6 +378,9 @@ export default function ManagerBookingDetailPage() {
         <div className="mt-3 flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <h1 className="text-xl font-semibold text-slate-900">{b.userId?.name || 'Patient'}</h1>
+            {bookingCodeBadge(b) ? (
+              <p className="mt-1 font-mono text-xs font-semibold text-slate-500">{bookingCodeBadge(b)}</p>
+            ) : null}
             <p className="mt-0.5 text-sm text-slate-600">{b.issue}</p>
             <p className="mt-2 text-sm text-slate-500">
               {formatBookingDateAndSlot(b.date, b.timeSlot)}
@@ -576,6 +579,11 @@ export default function ManagerBookingDetailPage() {
                   <span className="font-semibold tabular-nums text-slate-900">
                     {outstanding > 0.009 ? `₹${outstanding.toFixed(0)}` : '₹0'}
                   </span>
+                  . Cash you record waits under{' '}
+                  <Link to="/manager/finance?tab=cash" className="font-semibold text-teal-700 underline">
+                    Finance
+                  </Link>{' '}
+                  until admin settles — then your commission is withdrawable.
                 </p>
                 <InstallmentsCard
                   title="Collections"
@@ -593,11 +601,11 @@ export default function ManagerBookingDetailPage() {
                 </InstallmentsCard>
                 {!canCollect && outstanding <= 0.009 && Number(paymentSummary?.totalPaid || 0) > 0 ? (
                   <p className="rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
-                    Fully paid. See{' '}
-                    <Link to="/manager/ledger" className="font-semibold underline">
-                      Finance → Collections
+                    Fully paid. Check{' '}
+                    <Link to="/manager/finance?tab=cash" className="font-semibold underline">
+                      Finance
                     </Link>{' '}
-                    for settlement status.
+                    for cash waiting on admin and your commission.
                   </p>
                 ) : null}
               </>

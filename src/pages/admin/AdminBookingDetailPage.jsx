@@ -9,6 +9,7 @@ import {
   paymentModeLabel,
   billingTypeLabel,
   paymentStatusLabel,
+  bookingCodeBadge,
 } from '../../utils/bookingDisplay'
 import toast from 'react-hot-toast'
 import BookingSessionTimeline from '../../components/bookings/BookingSessionTimeline'
@@ -423,6 +424,9 @@ export default function AdminBookingDetailPage() {
         <div className="mt-3 flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <h1 className="text-xl font-semibold text-slate-900">{b.userId?.name || 'Patient'}</h1>
+            {bookingCodeBadge(b) ? (
+              <p className="mt-1 font-mono text-xs font-semibold text-slate-500">{bookingCodeBadge(b)}</p>
+            ) : null}
             <p className="mt-0.5 text-sm text-slate-600">{b.issue || '—'}</p>
             <p className="mt-2 text-sm text-slate-500">
               {formatBookingDateAndSlot(b.date, b.timeSlot)}

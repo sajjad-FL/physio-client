@@ -1,10 +1,12 @@
 /**
- * Store Puppeteer's Chrome download inside the project instead of ~/.cache.
- * Render (and most CI) caches node_modules but not the home directory, so the
- * default location produces "Could not find Chrome" on cached builds.
+ * Store Puppeteer's Chrome download inside node_modules/.cache.
+ * Render (and most CI) caches node_modules between builds but wipes the repo
+ * checkout and the home directory — so this is the only location where the
+ * ~170MB Chrome download survives to the next deploy instead of re-downloading
+ * every time.
  */
 const { join } = require('path')
 
 module.exports = {
-  cacheDirectory: join(__dirname, '.cache', 'puppeteer'),
+  cacheDirectory: join(__dirname, 'node_modules', '.cache', 'puppeteer'),
 }

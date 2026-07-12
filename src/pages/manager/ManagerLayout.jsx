@@ -25,16 +25,6 @@ const iconLedger = (
   </svg>
 )
 
-const iconWallet = (
-  <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24" aria-hidden>
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M21 12a2.25 2.25 0 00-2.25-2.25H15a3 3 0 11-6 0H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9M3 12V9m18 0a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 9m18 0V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v3"
-    />
-  </svg>
-)
-
 const iconProfile = (
   <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24" aria-hidden>
     <path
@@ -49,8 +39,13 @@ function titleForPath(pathname) {
   if (pathname.startsWith('/manager/profile')) return 'Profile'
   if (pathname.startsWith('/manager/bookings/') && pathname !== '/manager/bookings') return 'Case detail'
   if (pathname.startsWith('/manager/bookings')) return 'Your cases'
-  if (pathname.startsWith('/manager/ledger')) return 'Collections'
-  if (pathname.startsWith('/manager/wallet')) return 'Earnings'
+  if (
+    pathname.startsWith('/manager/finance') ||
+    pathname.startsWith('/manager/ledger') ||
+    pathname.startsWith('/manager/wallet')
+  ) {
+    return 'Finance'
+  }
   return 'Care Manager'
 }
 
@@ -62,11 +57,12 @@ function subtitleForPath(pathname) {
   if (pathname.startsWith('/manager/bookings')) {
     return 'Assess patients, create plans, and coordinate care'
   }
-  if (pathname.startsWith('/manager/ledger')) {
-    return 'Cash/UPI collected — awaiting admin settlement'
-  }
-  if (pathname.startsWith('/manager/wallet')) {
-    return 'Your commission, balance & withdrawals'
+  if (
+    pathname.startsWith('/manager/finance') ||
+    pathname.startsWith('/manager/ledger') ||
+    pathname.startsWith('/manager/wallet')
+  ) {
+    return 'Cash you collected, what admin settles, and your commission'
   }
   return 'Home care operations'
 }
@@ -95,8 +91,7 @@ export default function ManagerLayout() {
   const navItems = useMemo(
     () => [
       { section: 'Operations', to: '/manager/bookings', label: 'Cases', icon: iconCases, badgeCount: actionCount },
-      { section: 'Finance', to: '/manager/ledger', label: 'Collections', icon: iconLedger },
-      { section: 'Finance', to: '/manager/wallet', label: 'Earnings', icon: iconWallet },
+      { section: 'Finance', to: '/manager/finance', label: 'Finance', icon: iconLedger },
       { section: 'Account', to: '/manager/profile', label: 'Profile', icon: iconProfile, end: true },
     ],
     [actionCount],
@@ -105,8 +100,7 @@ export default function ManagerLayout() {
   const bottomNavItems = useMemo(
     () => [
       { to: '/manager/bookings', label: 'Cases', icon: iconCases },
-      { to: '/manager/ledger', label: 'Collections', icon: iconLedger },
-      { to: '/manager/wallet', label: 'Earnings', icon: iconWallet },
+      { to: '/manager/finance', label: 'Finance', icon: iconLedger },
       { to: '/manager/profile', label: 'Profile', icon: iconProfile, end: true },
     ],
     [],

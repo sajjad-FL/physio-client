@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { formatBookingDateAndSlot } from '../../utils/date'
+import { bookingCodeBadge } from '../../utils/bookingDisplay'
 
 /**
  * Normalize booking context from API shapes: bookingRef, populated bookingId, or flat queue row.
@@ -25,14 +26,10 @@ export function resolveAdminCaseContext(source) {
   const issue = ref?.issue || source.bookingIssue || booking?.issue || null
   const date = ref?.date || source.bookingDate || booking?.date || null
   const timeSlot = ref?.timeSlot || source.bookingTimeSlot || booking?.timeSlot || null
+  const bookingCode =
+    ref?.bookingCode || source.bookingCode || booking?.bookingCode || null
 
-  return { id, patientName, issue, date, timeSlot }
-}
-
-function shortBookingId(id) {
-  if (!id) return null
-  const s = String(id)
-  return s.length > 6 ? s.slice(-6) : s
+  return { id, patientName, issue, date, timeSlot, bookingCode }
 }
 
 /**
@@ -49,7 +46,7 @@ export default function AdminCaseContext({
   compact = false,
   showLink = true,
   showPatient = true,
-  showIdSuffix = false,
+  showIdSuffix: _showIdSuffix = false,
   className = '',
 }) {
   const ctx = resolveAdminCaseContext(
@@ -67,7 +64,7 @@ export default function AdminCaseContext({
   const visitLine = [ctx.issue, formatBookingDateAndSlot(ctx.date, ctx.timeSlot)]
     .filter(Boolean)
     .join(' · ')
-  const idSuffix = showIdSuffix ? shortBookingId(ctx.id) : null
+  const idSuffix = bookingCodeBadge(ctx)
 
   if (compact) {
     return (
@@ -76,7 +73,7 @@ export default function AdminCaseContext({
           <div className="font-medium text-gray-900">{ctx.patientName}</div>
         ) : null}
         {visitLine ? <div className="text-xs text-gray-500">{visitLine}</div> : null}
-        {idSuffix ? <div className="text-[10px] text-gray-400">#{idSuffix}</div> : null}
+        {idSuffix ? <div className="text-[10px] font-mono text-gray-400">{idSuffix}</div> : null}
         {showLink && ctx.id ? (
           <Link
             to={`/admin/bookings/${ctx.id}`}
@@ -95,7 +92,7 @@ export default function AdminCaseContext({
         <p className="font-medium text-gray-900">{ctx.patientName || 'Patient'}</p>
       ) : null}
       {visitLine ? <p className="text-xs text-gray-500">{visitLine}</p> : null}
-      {idSuffix ? <p className="text-[10px] text-gray-400">Case #{idSuffix}</p> : null}
+      {idSuffix ? <p className="text-[10px] font-mono text-gray-400">{idSuffix}</p> : null}
       {showLink && ctx.id ? (
         <Link
           to={`/admin/bookings/${ctx.id}`}
@@ -112,6 +109,7 @@ export function AdminCaseContextSummary({ source, className = '' }) {
   const ctx = resolveAdminCaseContext(source)
   if (!ctx) return null
   const parts = [
+    bookingCodeBadge(ctx) || null,
     ctx.patientName,
     ctx.issue,
     formatBookingDateAndSlot(ctx.date, ctx.timeSlot),

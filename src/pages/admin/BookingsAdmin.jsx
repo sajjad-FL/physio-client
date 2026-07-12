@@ -3,12 +3,12 @@ import { Link } from 'react-router-dom'
 import { api } from '../../config/api'
 import Pagination from '../../components/Pagination'
 import { formatBookingDateAndSlot } from '../../utils/date'
-import { normalizeIndianPhone } from '../../utils/phoneIndia'
 import AdminBookingsToolbar from '../../components/admin/AdminBookingsToolbar'
 import AdminBookingsFilterDrawer, {
   DEFAULT_ADMIN_BOOKING_FILTERS,
 } from '../../components/admin/AdminBookingsFilterDrawer'
 import SessionsCalendarView from '../../components/physio/SessionsCalendarView'
+import { bookingCodeBadge } from '../../utils/bookingDisplay'
 
 function statusBadgeClass(status) {
   const map = {
@@ -25,7 +25,7 @@ function visitSortKey(b) {
   return `${String(b.date || '')}\t${String(b.timeSlot || '')}`
 }
 
-function buildListParams(page, filters) {
+function buildListParams(page, filters, search) {
   const params = { page, limit: 25 }
   if (filters.status !== 'all') params.status = filters.status
   if (filters.paymentStatus !== 'all') params.paymentStatus = filters.paymentStatus
@@ -34,6 +34,8 @@ function buildListParams(page, filters) {
   if (filters.sessionStatus !== 'all') {
     params.sessionStatus = filters.sessionStatus === 'not_set' ? 'none' : filters.sessionStatus
   }
+  const q = String(search || '').trim()
+  if (q) params.search = q
   return params
 }
 
@@ -64,7 +66,9 @@ export default function BookingsAdmin() {
       else setRefreshing(true)
       setError('')
       try {
-        const bRes = await api.get('/bookings', { params: buildListParams(page, filters) })
+        const bRes = await api.get('/bookings', {
+          params: buildListParams(page, filters, deferredSearch),
+        })
         setBookings(bRes.data?.data || [])
         setTotalPages(bRes.data?.totalPages || 1)
         setTotal(bRes.data?.total ?? 0)
@@ -76,7 +80,7 @@ export default function BookingsAdmin() {
         setRefreshing(false)
       }
     },
-    [page, filters],
+    [page, filters, deferredSearch],
   )
 
   useEffect(() => {
@@ -84,20 +88,7 @@ export default function BookingsAdmin() {
   }, [load])
 
   const displayBookings = useMemo(() => {
-    let list = [...bookings]
-    const q = deferredSearch.trim().toLowerCase()
-    if (q) {
-      const digits = q.replace(/\D/g, '')
-      const qNorm = normalizeIndianPhone(q)
-      list = list.filter((b) => {
-        const name = (b.userId?.name || '').toLowerCase()
-        const phone = String(b.userId?.phone || '')
-        const phoneDigits = phone.replace(/\D/g, '')
-        const phoneNorm = normalizeIndianPhone(phone) || phoneDigits
-        if (qNorm && qNorm.length === 10 && phoneNorm === qNorm) return true
-        return name.includes(q) || phone.toLowerCase().includes(q) || (digits.length > 0 && phoneDigits.includes(digits))
-      })
-    }
+    const list = [...bookings]
     list.sort((a, b) => {
       if (sort === 'latest' || sort === 'oldest') {
         const ta = new Date(a.createdAt).getTime()
@@ -112,7 +103,7 @@ export default function BookingsAdmin() {
       return sort === 'visitSoon' ? ka.localeCompare(kb) : kb.localeCompare(ka)
     })
     return list
-  }, [bookings, deferredSearch, sort])
+  }, [bookings, sort])
 
   function handleApplyFilters(next) {
     setFilters({ ...next })
@@ -195,7 +186,7 @@ export default function BookingsAdmin() {
         </p>
       ) : displayBookings.length === 0 ? (
         <p className="rounded-2xl border border-dashed border-border-subtle bg-canvas/80 px-4 py-10 text-center text-sm text-ink-muted">
-          No rows match your search on this page. Try another page or clear search.
+          No bookings match your search. Try another query or clear search.
         </p>
       ) : view === 'calendar' ? (
         <SessionsCalendarView
@@ -215,7 +206,14 @@ export default function BookingsAdmin() {
                   className="tap-feedback flex min-h-[3.25rem] items-center gap-3 px-3 py-3 transition-colors hover:bg-slate-50/90 sm:px-4"
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-ink">{formatBookingDateAndSlot(b.date, b.timeSlot)}</p>
+                    <p className="text-sm font-semibold text-ink">
+                      {formatBookingDateAndSlot(b.date, b.timeSlot)}
+                      {bookingCodeBadge(b) ? (
+                        <span className="ml-2 font-mono text-[10px] font-semibold text-ink-muted">
+                          {bookingCodeBadge(b)}
+                        </span>
+                      ) : null}
+                    </p>
                     <p className="truncate text-xs text-ink-muted">
                       {patient}
                       <span className="text-ink-muted/60"> · </span>

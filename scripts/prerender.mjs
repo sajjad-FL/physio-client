@@ -143,6 +143,11 @@ function startServer(rootDir, rootIndexHtml) {
           }
           const ext = path.extname(filePath).toLowerCase()
           res.setHeader('Content-Type', MIME[ext] || 'application/octet-stream')
+          // Vite asset filenames are content-hashed — let Chromium cache them so
+          // all ~60 page loads fetch/compile the JS bundle once, not 60 times.
+          if (reqUrl.startsWith('/assets/')) {
+            res.setHeader('Cache-Control', 'public, max-age=3600')
+          }
           res.end(buf)
         })
       })
@@ -151,24 +156,6 @@ function startServer(rootDir, rootIndexHtml) {
       const address = server.address()
       const port = typeof address === 'object' && address ? address.port : 0
       resolve({ server, port })
-    })
-  })
-}
-
-function installRequestFilter(page, allowedOrigin) {
-  return page.setRequestInterception(true).then(() => {
-    page.on('request', (req) => {
-      const target = req.url()
-      if (
-        target.startsWith(allowedOrigin) ||
-        target.startsWith('data:') ||
-        target.startsWith('blob:')
-      ) {
-        req.continue()
-        return
-      }
-      // External fonts/analytics never settle reliably in CI — skip for prerender.
-      req.abort()
     })
   })
 }
@@ -270,8 +257,17 @@ async function main() {
   try {
     try {
       browser = await puppeteer.launch({
-        headless: 'new',
-        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
+        headless: true,
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-gpu',
+          // Fail external requests (fonts/analytics/API) instantly at DNS level.
+          // Unlike request interception, this keeps Chromium's HTTP cache alive,
+          // so the JS bundle is fetched and compiled once across all routes.
+          '--host-resolver-rules=MAP * ~NOTFOUND, EXCLUDE 127.0.0.1',
+        ],
       })
     } catch (err) {
       // A broken Chrome install (missing binary, missing shared libs, OOM) must
@@ -285,7 +281,6 @@ async function main() {
       const p = await browser.newPage()
       await p.setViewport({ width: 1280, height: 900 })
       await p.setUserAgent('PhysiOkhomPrerender/1.0 (+static-build)')
-      await installRequestFilter(p, origin)
       return p
     }
 

@@ -19,7 +19,7 @@ import { StarRatingDisplay } from '../../components/reviews/StarRating'
 import { normalizeSessionRows } from '../../components/physio/physioBookingHelpers'
 import { isPlanLive, isAwaitingPatientConsent } from '../../utils/planStatus'
 import { formatBookingDateAndSlot } from '../../utils/date'
-import { formatBookingVisitWithCondition, billingTypeLabel, paymentAmountLabel } from '../../utils/bookingDisplay'
+import { formatBookingVisitWithCondition, billingTypeLabel, paymentAmountLabel, bookingCodeBadge } from '../../utils/bookingDisplay'
 import { buildSessionPaymentMap } from '../../utils/sessionPaymentMap'
 import {
   buildPatientWorkflowSteps,
@@ -268,6 +268,9 @@ export default function UserBookingDetailPage() {
         <div className="mt-3 flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <h1 className="text-xl font-semibold text-slate-900">{b.issue || 'Your session'}</h1>
+            {bookingCodeBadge(b) ? (
+              <p className="mt-1 font-mono text-xs font-semibold text-slate-500">{bookingCodeBadge(b)}</p>
+            ) : null}
             <p className="mt-0.5 text-sm text-slate-600">
               {physioDisplayName || managerName || (isOnline ? 'Online consultation' : 'Home visit')}
             </p>

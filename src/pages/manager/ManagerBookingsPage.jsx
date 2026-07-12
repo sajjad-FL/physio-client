@@ -15,6 +15,7 @@ import ManagerBookingsFilterDrawer, {
 import { normalizeIndianPhone } from '../../utils/phoneIndia'
 import { openGoogleMapsDestination } from '../../utils/googleMaps'
 import Card from '../../components/ui/Card'
+import { bookingCodeBadge } from '../../utils/bookingDisplay'
 
 function badgeClass(tone) {
   switch (tone) {
@@ -99,6 +100,8 @@ export default function ManagerBookingsPage() {
       const qNorm = normalizeIndianPhone(q)
       list = list.filter((b) => {
         const blob = [
+          b.bookingCode,
+          b.bookingSeq != null ? String(b.bookingSeq) : null,
           b.userId?.name,
           b.userId?.phone,
           b.issue,
@@ -109,6 +112,8 @@ export default function ManagerBookingsPage() {
           .join(' ')
           .toLowerCase()
         if (blob.includes(q)) return true
+        if (b.bookingCode && String(b.bookingCode).toLowerCase() === q) return true
+        if (b.bookingSeq != null && String(b.bookingSeq) === q.replace(/^#/, '')) return true
         const phone = String(b.userId?.phone || '')
         const phoneDigits = phone.replace(/\D/g, '')
         const phoneNorm = normalizeIndianPhone(phone) || phoneDigits
@@ -217,6 +222,11 @@ export default function ManagerBookingsPage() {
                   >
                     <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                       <p className="text-sm font-semibold text-gray-900">{formatBookingDateAndSlot(b.date, b.timeSlot)}</p>
+                      {bookingCodeBadge(b) ? (
+                        <span className="font-mono text-[10px] font-semibold text-slate-500">
+                          {bookingCodeBadge(b)}
+                        </span>
+                      ) : null}
                       <span
                         className={`inline-flex rounded-md px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ring-1 ${servicePillClass(
                           b.serviceType || 'home',

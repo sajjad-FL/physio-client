@@ -54,8 +54,7 @@ import AdminShopOrderDetailPage from './pages/admin/AdminShopOrderDetailPage'
 import ManagerLayout from './pages/manager/ManagerLayout'
 import ManagerBookingsPage from './pages/manager/ManagerBookingsPage'
 import ManagerBookingDetailPage from './pages/manager/ManagerBookingDetailPage'
-import ManagerLedgerPage from './pages/manager/ManagerLedgerPage'
-import ManagerWalletPage from './pages/manager/ManagerWalletPage'
+import ManagerFinancePage from './pages/manager/ManagerFinancePage'
 import AdminZonesPage from './pages/admin/AdminZonesPage'
 import AdminSettlementsPage from './pages/admin/AdminSettlementsPage'
 import { ShopCartProvider } from './hooks/useShopCart'
@@ -185,8 +184,9 @@ export default function App() {
           <Route index element={<Navigate to="/manager/bookings" replace />} />
           <Route path="bookings" element={<ManagerBookingsPage />} />
           <Route path="bookings/:id" element={<ManagerBookingDetailPage />} />
-          <Route path="ledger" element={<ManagerLedgerPage />} />
-          <Route path="wallet" element={<ManagerWalletPage />} />
+          <Route path="finance" element={<ManagerFinancePage />} />
+          <Route path="ledger" element={<Navigate to="/manager/finance?tab=cash" replace />} />
+          <Route path="wallet" element={<Navigate to="/manager/finance?tab=earnings" replace />} />
           <Route path="profile" element={<ProfilePage />} />
         </Route>
         <Route

@@ -1,10 +1,10 @@
 import { Link } from 'react-router-dom'
-import { formatBookingVisitWithCondition } from '../../../utils/bookingDisplay'
+import { formatBookingVisitWithCondition, bookingCodeBadge } from '../../../utils/bookingDisplay'
 import { openSupportWhatsApp } from '../../../utils/physioContact'
 
 export default function PendingBookingView({ booking: b }) {
   const serviceLabel = b.serviceType === 'online' ? 'Online Consultation' : 'Home Visit'
-  const bookingRef = b._id ? `#${String(b._id).slice(-6).toUpperCase()}` : '—'
+  const bookingRef = bookingCodeBadge(b) || '—'
   const managerName =
     b.managerId && typeof b.managerId === 'object' ? b.managerId.name : null
   const heading = managerName ? 'Your Care Manager is on it' : 'We received your booking'
@@ -55,7 +55,7 @@ export default function PendingBookingView({ booking: b }) {
 
       <div className="flex justify-center">
         <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600">
-          Booking Ref {bookingRef}
+          Booking ID {bookingRef}
         </span>
       </div>
 

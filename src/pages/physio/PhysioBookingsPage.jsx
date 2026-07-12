@@ -11,6 +11,7 @@ import SessionsCalendarView from '../../components/physio/SessionsCalendarView'
 import { matchesFilters } from '../../components/physio/physioBookingHelpers'
 import { openGoogleMapsDestination } from '../../utils/googleMaps'
 import { normalizeIndianPhone } from '../../utils/phoneIndia'
+import { bookingCodeBadge } from '../../utils/bookingDisplay'
 
 function badgeClass(tone) {
   switch (tone) {
@@ -220,6 +221,11 @@ export default function PhysioBookingsPage() {
                   >
                     <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                       <p className="text-sm font-semibold text-gray-900">{formatBookingDateAndSlot(b.date, b.timeSlot)}</p>
+                      {bookingCodeBadge(b) ? (
+                        <span className="font-mono text-[10px] font-semibold text-slate-500">
+                          {bookingCodeBadge(b)}
+                        </span>
+                      ) : null}
                       <span
                         className={`inline-flex rounded-md px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ring-1 ${servicePillClass(
                           b.serviceType,

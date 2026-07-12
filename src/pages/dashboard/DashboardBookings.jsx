@@ -6,7 +6,7 @@ import { bookingStatusBadge, paymentBadge } from './dashboardUtils'
 import { matchesPatientBookingFilter, sortPatientBookingsLatestFirst } from './bookingFilterUtils'
 import EmptyState from '../../components/ui/EmptyState'
 import { formatBookingDateAndSlot } from '../../utils/date'
-import { bookingConditionLabel } from '../../utils/bookingDisplay'
+import { bookingConditionLabel, bookingCodeBadge } from '../../utils/bookingDisplay'
 import { todayYmd } from '../../components/physio/physioBookingHelpers'
 import PatientBookingsFilterDrawer from '../../components/dashboard/PatientBookingsFilterDrawer'
 import PatientBookingsToolbar from '../../components/dashboard/PatientBookingsToolbar'
@@ -221,6 +221,11 @@ export default function DashboardBookings() {
                               <span className="font-normal text-gray-500"> ({condition})</span>
                             ) : null}
                           </p>
+                          {bookingCodeBadge(b) ? (
+                            <span className="mt-0.5 shrink-0 font-mono text-[10px] font-semibold text-slate-500">
+                              {bookingCodeBadge(b)}
+                            </span>
+                          ) : null}
                           <span
                             className={`mt-0.5 shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ring-1 ${servicePillClass(
                               b.serviceType,
