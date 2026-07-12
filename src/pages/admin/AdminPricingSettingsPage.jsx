@@ -25,6 +25,12 @@ export default function AdminPricingSettingsPage() {
   const [homePlanMaxDiscountPercent, setHomePlanMaxDiscountPercent] = useState(15)
   const [defaultPhysioPricePerSession, setDefaultPhysioPricePerSession] = useState(500)
   const [managerCommissionPerSessionRupees, setManagerCommissionPerSessionRupees] = useState(0)
+  const [techniquePrices, setTechniquePrices] = useState({
+    'Cupping Therapy': 800,
+    'Dry Needling': 1000,
+    'Kinesio Taping': 700,
+    IASTM: 900,
+  })
   const [planTiers, setPlanTiers] = useState([])
   const [planMilestones, setPlanMilestones] = useState({})
   const [updatedAt, setUpdatedAt] = useState(null)
@@ -42,6 +48,12 @@ export default function AdminPricingSettingsPage() {
     setHomePlanMaxDiscountPercent(data.homePlanMaxDiscountPercent)
     setDefaultPhysioPricePerSession(data.defaultPhysioPricePerSession)
     setManagerCommissionPerSessionRupees(data.managerCommissionPerSessionRupees ?? 0)
+    setTechniquePrices({
+      'Cupping Therapy': data.techniquePrices?.['Cupping Therapy'] ?? 800,
+      'Dry Needling': data.techniquePrices?.['Dry Needling'] ?? 1000,
+      'Kinesio Taping': data.techniquePrices?.['Kinesio Taping'] ?? 700,
+      IASTM: data.techniquePrices?.IASTM ?? 900,
+    })
     setPlanTiers(Array.isArray(data.planTiers) ? data.planTiers : [])
     setPlanMilestones(data.planMilestones && typeof data.planMilestones === 'object' ? data.planMilestones : {})
     setUpdatedAt(data.pricingUpdatedAt || null)
@@ -110,6 +122,12 @@ export default function AdminPricingSettingsPage() {
           homePlanMaxDiscountPercent: maxDisc,
           defaultPhysioPricePerSession: Number(defaultPhysioPricePerSession),
           managerCommissionPerSessionRupees: Number(managerCommissionPerSessionRupees),
+          techniquePrices: {
+            'Cupping Therapy': Number(techniquePrices['Cupping Therapy']),
+            'Dry Needling': Number(techniquePrices['Dry Needling']),
+            'Kinesio Taping': Number(techniquePrices['Kinesio Taping']),
+            IASTM: Number(techniquePrices.IASTM),
+          },
           planTiers: tiersForSave,
           planMilestones,
         },      )
@@ -225,6 +243,30 @@ export default function AdminPricingSettingsPage() {
                 Earned per session on manager-collected plans; paid out when the cash hand-off is settled. 0 disables it.
               </span>
             </label>
+          </div>
+        </Card>
+
+        <Card>
+          <h2 className="type-page-title text-slate-900">Technique session prices</h2>
+          <p className="mt-1 text-sm text-slate-600">
+            Fixed home-visit prices for Book-by-Need techniques (no care manager). Shown on technique detail pages.
+          </p>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {['Cupping Therapy', 'Dry Needling', 'Kinesio Taping', 'IASTM'].map((issue) => (
+              <label key={issue} className="block text-xs font-medium text-slate-600">
+                {issue} (₹)
+                <input
+                  type="number"
+                  min={1}
+                  step={1}
+                  className={`${inputCls} mt-1 max-w-none`}
+                  value={techniquePrices[issue]}
+                  onChange={(e) =>
+                    setTechniquePrices((prev) => ({ ...prev, [issue]: e.target.value }))
+                  }
+                />
+              </label>
+            ))}
           </div>
         </Card>
 

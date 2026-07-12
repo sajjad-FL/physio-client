@@ -78,6 +78,60 @@ export function buildPatientWorkflowSteps(ctx) {
     ]
   }
 
+  const techniqueDirect =
+    b.carePath === 'technique_direct' || b.workflowStatus === 'pending_physio_assignment'
+  const techniqueManaged = b.carePath === 'technique_managed'
+  const techniqueShort = techniqueDirect || techniqueManaged
+
+  if (techniqueShort) {
+    return [
+      {
+        id: 'team',
+        num: 1,
+        label: techniqueManaged ? 'Care manager' : 'Physiotherapist',
+        hint: techniqueManaged
+          ? hasPhysio
+            ? b.physioId?.name || 'Physio assigned'
+            : b.managerId?.name
+              ? `${b.managerId.name} will assign physio`
+              : 'Your care manager will assign a physio'
+          : hasPhysio
+            ? b.physioId?.name || 'Assigned'
+            : 'Finding your physiotherapist',
+        state: hasPhysio ? 'done' : 'current',
+      },
+      {
+        id: 'treatment',
+        num: 2,
+        label: 'Treatment',
+        hint: sessionsComplete
+          ? 'Completed'
+          : hasPhysio
+          ? formatBookingHint(b)
+          : 'After physio is assigned',
+        state: !hasPhysio ? 'upcoming' : sessionsComplete ? 'done' : 'current',
+      },
+      {
+        id: 'payment',
+        num: 3,
+        label: 'Payment',
+        hint:
+          outstanding > 0.009
+            ? `₹${Math.round(outstanding)} due`
+            : totalPaid > 0
+            ? 'Fully paid'
+            : paymentAmountLabel(b) || 'Pay after assignment',
+        state: !hasPhysio
+          ? 'upcoming'
+          : outstanding > 0.009
+          ? 'current'
+          : totalPaid > 0 || b.paymentStatus === 'held' || b.paymentStatus === 'released'
+          ? 'done'
+          : 'current',
+      },
+    ]
+  }
+
   return [
     {
       id: 'team',
@@ -165,14 +219,20 @@ export function patientPageContext(booking) {
   if (!booking) return null
   const b = booking
   const isOnline = b.serviceType === 'online'
-  const planLive = isPlanLive(b.planStatus) || isOnline
-  const awaitingConsent = !isOnline && isAwaitingPatientConsent(b.planStatus)
-  const assessmentDone = Boolean(b.assessmentCompletedAt)
-  const careTeamActive =
-    b.status === 'pending' ||
-    b.status === 'assigned' ||
-    Boolean(b.managerId) ||
-    !assessmentDone
+  const techniqueDirect =
+    b.carePath === 'technique_direct' || b.workflowStatus === 'pending_physio_assignment'
+  const techniqueManaged = b.carePath === 'technique_managed'
+  const techniqueShort = techniqueDirect || techniqueManaged
+  const planLive =
+    isPlanLive(b.planStatus) || isOnline || (techniqueShort && Boolean(b.physioId)) || techniqueManaged
+  const awaitingConsent = !isOnline && !techniqueShort && isAwaitingPatientConsent(b.planStatus)
+  const assessmentDone = Boolean(b.assessmentCompletedAt) || techniqueShort
+  const careTeamActive = techniqueShort
+    ? Boolean(b.physioId) || (techniqueManaged && Boolean(b.managerId))
+    : b.status === 'pending' ||
+      b.status === 'assigned' ||
+      Boolean(b.managerId) ||
+      !assessmentDone
   const hasPhysio = Boolean(b.physioId)
   const hasPlan = planLive || awaitingConsent || Boolean(b.schedule?.length)
   const paymentSummary = b.paymentSummary || null
@@ -194,6 +254,7 @@ export function patientPageContext(booking) {
     outstanding,
     totalPaid,
     sessionsComplete,
+    techniqueManaged,
     workflowMeta: patientWorkflowMeta(b),
   }
 }

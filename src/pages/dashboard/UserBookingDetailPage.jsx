@@ -400,7 +400,7 @@ export default function UserBookingDetailPage() {
                 <p className="mt-0.5 text-xs text-slate-500">
                   {isOnline
                     ? 'Session dates — tap View details for physio notes'
-                    : 'Assessment and treatment — tap View details for physio notes'}
+                    : 'Assessment and treatment — tap View notes on Assessment for care-manager notes'}
                 </p>
                 <div className="mt-3">
                   <BookingSessionTimeline

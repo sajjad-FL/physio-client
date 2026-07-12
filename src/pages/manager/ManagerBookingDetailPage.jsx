@@ -15,6 +15,12 @@ import { resolveFileUrl } from '../../utils/serverOrigin'
 import { buildSessionPaymentMap } from '../../utils/sessionPaymentMap'
 import { billingTypeLabel, paymentAmountLabel, bookingCodeBadge } from '../../utils/bookingDisplay'
 import { managerWorkflowMeta } from '../../utils/managerWorkflow'
+import StructuredAssessmentForm from '../../components/manager/StructuredAssessmentForm'
+import SuggestTechniquePanel from '../../components/manager/SuggestTechniquePanel'
+import {
+  EMPTY_ASSESSMENT_DATA,
+  validateAssessmentData,
+} from '../../constants/assessmentForm'
 
 function badgeToneClass(tone) {
   switch (tone) {
@@ -45,8 +51,39 @@ function buildWorkflowSteps(ctx) {
     outstanding,
     hasPlan,
     paymentSummary,
+    techniqueManaged,
   } = ctx
   const totalPaid = Number(paymentSummary?.totalPaid || 0)
+
+  if (techniqueManaged) {
+    return [
+      {
+        id: 'physio',
+        num: 1,
+        label: 'Physio',
+        hint: hasPhysio ? b.physioId?.name || 'Assigned' : 'Assign for this technique visit',
+        state: hasPhysio ? 'done' : 'current',
+      },
+      {
+        id: 'payment',
+        num: 2,
+        label: 'Payment',
+        hint:
+          outstanding > 0.009
+            ? `₹${Math.round(outstanding)} due`
+            : totalPaid > 0
+            ? 'Fully paid'
+            : 'Record cash / UPI',
+        state: !hasPhysio
+          ? 'upcoming'
+          : outstanding > 0.009
+          ? 'current'
+          : totalPaid > 0
+          ? 'done'
+          : 'current',
+      },
+    ]
+  }
 
   /** @type {Array<{ id: string, num: number, label: string, hint: string, state: StepState }>} */
   const steps = [
@@ -114,8 +151,9 @@ function defaultOpenStep(steps) {
 }
 
 function StepRail({ steps, openStep, onSelect }) {
+  const cols = steps.length <= 2 ? 'grid-cols-2' : 'grid-cols-4'
   return (
-    <ol className="grid grid-cols-4 gap-1 sm:gap-2">
+    <ol className={`grid ${cols} gap-1 sm:gap-2`}>
       {steps.map((step, i) => {
         const isOpen = openStep === step.id
         const done = step.state === 'done'
@@ -189,7 +227,7 @@ export default function ManagerBookingDetailPage() {
   const [physios, setPhysios] = useState([])
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
-  const [assessmentNotes, setAssessmentNotes] = useState('')
+  const [assessmentData, setAssessmentData] = useState({ ...EMPTY_ASSESSMENT_DATA })
   const [assignPhysioId, setAssignPhysioId] = useState('')
   const [assignModalOpen, setAssignModalOpen] = useState(false)
   const [collectionModalOpen, setCollectionModalOpen] = useState(false)
@@ -207,7 +245,14 @@ export default function ManagerBookingDetailPage() {
         api.get('/manager/physios', { params: { bookingId: id } }),
       ])
       setBooking(bRes.data)
-      setAssessmentNotes(bRes.data?.assessmentNotes || '')
+      setAssessmentData(
+        bRes.data?.assessmentData && typeof bRes.data.assessmentData === 'object'
+          ? { ...EMPTY_ASSESSMENT_DATA, ...bRes.data.assessmentData }
+          : {
+              ...EMPTY_ASSESSMENT_DATA,
+              extraNotes: bRes.data?.assessmentNotes || '',
+            },
+      )
       setPhysios(pRes.data?.physios || [])
     } catch (e) {
       toast.error(e.response?.data?.message || 'Failed to load booking')
@@ -229,21 +274,25 @@ export default function ManagerBookingDetailPage() {
   const pageCtx = useMemo(() => {
     if (!booking) return null
     const b = booking
-    const planLive = b.planStatus === 'live' || b.planStatus === 'approved'
-    const awaitingConsent = b.planStatus === 'awaiting_consent' || b.planStatus === 'proposed'
-    const assessmentDone = Boolean(b.assessmentCompletedAt)
-    const canCreatePlan = !awaitingConsent && !planLive && assessmentDone
-    const needsAssessment = !awaitingConsent && !planLive && !assessmentDone
+    const techniqueManaged = b.carePath === 'technique_managed'
+    const planLive = b.planStatus === 'live' || b.planStatus === 'approved' || techniqueManaged
+    const awaitingConsent = techniqueManaged
+      ? false
+      : b.planStatus === 'awaiting_consent' || b.planStatus === 'proposed'
+    const assessmentDone = techniqueManaged ? true : Boolean(b.assessmentCompletedAt)
+    const canCreatePlan = techniqueManaged ? false : !awaitingConsent && !planLive && assessmentDone
+    const needsAssessment = techniqueManaged ? false : !awaitingConsent && !planLive && !assessmentDone
     const paymentSummary = b.paymentSummary || null
     const payments = b.payments || []
     const outstanding = Number(paymentSummary?.outstanding || 0)
     const canCollect = planLive && outstanding > 0.009
-    const hasPlan = !canCreatePlan && !needsAssessment
+    const hasPlan = techniqueManaged ? true : !canCreatePlan && !needsAssessment
     const hasPhysio = Boolean(b.physioId)
     const workflowMeta = managerWorkflowMeta({ ...b, paymentSummary })
 
     return {
       b,
+      techniqueManaged,
       planLive,
       awaitingConsent,
       assessmentDone,
@@ -268,16 +317,31 @@ export default function ManagerBookingDetailPage() {
     setStepReady(true)
   }, [steps, stepReady])
 
+  useEffect(() => {
+    if (!pageCtx?.techniqueManaged) return
+    if (openStep === 'assessment' || openStep === 'plan') {
+      setOpenStep(defaultOpenStep(steps.length ? steps : [{ id: 'physio', state: 'current' }]))
+    }
+  }, [pageCtx?.techniqueManaged, openStep, steps])
+
   const selectedPhysioForAssign = useMemo(
     () => physios.find((p) => String(p._id) === String(assignPhysioId)),
     [physios, assignPhysioId],
   )
 
   async function saveAssessment() {
+    const err = validateAssessmentData(assessmentData)
+    if (err) {
+      toast.error(err)
+      return
+    }
     setBusy(true)
     try {
-      const res = await api.patch(`/manager/bookings/${id}/assessment`, { assessmentNotes })
+      const res = await api.patch(`/manager/bookings/${id}/assessment`, { assessmentData })
       setBooking(res.data)
+      if (res.data?.assessmentData) {
+        setAssessmentData({ ...EMPTY_ASSESSMENT_DATA, ...res.data.assessmentData })
+      }
       toast.success('Assessment saved')
       setOpenStep('plan')
     } catch (e) {
@@ -397,6 +461,8 @@ export default function ManagerBookingDetailPage() {
         </div>
       </div>
 
+      <SuggestTechniquePanel sourceBookingId={b._id} disabled={busy} />
+
       {/* 4-step workflow — tap a step to open it */}
       <div className="rounded-2xl border border-slate-200/80 bg-white p-2.5 shadow-sm sm:p-3 md:p-4">
         <p className="mb-2 px-0.5 text-xs font-semibold uppercase tracking-wide text-slate-500 sm:mb-3">Your checklist</p>
@@ -407,34 +473,33 @@ export default function ManagerBookingDetailPage() {
       <div className="min-w-0 overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-3 shadow-sm sm:p-4 md:p-5">
         <div className="mb-4 border-b border-slate-100 pb-3">
           <p className="text-xs font-semibold uppercase tracking-wide text-teal-700">
-            Step {activeStepMeta?.num || 1} of 4
+            Step {activeStepMeta?.num || 1} of {steps.length || 4}
           </p>
           <h2 className="mt-0.5 text-lg font-semibold text-slate-900">{activeStepMeta?.label}</h2>
+          {pageCtx.techniqueManaged ? (
+            <p className="mt-1 text-sm text-slate-600">
+              Technique session — assign a physiotherapist and record payment. No assessment or care plan needed.
+            </p>
+          ) : null}
           {activeStepMeta?.state === 'waiting' ? (
             <p className="mt-1 text-sm text-blue-800">Waiting on the patient — you can still edit the plan below.</p>
           ) : null}
         </div>
 
-        {openStep === 'assessment' && (
+        {openStep === 'assessment' && !pageCtx.techniqueManaged && (
           <div className="space-y-4">
             <p className="text-sm text-slate-600">
               Visit on <span className="font-medium">{formatBookingDateAndSlot(b.date, b.timeSlot)}</span> is
-              complimentary. Save your notes, then move to step 2.
+              complimentary. Capture baseline scores, then move to step 2.
             </p>
-            <textarea
-              className="w-full rounded-xl border border-slate-200 p-3 text-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
-              rows={5}
-              value={assessmentNotes}
-              onChange={(e) => setAssessmentNotes(e.target.value)}
-              placeholder="Findings, mobility, recommended sessions…"
-            />
-            <Button type="button" disabled={busy} onClick={saveAssessment}>
+            <StructuredAssessmentForm value={assessmentData} onChange={setAssessmentData} />
+            <Button type="button" disabled={busy || Boolean(validateAssessmentData(assessmentData))} onClick={saveAssessment}>
               {pageCtx.assessmentDone ? 'Save changes' : 'Save & continue'}
             </Button>
           </div>
         )}
 
-        {openStep === 'plan' && (
+        {openStep === 'plan' && !pageCtx.techniqueManaged && (
           <div className="space-y-4">
             {needsAssessment ? (
               <p className="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-950">
@@ -473,8 +538,13 @@ export default function ManagerBookingDetailPage() {
 
         {openStep === 'physio' && (
           <div className="space-y-4">
-            {!planLive && !hasPhysio ? (
+            {!planLive && !hasPhysio && !pageCtx.techniqueManaged ? (
               <p className="text-sm text-slate-600">Available after the patient consents to the care plan (step 2).</p>
+            ) : null}
+            {pageCtx.techniqueManaged && !hasPhysio ? (
+              <p className="text-sm text-slate-600">
+                Fixed technique price {paymentAmountLabel(b)}. Assign a physiotherapist for this home visit.
+              </p>
             ) : null}
 
             {hasPhysio ? (

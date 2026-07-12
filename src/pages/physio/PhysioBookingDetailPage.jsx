@@ -416,9 +416,9 @@ export default function PhysioBookingDetailPage() {
 
             <div className="rounded-xl border border-slate-200 bg-slate-50/40 p-4">
               <h3 className="text-sm font-semibold text-slate-900">Visit schedule</h3>
-              <p className="mt-0.5 text-xs text-slate-500">
-                Mark complete, add session notes, or reschedule after each visit.
-              </p>
+                <p className="mt-0.5 text-xs text-slate-500">
+                  Mark complete, log progress each visit, or reschedule. Assessment baseline shows on the complementary visit.
+                </p>
               <div className="mt-3">
                 <BookingSessionTimeline
                   booking={b}

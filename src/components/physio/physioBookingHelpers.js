@@ -32,7 +32,27 @@ function buildComplimentaryAssessmentRow(b) {
     n: null,
     label: 'Assessment',
     complimentary: true,
-    notes: b.assessmentNotes || null,
+    notes: (() => {
+      if (b.assessmentData && typeof b.assessmentData === 'object') {
+        const text = String(b.assessmentNotes || '').trim()
+        return {
+          text: text || null,
+          painNow: b.assessmentData.painNow ?? null,
+          functionNow: b.assessmentData.functionNow ?? null,
+          painOnMovement: b.assessmentData.painOnMovement ?? null,
+          sleep: b.assessmentData.sleep || null,
+          mobility: b.assessmentData.mobility || null,
+          areas: b.assessmentData.areas || [],
+          updatedAt: b.assessmentCompletedAt || null,
+        }
+      }
+      const text = String(b.assessmentNotes || '').trim()
+      if (!text) return null
+      return {
+        text,
+        updatedAt: b.assessmentCompletedAt || null,
+      }
+    })(),
     status: b.assessmentCompletedAt ? 'completed' : 'scheduled',
     completedAt: b.assessmentCompletedAt || null,
     noShowReason: '',

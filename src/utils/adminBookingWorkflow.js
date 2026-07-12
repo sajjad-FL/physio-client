@@ -176,7 +176,9 @@ export function adminPageContext(booking, opts = {}) {
   const isHome = b.serviceType === 'home'
   const hasManager = Boolean(b.managerId)
   const hasPhysio = Boolean(b.physioId)
-  const needsManager = isHome && !hasManager
+  const techniqueDirect = b.carePath === 'technique_direct'
+  const techniqueManaged = b.carePath === 'technique_managed'
+  const needsManager = isHome && !hasManager && !techniqueDirect && !techniqueManaged
   const paymentSummary = b.paymentSummary || null
   const payments = Array.isArray(b.payments) ? b.payments : []
   const outstanding = Number(paymentSummary?.outstanding || 0)
@@ -204,6 +206,8 @@ export function adminPageContext(booking, opts = {}) {
     hasManager,
     hasPhysio,
     needsManager,
+    techniqueDirect,
+    techniqueManaged,
     paymentSummary,
     payments,
     outstanding,
@@ -217,7 +221,7 @@ export function adminPageContext(booking, opts = {}) {
     canVerifyOffline,
     needsPaymentVerify,
     activeDispute,
-    planLive: isPlanLive(b.planStatus) || isOnline,
+    planLive: isPlanLive(b.planStatus) || isOnline || techniqueManaged,
     ...(opts.extras || {}),
   }
 

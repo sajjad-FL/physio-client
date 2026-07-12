@@ -12,6 +12,7 @@ export const ISSUE_OPTIONS = [
   'Cupping Therapy',
   'Dry Needling',
   'Kinesio Taping',
+  'IASTM',
 ]
 
 /** Select value when user chooses "Other"; final `issue` text comes from a separate text field. */

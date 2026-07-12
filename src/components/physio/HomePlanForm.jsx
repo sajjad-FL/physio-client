@@ -312,26 +312,91 @@ export default function HomePlanForm({
           }
         >
           {!embedded ? <h3 className="text-sm font-semibold text-gray-900">Plan details</h3> : null}
-          <div className={`grid min-w-0 ${embedded ? 'gap-4' : 'gap-5 sm:grid-cols-2'}`}>
-            <div className={embedded ? 'space-y-4' : 'sm:col-span-2 sm:grid sm:grid-cols-2 sm:gap-5'}>
-              <div>
-                <label className={fieldLabel}>Number of sessions</label>
-                <select
-                  value={sessions}
-                  onChange={(e) => handleSessionsChange(e.target.value)}
-                  className={`${fieldInput} cursor-pointer`}
-                >
-                  {allowedSessionCounts.map((count) => {
-                    const tier = tierBySessions.get(count)
-                    const label = tier?.label || `${count} sessions`
-                    return (
-                      <option key={count} value={count}>
-                        {label} ({count} sessions)
-                      </option>
-                    )
-                  })}
-                </select>
+          <div className={`grid min-w-0 ${embedded ? 'gap-4' : 'gap-5'}`}>
+            <div>
+              <label className={fieldLabel}>Number of sessions</label>
+              <select
+                value={sessions}
+                onChange={(e) => handleSessionsChange(e.target.value)}
+                className={`${fieldInput} cursor-pointer`}
+              >
+                {allowedSessionCounts.map((count) => {
+                  const tier = tierBySessions.get(count)
+                  const label = tier?.label || `${count} sessions`
+                  return (
+                    <option key={count} value={count}>
+                      {label} ({count} sessions)
+                    </option>
+                  )
+                })}
+              </select>
+            </div>
+
+            <div>
+              <p className={`${fieldLabel} mb-3`}>Payment type</p>
+              <div className="flex flex-col gap-2.5 sm:flex-row sm:gap-3">
+                <label className="flex min-w-0 flex-1 cursor-pointer items-start gap-2.5 rounded-xl border border-gray-200 bg-white px-3 py-2.5 shadow-sm transition-all duration-200 hover:border-blue-200 sm:items-center sm:gap-3 sm:px-4 sm:py-3 has-[:checked]:border-blue-500 has-[:checked]:ring-2 has-[:checked]:ring-blue-500/20">
+                  <input
+                    type="radio"
+                    name={`bt-${booking._id}`}
+                    checked={billingType === 'full'}
+                    onChange={() => setBillingType('full')}
+                    className="text-blue-600"
+                  />
+                  <span className="min-w-0">
+                    <span className="block text-sm font-medium text-gray-900">Full payment</span>
+                    <span className="block text-xs text-gray-500">Patient pays entire plan upfront — admin discount applies</span>
+                  </span>
+                </label>
+                <label className="flex min-w-0 flex-1 cursor-pointer items-start gap-2.5 rounded-xl border border-gray-200 bg-white px-3 py-2.5 shadow-sm transition-all duration-200 hover:border-blue-200 sm:items-center sm:gap-3 sm:px-4 sm:py-3 has-[:checked]:border-blue-500 has-[:checked]:ring-2 has-[:checked]:ring-blue-500/20">
+                  <input
+                    type="radio"
+                    name={`bt-${booking._id}`}
+                    checked={billingType === 'installment'}
+                    onChange={() => setBillingType('installment')}
+                    className="text-blue-600"
+                  />
+                  <span className="min-w-0">
+                    <span className="block text-sm font-medium text-gray-900">Installment</span>
+                    <span className="block text-xs text-gray-500">Pay over time per milestones — no discount</span>
+                  </span>
+                </label>
               </div>
+            </div>
+
+            <div>
+              <p className={`${fieldLabel} mb-3`}>Payment mode</p>
+              <div className="flex flex-col gap-2.5 sm:flex-row sm:gap-3">
+                <label className="flex min-w-0 flex-1 cursor-pointer items-start gap-2.5 rounded-xl border border-gray-200 bg-white px-3 py-2.5 shadow-sm transition-all duration-200 hover:border-blue-200 sm:items-center sm:gap-3 sm:px-4 sm:py-3 has-[:checked]:border-blue-500 has-[:checked]:ring-2 has-[:checked]:ring-blue-500/20">
+                  <input
+                    type="radio"
+                    name={`pm-${booking._id}`}
+                    checked={paymentMode === 'offline'}
+                    onChange={() => setPaymentMode('offline')}
+                    className="text-blue-600"
+                  />
+                  <span className="min-w-0">
+                    <span className="block text-sm font-medium text-gray-900">Offline</span>
+                    <span className="block text-xs text-gray-500">Cash / UPI — you verify later</span>
+                  </span>
+                </label>
+                <label className="flex min-w-0 flex-1 cursor-pointer items-start gap-2.5 rounded-xl border border-gray-200 bg-white px-3 py-2.5 shadow-sm transition-all duration-200 hover:border-blue-200 sm:items-center sm:gap-3 sm:px-4 sm:py-3 has-[:checked]:border-blue-500 has-[:checked]:ring-2 has-[:checked]:ring-blue-500/20">
+                  <input
+                    type="radio"
+                    name={`pm-${booking._id}`}
+                    checked={paymentMode === 'online'}
+                    onChange={() => setPaymentMode('online')}
+                    className="text-blue-600"
+                  />
+                  <span className="min-w-0">
+                    <span className="block text-sm font-medium text-gray-900">Online</span>
+                    <span className="block text-xs text-gray-500">Patient pays after approving</span>
+                  </span>
+                </label>
+              </div>
+            </div>
+
+            <div className={embedded ? 'space-y-4' : 'grid gap-5 sm:grid-cols-2'}>
               <div>
                 <label className={fieldLabel}>Amount per session (₹)</label>
                 {physio && fixedFee ? (
@@ -385,24 +450,25 @@ export default function HomePlanForm({
                   </p>
                 ) : null}
               </div>
+              <div>
+                <label className={fieldLabel}>Discount (max {maxDiscountPercent}%)</label>
+                <input
+                  type="number"
+                  min={0}
+                  max={maxDiscountPercent}
+                  step={0.5}
+                  value={discount}
+                  readOnly
+                  className={`${fieldInput} cursor-not-allowed bg-gray-50 text-gray-700`}
+                />
+                <p className="mt-1 text-xs text-gray-500">
+                  {billingType === 'full'
+                    ? 'Set by admin for full payment on this plan length.'
+                    : 'Installment plans have no discount.'}
+                </p>
+              </div>
             </div>
-            <div>
-              <label className={fieldLabel}>Discount (max {maxDiscountPercent}%)</label>
-              <input
-                type="number"
-                min={0}
-                max={maxDiscountPercent}
-                step={0.5}
-                value={discount}
-                readOnly
-                className={`${fieldInput} cursor-not-allowed bg-gray-50 text-gray-700`}
-              />
-              <p className="mt-1 text-xs text-gray-500">
-                {billingType === 'full'
-                  ? 'Set by admin for full payment on this plan length.'
-                  : 'Installment plans have no discount.'}
-              </p>
-            </div>
+
             <div>
               <label className={fieldLabel}>Session time (each visit)</label>
               <select
@@ -416,70 +482,6 @@ export default function HomePlanForm({
                   </option>
                 ))}
               </select>
-            </div>
-          </div>
-
-          <div>
-            <p className={`${fieldLabel} mb-3`}>Payment type</p>
-            <div className="flex flex-col gap-2.5 sm:flex-row sm:gap-3">
-              <label className="flex min-w-0 flex-1 cursor-pointer items-start gap-2.5 rounded-xl border border-gray-200 bg-white px-3 py-2.5 shadow-sm transition-all duration-200 hover:border-blue-200 sm:items-center sm:gap-3 sm:px-4 sm:py-3 has-[:checked]:border-blue-500 has-[:checked]:ring-2 has-[:checked]:ring-blue-500/20">
-                <input
-                  type="radio"
-                  name={`bt-${booking._id}`}
-                  checked={billingType === 'full'}
-                  onChange={() => setBillingType('full')}
-                  className="text-blue-600"
-                />
-                <span className="min-w-0">
-                  <span className="block text-sm font-medium text-gray-900">Full payment</span>
-                  <span className="block text-xs text-gray-500">Patient pays entire plan upfront — admin discount applies</span>
-                </span>
-              </label>
-              <label className="flex min-w-0 flex-1 cursor-pointer items-start gap-2.5 rounded-xl border border-gray-200 bg-white px-3 py-2.5 shadow-sm transition-all duration-200 hover:border-blue-200 sm:items-center sm:gap-3 sm:px-4 sm:py-3 has-[:checked]:border-blue-500 has-[:checked]:ring-2 has-[:checked]:ring-blue-500/20">
-                <input
-                  type="radio"
-                  name={`bt-${booking._id}`}
-                  checked={billingType === 'installment'}
-                  onChange={() => setBillingType('installment')}
-                  className="text-blue-600"
-                />
-                <span className="min-w-0">
-                  <span className="block text-sm font-medium text-gray-900">Installment</span>
-                  <span className="block text-xs text-gray-500">Pay over time per milestones — no discount</span>
-                </span>
-              </label>
-            </div>
-          </div>
-
-          <div>
-            <p className={`${fieldLabel} mb-3`}>Payment mode</p>
-            <div className="flex flex-col gap-2.5 sm:flex-row sm:gap-3">
-              <label className="flex min-w-0 flex-1 cursor-pointer items-start gap-2.5 rounded-xl border border-gray-200 bg-white px-3 py-2.5 shadow-sm transition-all duration-200 hover:border-blue-200 sm:items-center sm:gap-3 sm:px-4 sm:py-3 has-[:checked]:border-blue-500 has-[:checked]:ring-2 has-[:checked]:ring-blue-500/20">
-                <input
-                  type="radio"
-                  name={`pm-${booking._id}`}
-                  checked={paymentMode === 'offline'}
-                  onChange={() => setPaymentMode('offline')}
-                  className="text-blue-600"
-                />
-                <span className="min-w-0">
-                  <span className="block text-sm font-medium text-gray-900">Offline</span>
-                  <span className="block text-xs text-gray-500">Cash / UPI — you verify later</span>
-                </span>
-              </label>
-              <label className="flex min-w-0 flex-1 cursor-pointer items-start gap-2.5 rounded-xl border border-gray-200 bg-white px-3 py-2.5 shadow-sm transition-all duration-200 hover:border-blue-200 sm:items-center sm:gap-3 sm:px-4 sm:py-3 has-[:checked]:border-blue-500 has-[:checked]:ring-2 has-[:checked]:ring-blue-500/20">
-                <input
-                  type="radio"
-                  name={`pm-${booking._id}`}
-                  checked={paymentMode === 'online'}
-                  onChange={() => setPaymentMode('online')}
-                  className="text-blue-600"
-                />
-                <span className="min-w-0">
-                  <span className="block text-sm font-medium text-gray-900">Online</span>
-                  <span className="block text-xs text-gray-500">Patient pays after approving</span>
-                </span>
-              </label>
             </div>
           </div>
         </div>

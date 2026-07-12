@@ -2,12 +2,14 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 
 import { ISSUE_OTHER_SENTINEL } from '../../constants/issues'
+import { getTechniqueByIssue } from '../../constants/techniques'
 import PainBodyMapPanel from '../booking/PainBodyMapPanel'
 import PainViewModeToggle from '../booking/PainViewModeToggle'
 
 import imgCupping    from '../../assets/technique_cupping.png'
 import imgNeedling   from '../../assets/technique_needling.png'
 import imgKinesio    from '../../assets/technique_kinesio.png'
+import imgIastm      from '../../assets/technique_iastm.png'
 import imgOrthopedic from '../../assets/specialty_orthopedic.png'
 import imgNeuro      from '../../assets/specialty_neuro.png'
 import imgPediatric  from '../../assets/illustration_pediatric.png'
@@ -32,6 +34,7 @@ const TECHNIQUES = [
   { label: 'Cupping Therapy', issue: 'Cupping Therapy', image: imgCupping,  color: '#ea580c', bg: '#fff7ed', border: '#fed7aa' },
   { label: 'Dry Needling',    issue: 'Dry Needling',    image: imgNeedling, color: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe' },
   { label: 'Kinesio Taping',  issue: 'Kinesio Taping',  image: imgKinesio,  color: '#0d9488', bg: '#f0fdfa', border: '#99f6e4' },
+  { label: 'IASTM',           issue: 'IASTM',           image: imgIastm,    color: '#0369a1', bg: '#f0f9ff', border: '#bae6fd', imgClass: 'scale-110' },
 ]
 
 const SPECIALTIES = [
@@ -47,19 +50,28 @@ function bookTo(issue) {
   return { to: '/book', state: issue ? { selectedIssue: issue } : undefined }
 }
 
+function techniqueTo(issue) {
+  const tech = getTechniqueByIssue(issue)
+  if (tech) return { to: `/techniques/${tech.slug}` }
+  return bookTo(issue)
+}
+
 /* ── Technique card — compact portrait card, coloured top border ── */
 function TechniqueCard({ item }) {
-  const { to, state } = bookTo(item.issue)
+  const { to } = techniqueTo(item.issue)
   return (
     <Link
       to={to}
-      state={state}
       className="group flex flex-1 flex-col items-center gap-2 overflow-hidden rounded-xl border bg-white pb-3 pt-0 shadow-sm transition-shadow hover:shadow-md active:opacity-80"
       style={{ borderColor: item.border }}
     >
       {/* Coloured top strip */}
-      <div className="flex h-20 w-full items-end justify-center" style={{ background: item.bg }}>
-        <img src={item.image} alt={item.label} className="h-16 w-16 object-contain object-bottom" />
+      <div className="flex h-20 w-full items-end justify-center overflow-hidden" style={{ background: item.bg }}>
+        <img
+          src={item.image}
+          alt={item.label}
+          className={`h-16 w-16 object-contain object-bottom ${item.imgClass || ''}`}
+        />
       </div>
       <span className="px-2 text-center text-[11px] font-bold leading-tight" style={{ color: item.color }}>
         {item.label}

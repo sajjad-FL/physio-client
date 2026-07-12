@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { formatBookingDateAndSlot } from '../../utils/date'
 import { normalizeSessionRows, todayYmd } from '../physio/physioBookingHelpers'
 import { StarRatingDisplay } from '../reviews/StarRating'
-import { SessionNoteReadOnlyBlock } from './SessionNotesReadOnly'
+import SessionNotesViewModal from './SessionNotesViewModal'
+import { formatProgressHistoryLine } from '../../constants/assessmentForm'
 
 function statusBadgeClass(status) {
   if (status === 'completed') return 'bg-emerald-50 text-emerald-900 ring-emerald-200'
@@ -50,7 +51,7 @@ function statusLabel(status) {
  *   notesViewer?: { enabled: boolean },
  *   sessionPayments?: Record<string, { recorded: number, items?: Array }>,
  * }} props
- * notesViewer — read-only expand of physio session notes (manager/admin)
+ * notesViewer — open read-only notes modal (manager/admin/patient)
  */
 export default function BookingSessionTimeline({
   booking,
@@ -66,7 +67,8 @@ export default function BookingSessionTimeline({
   const bookingDone = booking.sessionStatus === 'completed'
   const bookingRescheduled = Boolean(booking.rescheduled)
   const showAddSession = Boolean(adminSessions?.enabled && adminSessions?.onAdd && !bookingDone)
-  const [openNotesKey, setOpenNotesKey] = useState(null)
+  const [notesModalRow, setNotesModalRow] = useState(null)
+  const progressLine = formatProgressHistoryLine(booking)
 
   return (
     <div
@@ -74,6 +76,11 @@ export default function BookingSessionTimeline({
         bookingRescheduled ? 'border-amber-200/90 bg-amber-50/50' : 'border-gray-100 bg-gray-50/60'
       }`}
     >
+      {progressLine ? (
+        <div className="mb-3 rounded-lg border border-teal-100 bg-teal-50/70 px-3 py-2 text-xs font-medium text-teal-950">
+          Progress · {progressLine}
+        </div>
+      ) : null}
       {showAddSession ? (
         <div className="mb-3 flex justify-end">
           <button
@@ -173,10 +180,19 @@ export default function BookingSessionTimeline({
           const payKey = r.sessionId ? String(r.sessionId) : '__primary__'
           const payEntry = sessionPayments?.[payKey]
           const hasPaymentInfo = Boolean(sessionPayments) && !isComplimentary
-          const notesOpen = openNotesKey === r.key
-          const showViewNotesBtn = Boolean(patientActions?.enabled || notesViewer?.enabled)
+          const hasAssessmentNotes = Boolean(
+            r.notes?.text?.trim() ||
+              booking?.assessmentData ||
+              r.notes?.painNow != null ||
+              r.notes?.functionNow != null,
+          )
+          // Complimentary assessment notes: patient, physio, manager/admin can view
+          const showViewNotesBtn = isComplimentary
+            ? Boolean(patientActions?.enabled || notesViewer?.enabled || physioActions?.enabled)
+            : Boolean(patientActions?.enabled || notesViewer?.enabled)
           const showPhysioNotesBtn = Boolean(physioActions?.onNotes) && !isComplimentary
-          const physioHasNotes = Boolean(r.notes?.text?.trim())
+          const physioHasNotes = Boolean(r.notes?.text?.trim() || r.notes?.painNow != null)
+          const viewNotesLabel = isComplimentary ? 'View notes' : 'View details'
 
           return (
             <li key={r.key} className={`${rowCls} !flex-col !items-stretch`}>
@@ -265,21 +281,22 @@ export default function BookingSessionTimeline({
                           : 'border-indigo-200 bg-indigo-50 text-indigo-800 hover:border-indigo-300 hover:bg-indigo-100'
                       }`}
                     >
-                      {physioHasNotes ? 'Edit session notes' : 'Add session notes'}
+                      {physioHasNotes ? 'Edit progress' : 'Log progress'}
                     </button>
                   )}
                   {showViewNotesBtn && (
                     <button
                       type="button"
-                      onClick={() => setOpenNotesKey(notesOpen ? null : r.key)}
-                      aria-expanded={notesOpen}
+                      onClick={() => setNotesModalRow(r)}
                       className={`tap-feedback shrink-0 rounded-lg border px-2.5 py-1 text-[11px] font-semibold transition-all ${
-                        notesOpen
-                          ? 'border-teal-600/80 bg-teal-700 text-white shadow-sm hover:bg-teal-800'
+                        isComplimentary
+                          ? hasAssessmentNotes
+                            ? 'border-teal-600/60 bg-teal-700/95 text-teal-50 shadow-sm hover:border-teal-600 hover:bg-teal-800'
+                            : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
                           : 'border-teal-600/60 bg-teal-700/95 text-teal-50 shadow-sm hover:border-teal-600 hover:bg-teal-800 hover:text-white'
                       }`}
                     >
-                      {notesOpen ? 'Hide details' : 'View details'}
+                      {viewNotesLabel}
                     </button>
                   )}
                   {showRatedBadge && submittedRating && (
@@ -324,18 +341,26 @@ export default function BookingSessionTimeline({
                 {statusLabel(rowStatus)}
               </span>
               </div>
-              {showViewNotesBtn && notesOpen ? (
-                <div className="mt-2 w-full">
-                  <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-teal-700">
-                    {patientActions?.enabled ? 'From your physiotherapist' : 'Session notes'}
-                  </p>
-                  <SessionNoteReadOnlyBlock row={r} showLabel={false} />
-                </div>
-              ) : null}
             </li>
           )
         })}
       </ul>
+
+      <SessionNotesViewModal
+        open={Boolean(notesModalRow)}
+        onClose={() => setNotesModalRow(null)}
+        row={notesModalRow}
+        booking={booking}
+        viewerHint={
+          notesModalRow?.complimentary
+            ? patientActions?.enabled
+              ? 'From your care manager'
+              : null
+            : patientActions?.enabled
+              ? 'From your physiotherapist'
+              : null
+        }
+      />
     </div>
   )
 }

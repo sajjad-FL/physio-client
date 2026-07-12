@@ -11,6 +11,8 @@ import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import RegisterPhysioPage from './pages/RegisterPhysioPage'
 import BookingPage from './pages/BookingPage'
 import PhysioListPage from './pages/PhysioListPage'
+import TechniqueDetailPage from './pages/TechniqueDetailPage'
+import TechniqueBookPage from './pages/TechniqueBookPage'
 import PublicPhysicianPage from './pages/PublicPhysicianPage'
 import MapView from './pages/MapView'
 import UnauthorizedPage from './pages/UnauthorizedPage'
@@ -129,6 +131,15 @@ export default function App() {
           <Route path="orders/:id" element={<ShopOrderDetailPage />} />
           <Route path="disputes" element={<DashboardDisputes />} />
         </Route>
+        <Route path="/techniques/:slug" element={<TechniqueDetailPage />} />
+        <Route
+          path="/techniques/:slug/book"
+          element={
+            <RoleProtectedRoute allowedRoles={['user']}>
+              <TechniqueBookPage />
+            </RoleProtectedRoute>
+          }
+        />
         <Route
           path="/book"
           element={

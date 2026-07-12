@@ -56,6 +56,7 @@ import techniqueNeedling  from '../assets/technique_needling.png'
 import techniquePediatric from '../assets/technique_pediatric.png'
 import techniqueElderly   from '../assets/technique_elderly.png'
 import techniqueKinesio   from '../assets/technique_kinesio.png'
+import techniqueIastm     from '../assets/technique_iastm.png'
 
 import illustrationOther  from '../assets/illustration_other.png'
 
@@ -177,9 +178,10 @@ const SPECIALTIES = [
 ]
 
 const TECHNIQUES = [
-  { title: 'Cupping Therapy', image: techniqueCupping,   bg: 'bg-[#fff7ed]', color: 'text-[#c2410c]' },
-  { title: 'Dry Needling',   image: techniqueNeedling,  bg: 'bg-[#f5f3ff]', color: 'text-[#6d28d9]' },
-  { title: 'Kinesio Taping', image: techniqueKinesio,   bg: 'bg-[#e6f4f3]', color: 'text-[#0d6b6b]' },
+  { title: 'Cupping Therapy', slug: 'cupping-therapy', image: techniqueCupping,   bg: 'bg-[#fff7ed]', color: 'text-[#c2410c]' },
+  { title: 'Dry Needling',   slug: 'dry-needling', image: techniqueNeedling,  bg: 'bg-[#f5f3ff]', color: 'text-[#6d28d9]' },
+  { title: 'Kinesio Taping', slug: 'kinesio-taping', image: techniqueKinesio,   bg: 'bg-[#e6f4f3]', color: 'text-[#0d6b6b]' },
+  { title: 'IASTM',          slug: 'iastm', image: techniqueIastm,     bg: 'bg-[#f0f9ff]', color: 'text-[#0369a1]', imgClass: 'scale-110' },
 ]
 
 const FAQ_CATEGORIES = ['All', 'Booking', 'Therapists', 'Payments']
@@ -877,11 +879,11 @@ export default function HomePage() {
         {TECHNIQUES.map((tech) => (
           <Link
             key={tech.title}
-            to="/book"
+            to={`/techniques/${tech.slug}`}
             className="flex flex-col items-center w-[112px] sm:w-[150px] text-center group cursor-pointer"
           >
-            <div className={`w-24 h-24 sm:w-32 sm:h-32 rounded-full flex items-center justify-center transition-all duration-300 group-hover:scale-105 group-hover:shadow-lg ${tech.bg}`}>
-              <img src={tech.image} alt={tech.title} className="w-[80px] h-[80px] sm:w-[110px] sm:h-[110px] object-contain" />
+            <div className={`w-24 h-24 sm:w-32 sm:h-32 rounded-full flex items-center justify-center overflow-hidden transition-all duration-300 group-hover:scale-105 group-hover:shadow-lg ${tech.bg}`}>
+              <img src={tech.image} alt={tech.title} className={`w-[80px] h-[80px] sm:w-[110px] sm:h-[110px] object-contain ${tech.imgClass || ''}`} />
             </div>
             <span className={`text-sm font-bold mt-3 group-hover:opacity-80 transition-opacity ${tech.color}`}>
               {tech.title}

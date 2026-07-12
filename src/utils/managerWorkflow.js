@@ -19,6 +19,11 @@ const WORKFLOW = {
     hint: 'Plan is live — assign a physiotherapist',
     tone: 'action',
   },
+  pending_physio_assignment: {
+    label: 'Assign physio',
+    hint: 'Technique session — assign a physiotherapist',
+    tone: 'action',
+  },
   physio_assigned: {
     label: 'Collect payment',
     hint: 'Record cash/UPI collection if offline',
@@ -71,10 +76,24 @@ function totalPaidForBooking(b) {
 /**
  * Payment-aware workflow badge for manager case list.
  */
+export function isTechniqueManagedBooking(b) {
+  return b?.carePath === 'technique_managed'
+}
+
 export function managerWorkflowMeta(b) {
   const outstanding = outstandingForBooking(b)
   const totalPaid = totalPaidForBooking(b)
   const ws = b?.workflowStatus
+
+  if (isTechniqueManagedBooking(b) && (ws === 'plan_live' || !b?.physioId)) {
+    if (!b?.physioId) {
+      return {
+        label: 'Assign physio',
+        hint: 'Technique session — assign a physiotherapist',
+        tone: 'action',
+      }
+    }
+  }
 
   if (outstanding <= 0.009 && totalPaid > 0) {
     return {
@@ -115,6 +134,7 @@ export function managerWorkflowMeta(b) {
 
 export function managerNeedsAction(b) {
   const ws = b?.workflowStatus
+  if (isTechniqueManagedBooking(b) && !b?.physioId) return true
   if (!MANAGER_ACTION_STATUSES.has(ws)) {
     if (ws === 'payment_recorded' && outstandingForBooking(b) > 0.009) {
       return true
@@ -169,6 +189,7 @@ export function managerCaseSortTier(b) {
   const planLive = b?.planStatus === 'live' || b?.planStatus === 'approved'
 
   if (planLive && outstanding > 0.009) return 1
+  if (isTechniqueManagedBooking(b) && !b?.physioId) return 1
   if (ws === 'manager_assigned') return 2
   if (ws === 'assessment_done') return 3
   if (ws === 'plan_live') return 4
