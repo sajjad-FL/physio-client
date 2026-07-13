@@ -144,7 +144,7 @@ function startServer(rootDir, rootIndexHtml) {
           const ext = path.extname(filePath).toLowerCase()
           res.setHeader('Content-Type', MIME[ext] || 'application/octet-stream')
           // Vite asset filenames are content-hashed — let Chromium cache them so
-          // all ~60 page loads fetch/compile the JS bundle once, not 60 times.
+          // all ~40 page loads fetch/compile the JS bundle once, not once each.
           if (reqUrl.startsWith('/assets/')) {
             res.setHeader('Cache-Control', 'public, max-age=3600')
           }
@@ -200,6 +200,7 @@ async function main() {
     process.exit(0)
   }
 
+  const t0 = Date.now()
   const cities = await loadServiceCities()
   const citySlugs = cities.map((c) => c.slug)
   const conditionSlugs = await loadConditionSlugs()
@@ -208,31 +209,10 @@ async function main() {
     conditionSlugs.map((cond) => `/physio-in/${slug}/${cond}`),
   )
   const nearMeCityRoutes = citySlugs.map((slug) => `/near-me-physio/${slug}`)
-  const nearMeLocalityRoutes = cities.flatMap((city) =>
-    (city.neighborhoods || [])
-      .slice(0, 3)
-      .map((name) =>
-        `/near-me-physio/${city.slug}/${String(name)
-          .trim()
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, '-')
-          .replace(/^-+|-+$/g, '')}`,
-      ),
-  )
 
+  // SEO pages only — skip auth and near-me locality fan-out (CSR still works).
   const routes = Array.from(
-    new Set([
-      '/',
-      '/login',
-      '/register',
-      '/forgot-password',
-      '/register-physio',
-      '/near-me-physio',
-      ...cityRoutes,
-      ...conditionCityRoutes,
-      ...nearMeCityRoutes,
-      ...nearMeLocalityRoutes,
-    ]),
+    new Set(['/', '/near-me-physio', ...cityRoutes, ...conditionCityRoutes, ...nearMeCityRoutes]),
   )
 
   // Cache the original, un-prerendered root HTML and serve it for every SPA
@@ -251,10 +231,18 @@ async function main() {
 
   const { server, port } = await startServer(distDir, rootIndexHtml)
   const origin = `http://127.0.0.1:${port}`
-  console.log(`[prerender] Serving dist on ${origin}`)
+  // ponytail: fixed pool size — bump PRERENDER_CONCURRENCY on a beefier build
+  // box, drop it if Chromium OOMs on a small one.
+  const concurrency = Math.max(1, Math.min(Number(process.env.PRERENDER_CONCURRENCY) || 4, routes.length))
+  console.log(
+    `[prerender] Serving dist on ${origin} — ${routes.length} routes, concurrency ${concurrency}`,
+  )
 
   let browser
+  let ok = 0
+  let failures = 0
   try {
+    const launchStart = Date.now()
     try {
       browser = await puppeteer.launch({
         headless: true,
@@ -277,6 +265,8 @@ async function main() {
       server.close()
       process.exit(0)
     }
+    console.log(`[prerender] Chromium launched in ${Date.now() - launchStart}ms`)
+
     async function makePage() {
       const p = await browser.newPage()
       await p.setViewport({ width: 1280, height: 900 })
@@ -285,12 +275,7 @@ async function main() {
     }
 
     const queue = routes.slice()
-    let failures = 0
     let aborted = false
-
-    // ponytail: fixed pool size — bump PRERENDER_CONCURRENCY on a beefier build
-    // box, drop it if Chromium OOMs on a small one.
-    const concurrency = Math.max(1, Math.min(Number(process.env.PRERENDER_CONCURRENCY) || 4, routes.length))
 
     async function worker() {
       let page = await makePage()
@@ -300,7 +285,7 @@ async function main() {
         const outFile = routeToOutputPath(route)
         fs.mkdirSync(path.dirname(outFile), { recursive: true })
         const target = `${origin}${route}`
-        console.log(`[prerender] ${route} -> ${path.relative(clientRoot, outFile)}`)
+        const routeStart = Date.now()
         try {
           // Recycle the tab periodically to avoid Chromium slowdown on long runs.
           if (count > 0 && count % 25 === 0) {
@@ -309,9 +294,15 @@ async function main() {
           }
           const html = await captureRoute(page, target)
           fs.writeFileSync(outFile, html, 'utf8')
+          ok += 1
+          console.log(
+            `[prerender] ${route} -> ${path.relative(clientRoot, outFile)} (${Date.now() - routeStart}ms)`,
+          )
         } catch (err) {
-          console.warn(`[prerender] failed ${route}: ${err?.message || err}`)
           failures += 1
+          console.warn(
+            `[prerender] failed ${route} (${Date.now() - routeStart}ms): ${err?.message || err}`,
+          )
           // A dead browser (e.g. OOM-killed on a small CI machine) makes every
           // remaining route fail too — bail out instead of burning build minutes.
           if (failures >= 8) {
@@ -330,7 +321,9 @@ async function main() {
     server.close()
   }
 
-  console.log('[prerender] Done.')
+  console.log(
+    `[prerender] Done in ${Date.now() - t0}ms — ${ok} ok, ${failures} failed, ${routes.length} routes, concurrency ${concurrency}`,
+  )
 }
 
 main().catch((err) => {
