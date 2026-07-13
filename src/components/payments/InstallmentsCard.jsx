@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { assetUrl } from '../../utils/assetUrl'
 
 function formatRupees(n) {
   const v = Number(n || 0)
@@ -36,15 +37,17 @@ const STATUS_LABEL = {
   refunded: 'Refunded',
 }
 
+function paymentModeLabel(p) {
+  const channel = String(p?.meta?.collectionChannel || '').toLowerCase()
+  if (channel === 'phonepe_qr') return 'PhonePe QR'
+  if (channel === 'cash') return 'Cash'
+  if (p?.mode === 'online') return 'Online'
+  if (p?.mode === 'offline') return 'Cash / UPI'
+  return p?.mode || '—'
+}
+
 /**
- * Installments card shared across patient / physio / admin views.
- *
- * - Renders the running header (paid, outstanding, sessions covered).
- * - Renders the installments table.
- * - Accepts `renderRowActions(payment)` so role-specific buttons (verify/reject,
- *   etc.) can be injected per row.
- * - Accepts `children` as a slot for role-specific header actions
- *   (e.g. "Pay next installment", "Record collection").
+ * Installments card shared across patient / physio / admin / manager views.
  */
 export default function InstallmentsCard({
   title = 'Installments',
@@ -69,8 +72,12 @@ export default function InstallmentsCard({
   const s = summary || {}
   const totalAmount = Number(s.totalAmount || 0)
   const totalPaid = Number(s.totalPaid || 0)
-  const outstanding = Number(s.outstanding || Math.max(0, totalAmount - totalPaid))
+  const totalCollected = Number(s.totalCollected || 0)
   const totalPending = Number(s.totalPending || 0)
+  const outstandingRaw = s.outstanding
+  const outstanding = Number.isFinite(Number(outstandingRaw))
+    ? Number(outstandingRaw)
+    : Math.max(0, totalAmount - totalPaid - totalCollected - totalPending)
   const coveredSessions = Number(s.coveredSessions || 0)
   const sessionsCount = Number(s.sessionsCount || 0)
 
@@ -91,9 +98,14 @@ export default function InstallmentsCard({
             {formatRupees(totalPaid)}{' '}
             <span className="text-xs font-normal text-ink-muted">of {formatRupees(totalAmount)}</span>
           </dd>
+          {totalCollected > 0 ? (
+            <p className="mt-1 text-[11px] text-amber-800">
+              {formatRupees(totalCollected)} awaiting admin verification
+            </p>
+          ) : null}
           {totalPending > 0 ? (
             <p className="mt-1 text-[11px] text-amber-800">
-              {formatRupees(totalPending)} pending verification
+              {formatRupees(totalPending)} online payment in progress
             </p>
           ) : null}
         </div>
@@ -132,6 +144,7 @@ export default function InstallmentsCard({
               {rows.map((p) => {
                 const chip = STATUS_CHIP[p.status] || 'bg-slate-100 text-slate-700 ring-slate-200'
                 const label = STATUS_LABEL[p.status] || p.status
+                const proofSrc = p.proofUrl ? assetUrl(p.proofUrl) : ''
                 return (
                   <tr key={p._id}>
                     <td className="py-2 pr-3 align-top text-ink">
@@ -142,7 +155,19 @@ export default function InstallmentsCard({
                         {p.sessionOrdinal ? `#${p.sessionOrdinal}` : '—'}
                       </td>
                     ) : null}
-                    <td className="py-2 pr-3 align-top capitalize text-ink">{p.mode}</td>
+                    <td className="py-2 pr-3 align-top text-ink">
+                      <span>{paymentModeLabel(p)}</span>
+                      {proofSrc ? (
+                        <a
+                          href={proofSrc}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="mt-1 block text-[11px] font-medium text-teal-700 hover:underline"
+                        >
+                          View screenshot
+                        </a>
+                      ) : null}
+                    </td>
                     <td className="py-2 pr-3 align-top text-right font-medium tabular-nums text-ink">
                       {formatRupees(p.amount)}
                     </td>

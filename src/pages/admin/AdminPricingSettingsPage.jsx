@@ -76,13 +76,13 @@ export default function AdminPricingSettingsPage() {
   const [saving, setSaving] = useState(false)
   const [resetting, setResetting] = useState(false)
 
-  const [defaultBookingAmountRupees, setDefaultBookingAmountRupees] = useState(500)
-  const [platformCommissionPerSessionRupees, setPlatformCommissionPerSessionRupees] = useState(100)
   const [distanceSurchargeBaseKm, setDistanceSurchargeBaseKm] = useState(5)
   const [distanceSurchargePerKmRupees, setDistanceSurchargePerKmRupees] = useState(5)
   const [homePlanMaxDiscountPercent, setHomePlanMaxDiscountPercent] = useState(15)
-  const [defaultPhysioPricePerSession, setDefaultPhysioPricePerSession] = useState(500)
-  const [managerCommissionPerSessionRupees, setManagerCommissionPerSessionRupees] = useState(0)
+  const [defaultSessionPricing, setDefaultSessionPricing] = useState(() =>
+    expandTechniquePrice(600, 600, 70),
+  )
+  const [defaultsMode, setDefaultsMode] = useState('with') // 'with' | 'without'
   const [techniquePrices, setTechniquePrices] = useState(() =>
     Object.fromEntries(
       TECHNIQUE_ISSUES.map((issue) => [
@@ -91,19 +91,29 @@ export default function AdminPricingSettingsPage() {
       ]),
     ),
   )
-  const [techniqueMode, setTechniqueMode] = useState('without') // 'with' | 'without'
+  const [techniqueMode, setTechniqueMode] = useState('with') // 'with' | 'without'
   const [planTiers, setPlanTiers] = useState([])
   const [planMilestones, setPlanMilestones] = useState({})
   const [updatedAt, setUpdatedAt] = useState(null)
 
   const applyPayload = useCallback((data) => {
-    setDefaultBookingAmountRupees(data.defaultBookingAmountRupees)
-    setPlatformCommissionPerSessionRupees(data.platformCommissionPerSessionRupees ?? 100)
     setDistanceSurchargeBaseKm(data.distanceSurchargeBaseKm)
     setDistanceSurchargePerKmRupees(data.distanceSurchargePerKmRupees)
     setHomePlanMaxDiscountPercent(data.homePlanMaxDiscountPercent)
-    setDefaultPhysioPricePerSession(data.defaultPhysioPricePerSession)
-    setManagerCommissionPerSessionRupees(data.managerCommissionPerSessionRupees ?? 0)
+    setDefaultSessionPricing(
+      expandTechniquePrice(
+        data.defaultSessionPricing || {
+          totalAmount: data.defaultBookingAmountRupees,
+          withManager: {
+            platform: data.platformCommissionPerSessionRupees,
+            physio: data.defaultPhysioPricePerSession,
+            manager: data.managerCommissionPerSessionRupees,
+          },
+        },
+        data.defaultBookingAmountRupees || 600,
+        data.platformCommissionPerSessionRupees ?? 70,
+      ),
+    )
     setTechniquePrices(
       Object.fromEntries(
         TECHNIQUE_ISSUES.map((issue) => [
@@ -171,6 +181,21 @@ export default function AdminPricingSettingsPage() {
       ...t,
       defaultDiscountPercent: Math.min(maxDisc, Math.max(0, Number(t.defaultDiscountPercent) || 0)),
     }))
+    const defaultsTotal = Number(defaultSessionPricing?.totalAmount) || 0
+    if (Math.abs(splitSum(defaultSessionPricing?.withManager) - defaultsTotal) > 0.01) {
+      toast.error(`Defaults: with-manager split must equal patient total ₹${defaultsTotal}`)
+      setSaving(false)
+      setTab('defaults')
+      setDefaultsMode('with')
+      return
+    }
+    if (Math.abs(splitSum({ ...defaultSessionPricing?.withoutManager, manager: 0 }) - defaultsTotal) > 0.01) {
+      toast.error(`Defaults: without-manager split must equal patient total ₹${defaultsTotal}`)
+      setSaving(false)
+      setTab('defaults')
+      setDefaultsMode('without')
+      return
+    }
     for (const issue of TECHNIQUE_ISSUES) {
       const row = techniquePrices[issue]
       const total = Number(row?.totalAmount) || 0
@@ -190,14 +215,25 @@ export default function AdminPricingSettingsPage() {
       }
     }
     try {
+      const wm = defaultSessionPricing.withManager || { platform: 0, physio: 0, manager: 0 }
+      const wom = defaultSessionPricing.withoutManager || { platform: 0, physio: 0, manager: 0 }
       const { data } = await api.patch('/admin/pricing/settings', {
-        defaultBookingAmountRupees: Number(defaultBookingAmountRupees),
-        platformCommissionPerSessionRupees: Number(platformCommissionPerSessionRupees),
+        defaultSessionPricing: {
+          totalAmount: defaultsTotal,
+          withManager: {
+            platform: Number(wm.platform) || 0,
+            physio: Number(wm.physio) || 0,
+            manager: Number(wm.manager) || 0,
+          },
+          withoutManager: {
+            platform: Number(wom.platform) || 0,
+            physio: Number(wom.physio) || 0,
+            manager: 0,
+          },
+        },
         distanceSurchargeBaseKm: Number(distanceSurchargeBaseKm),
         distanceSurchargePerKmRupees: Number(distanceSurchargePerKmRupees),
         homePlanMaxDiscountPercent: maxDisc,
-        defaultPhysioPricePerSession: Number(defaultPhysioPricePerSession),
-        managerCommissionPerSessionRupees: Number(managerCommissionPerSessionRupees),
         techniquePrices: Object.fromEntries(
           TECHNIQUE_ISSUES.map((issue) => {
             const row = techniquePrices[issue] || expandTechniquePrice(DEFAULT_TECHNIQUE_TOTALS[issue])
@@ -285,69 +321,178 @@ export default function AdminPricingSettingsPage() {
       </div>
 
       <form onSubmit={onSave} className="space-y-6">
-        {tab === 'defaults' && (
-          <Card>
-            <h2 className="type-page-title text-slate-900">Defaults &amp; commission</h2>
-            <p className="mt-2 rounded-xl bg-teal-50 px-3 py-2.5 text-sm text-teal-900">
-              Patient pays (totalAmount):{' '}
-              <span className="font-semibold">
-                ₹{Number(defaultBookingAmountRupees || 0).toLocaleString('en-IN')}
-              </span>
-              <span className="text-teal-700/80"> / session</span>
-              <span className="mt-1.5 block text-xs font-normal text-teal-800/90">
-                Platform ₹{Number(platformCommissionPerSessionRupees || 0).toLocaleString('en-IN')}
-                <span className="mx-1.5 text-teal-600/50">·</span>
-                Physio ₹{Number(defaultPhysioPricePerSession || 0).toLocaleString('en-IN')}
-                <span className="mx-1.5 text-teal-600/50">·</span>
-                Care manager ₹{Number(managerCommissionPerSessionRupees || 0).toLocaleString('en-IN')}
-              </span>
-            </p>
-            <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              <label className="block text-xs font-medium text-slate-600">
-                Default session price (₹)
+        {tab === 'defaults' && (() => {
+          const row =
+            defaultSessionPricing || expandTechniquePrice(600, 600, 70)
+          const totalAmount = Math.max(0, Number(row.totalAmount) || 0)
+          const splitKey = defaultsMode === 'with' ? 'withManager' : 'withoutManager'
+          const split = row[splitKey] || { platform: 0, physio: 0, manager: 0 }
+          const platform = Math.max(0, Number(split.platform) || 0)
+          const physio = Math.max(0, Number(split.physio) || 0)
+          const manager = defaultsMode === 'with' ? Math.max(0, Number(split.manager) || 0) : 0
+          const sum = platform + physio + manager
+          const balanced = Math.abs(sum - totalAmount) < 0.01
+
+          function patchDefaults(next) {
+            setDefaultSessionPricing((prev) => ({ ...prev, ...next }))
+          }
+
+          function setTotal(value) {
+            const nextTotal = Math.max(0, Number(value) || 0)
+            const wm = { ...(row.withManager || {}) }
+            const wom = { ...(row.withoutManager || {}) }
+            const wmPlatform = Math.min(Math.max(0, Number(wm.platform) || 0), nextTotal)
+            const wmManager = Math.min(Math.max(0, Number(wm.manager) || 0), nextTotal - wmPlatform)
+            wm.platform = wmPlatform
+            wm.manager = wmManager
+            wm.physio = Math.max(0, nextTotal - wmPlatform - wmManager)
+            const womPlatform = Math.min(Math.max(0, Number(wom.platform) || 0), nextTotal)
+            wom.platform = womPlatform
+            wom.manager = 0
+            wom.physio = Math.max(0, nextTotal - womPlatform)
+            patchDefaults({ totalAmount: nextTotal, withManager: wm, withoutManager: wom })
+          }
+
+          function setSplitPart(field, value) {
+            const n = Math.max(0, Number(value) || 0)
+            const p = field === 'platform' ? n : Math.max(0, Number(split.platform) || 0)
+            const m =
+              defaultsMode === 'with'
+                ? field === 'manager'
+                  ? n
+                  : Math.max(0, Number(split.manager) || 0)
+                : 0
+            const ph = field === 'physio' ? n : Math.max(0, totalAmount - p - m)
+            patchDefaults({
+              [splitKey]: { platform: p, physio: ph, manager: m },
+            })
+          }
+
+          return (
+            <Card>
+              <h2 className="type-page-title text-slate-900">Defaults &amp; commission</h2>
+              <p className="mt-1 text-sm text-slate-600">
+                Default home-session price. Patient always pays the same total. Use the toggle to set who
+                earns what with or without a care manager.
+              </p>
+
+              <div className="mt-4 inline-flex rounded-xl bg-slate-100 p-1">
+                <button
+                  type="button"
+                  onClick={() => setDefaultsMode('with')}
+                  className={`rounded-lg px-3 py-1.5 text-sm font-semibold ${
+                    defaultsMode === 'with'
+                      ? 'bg-white text-slate-900 shadow-sm'
+                      : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  With manager
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDefaultsMode('without')}
+                  className={`rounded-lg px-3 py-1.5 text-sm font-semibold ${
+                    defaultsMode === 'without'
+                      ? 'bg-white text-slate-900 shadow-sm'
+                      : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  Without manager
+                </button>
+              </div>
+
+              <p className="mt-4 rounded-xl bg-teal-50 px-3 py-2.5 text-sm text-teal-900">
+                Patient pays (totalAmount):{' '}
+                <span className="font-semibold">
+                  ₹{totalAmount.toLocaleString('en-IN')}
+                </span>
+                <span className="text-teal-700/80"> / session</span>
+                <span className="mt-1.5 block text-xs font-normal text-teal-800/90">
+                  Platform ₹{platform.toLocaleString('en-IN')}
+                  <span className="mx-1.5 text-teal-600/50">·</span>
+                  Physio ₹{physio.toLocaleString('en-IN')}
+                  {defaultsMode === 'with' ? (
+                    <>
+                      <span className="mx-1.5 text-teal-600/50">·</span>
+                      Care manager ₹{manager.toLocaleString('en-IN')}
+                    </>
+                  ) : null}
+                </span>
+              </p>
+
+              <label className="mt-4 block text-xs font-medium text-slate-600">
+                Patient pays (totalAmount) ₹
                 <input
                   type="number"
                   min={1}
                   step={1}
                   className={inputCls}
-                  value={defaultBookingAmountRupees}
-                  onChange={(e) => setDefaultBookingAmountRupees(e.target.value)}
+                  value={totalAmount}
+                  onChange={(e) => setTotal(e.target.value)}
                 />
+                <span className="mt-1 block text-[11px] font-normal text-slate-500">
+                  Same amount with or without a manager
+                </span>
               </label>
-              <label className="block text-xs font-medium text-slate-600">
-                Platform commission (₹)
-                <input
-                  type="number"
-                  min={0}
-                  step={1}
-                  className={inputCls}
-                  value={platformCommissionPerSessionRupees}
-                  onChange={(e) => setPlatformCommissionPerSessionRupees(e.target.value)}
-                />
-              </label>
-              <label className="block text-xs font-medium text-slate-600">
-                Physio rate (₹)
-                <input
-                  type="number"
-                  min={0}
-                  step={1}
-                  className={inputCls}
-                  value={defaultPhysioPricePerSession}
-                  onChange={(e) => setDefaultPhysioPricePerSession(e.target.value)}
-                />
-              </label>
-              <label className="block text-xs font-medium text-slate-600">
-                Care-manager commission (₹)
-                <input
-                  type="number"
-                  min={0}
-                  step={1}
-                  className={inputCls}
-                  value={managerCommissionPerSessionRupees}
-                  onChange={(e) => setManagerCommissionPerSessionRupees(e.target.value)}
-                />
-              </label>
-              <label className="block text-xs font-medium text-slate-600">
+
+              <p className="mt-4 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                {defaultsMode === 'with' ? 'With manager' : 'Without manager'} split
+              </p>
+              <div
+                className={`mt-2 grid gap-3 ${
+                  defaultsMode === 'with' ? 'sm:grid-cols-3' : 'sm:grid-cols-2'
+                }`}
+              >
+                <label className="block text-xs font-medium text-slate-600">
+                  Platform (₹)
+                  <input
+                    type="number"
+                    min={0}
+                    step={1}
+                    className={inputCls}
+                    value={split.platform}
+                    onChange={(e) => setSplitPart('platform', e.target.value)}
+                  />
+                </label>
+                <label className="block text-xs font-medium text-slate-600">
+                  Physio (₹)
+                  <input
+                    type="number"
+                    min={0}
+                    step={1}
+                    className={inputCls}
+                    value={split.physio}
+                    onChange={(e) => setSplitPart('physio', e.target.value)}
+                  />
+                </label>
+                {defaultsMode === 'with' ? (
+                  <label className="block text-xs font-medium text-slate-600">
+                    Care manager (₹)
+                    <input
+                      type="number"
+                      min={0}
+                      step={1}
+                      className={inputCls}
+                      value={split.manager}
+                      onChange={(e) => setSplitPart('manager', e.target.value)}
+                    />
+                  </label>
+                ) : null}
+              </div>
+
+              <p
+                className={`mt-2.5 rounded-lg px-3 py-2 text-xs ${
+                  balanced
+                    ? 'bg-emerald-50 text-emerald-800'
+                    : 'bg-amber-50 text-amber-900'
+                }`}
+              >
+                {balanced
+                  ? `Split totals ₹${sum.toLocaleString('en-IN')} — matches patient total`
+                  : `Split totals ₹${sum.toLocaleString('en-IN')} — must equal ₹${totalAmount.toLocaleString('en-IN')}`}
+              </p>
+
+              <label className="mt-4 block text-xs font-medium text-slate-600">
                 Max home-plan discount (%)
                 <input
                   type="number"
@@ -359,9 +504,9 @@ export default function AdminPricingSettingsPage() {
                   onChange={(e) => setHomePlanMaxDiscountPercent(e.target.value)}
                 />
               </label>
-            </div>
-          </Card>
-        )}
+            </Card>
+          )
+        })()}
 
         {tab === 'techniques' && (
           <Card>
@@ -374,17 +519,6 @@ export default function AdminPricingSettingsPage() {
             <div className="mt-4 inline-flex rounded-xl bg-slate-100 p-1">
               <button
                 type="button"
-                onClick={() => setTechniqueMode('without')}
-                className={`rounded-lg px-3 py-1.5 text-sm font-semibold ${
-                  techniqueMode === 'without'
-                    ? 'bg-white text-slate-900 shadow-sm'
-                    : 'text-slate-500 hover:text-slate-800'
-                }`}
-              >
-                Without manager
-              </button>
-              <button
-                type="button"
                 onClick={() => setTechniqueMode('with')}
                 className={`rounded-lg px-3 py-1.5 text-sm font-semibold ${
                   techniqueMode === 'with'
@@ -393,6 +527,17 @@ export default function AdminPricingSettingsPage() {
                 }`}
               >
                 With manager
+              </button>
+              <button
+                type="button"
+                onClick={() => setTechniqueMode('without')}
+                className={`rounded-lg px-3 py-1.5 text-sm font-semibold ${
+                  techniqueMode === 'without'
+                    ? 'bg-white text-slate-900 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                Without manager
               </button>
             </div>
 

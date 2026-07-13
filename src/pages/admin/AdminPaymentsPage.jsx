@@ -3,7 +3,7 @@ import { api } from '../../config/api'
 import toast from 'react-hot-toast'
 import AdminPageHeader, { AdminLink } from '../../components/admin/AdminPageHeader'
 import AdminFlowGuide from '../../components/admin/AdminFlowGuide'
-import AdminPaymentQueueTable, { PaymentQueueVerifySummary } from '../../components/admin/AdminPaymentQueueTable'
+import AdminPaymentQueueTable, { PaymentQueueVerifySummary, isManagerPhonePe } from '../../components/admin/AdminPaymentQueueTable'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import Input from '../../components/ui/Input'
@@ -144,10 +144,10 @@ export default function AdminPaymentsPage() {
       />
 
       <AdminFlowGuide
-        title="Payment flow (offline)"
+        title="Payment flow"
         steps={[
-          'Patient pays physiotherapist in cash → physiotherapist marks installment as collected in their app.',
-          'You verify the collection here (or on the booking detail page under Installments).',
+          'Physio cash/UPI or manager PhonePe QR collections land here as Collected until you verify.',
+          'Verify a row to credit wallets / unlock manager commission; reject if the screenshot or amount is wrong.',
           'Verified amounts update physiotherapist wallets — commission due appears under Finance.',
           'After sessions complete, release escrow from the booking detail page when appropriate.',
         ]}
@@ -257,9 +257,21 @@ export default function AdminPaymentsPage() {
           <Card hover={false} className="max-w-md shadow-xl">
             <h3 className="type-page-title text-gray-900">Verify payment</h3>
             <p className="mt-2 text-sm text-gray-600">
-              Confirm <span className="font-semibold text-gray-900">{formatInr(verifyTarget.amount)}</span> collected by{' '}
-              <span className="font-semibold text-gray-900">{verifyTarget.physioName}</span>? This posts the ledger
-              entries for this installment.
+              Confirm <span className="font-semibold text-gray-900">{formatInr(verifyTarget.amount)}</span>
+              {isManagerPhonePe(verifyTarget) ? (
+                <>
+                  {' '}
+                  PhonePe QR collection by manager{' '}
+                  <span className="font-semibold text-gray-900">{verifyTarget.managerName || 'Manager'}</span>
+                </>
+              ) : (
+                <>
+                  {' '}
+                  collected by{' '}
+                  <span className="font-semibold text-gray-900">{verifyTarget.physioName || 'physiotherapist'}</span>
+                </>
+              )}
+              ? This posts the ledger entries for this installment.
             </p>
             <PaymentQueueVerifySummary row={verifyTarget} />
             <div className="mt-6 flex justify-end gap-2">
@@ -278,7 +290,11 @@ export default function AdminPaymentsPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog">
           <Card hover={false} className="max-w-md shadow-xl">
             <h3 className="type-page-title text-gray-900">Reject collection</h3>
-            <p className="mt-1 text-sm text-gray-600">The physiotherapist can record a fresh collection after this.</p>
+            <p className="mt-1 text-sm text-gray-600">
+              {isManagerPhonePe(rejectTarget)
+                ? 'The manager can upload a new PhonePe screenshot after this.'
+                : 'The physiotherapist can record a fresh collection after this.'}
+            </p>
             <PaymentQueueVerifySummary row={rejectTarget} />
             <label className="mt-4 block text-xs font-medium text-gray-500">Reason</label>
             <textarea
