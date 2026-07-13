@@ -149,6 +149,10 @@ export default function AdminSettlementsPage() {
   const [busy, setBusy] = useState(false)
   const [payoutRequests, setPayoutRequests] = useState([])
   const [payoutBusyId, setPayoutBusyId] = useState(null)
+  const [payoutModal, setPayoutModal] = useState(null) // { request, action: 'approved'|'rejected' }
+  const [payoutRef, setPayoutRef] = useState('')
+  const [payoutNote, setPayoutNote] = useState('')
+  const [pendingPhonePeCount, setPendingPhonePeCount] = useState(0)
 
   const loadPayoutRequests = useCallback(async () => {
     try {
@@ -167,6 +171,12 @@ export default function AdminSettlementsPage() {
       setBatches(res.data?.batches || [])
     })
     loadPayoutRequests()
+    api
+      .get('/admin/payments', { params: { mode: 'offline', status: 'collected', limit: 1 } })
+      .then((res) => {
+        setPendingPhonePeCount(Number(res.data?.pendingVerification || 0))
+      })
+      .catch(() => setPendingPhonePeCount(0))
   }, [loadPayoutRequests])
 
   const loadLedger = useCallback(async (managerId) => {
@@ -223,28 +233,32 @@ export default function AdminSettlementsPage() {
     }
   }
 
-  async function processPayout(request, status) {
-    let payoutReference = ''
-    if (status === 'approved') {
-      payoutReference = window.prompt('Payout reference (UPI/bank ref):', '') ?? ''
-      if (payoutReference === '' && !window.confirm('Approve without a payout reference?')) return
-    }
-    const note = status === 'rejected' ? window.prompt('Reason for rejecting:', '') : ''
-    if (status === 'rejected' && note == null) return
+  async function submitPayoutModal() {
+    if (!payoutModal) return
+    const { request, action } = payoutModal
     setPayoutBusyId(String(request._id))
     try {
       await api.patch(`/withdraw/${request._id}`, {
-        status,
-        payoutReference: payoutReference.trim(),
-        note: (note || '').trim(),
+        status: action,
+        payoutReference: action === 'approved' ? payoutRef.trim() : '',
+        note: action === 'rejected' ? payoutNote.trim() : '',
       })
-      toast.success(status === 'approved' ? 'Payout approved' : 'Request rejected')
+      toast.success(action === 'approved' ? 'Payout approved' : 'Request rejected')
+      setPayoutModal(null)
+      setPayoutRef('')
+      setPayoutNote('')
       await loadPayoutRequests()
     } catch (err) {
       toast.error(err.response?.data?.message || 'Could not process request')
     } finally {
       setPayoutBusyId(null)
     }
+  }
+
+  function openPayoutModal(request, action) {
+    setPayoutRef('')
+    setPayoutNote('')
+    setPayoutModal({ request, action })
   }
 
   const allEntries = ledger?.entries || []
@@ -255,6 +269,24 @@ export default function AdminSettlementsPage() {
 
   return (
     <div className="space-y-6">
+      <div className="rounded-xl border border-teal-200 bg-teal-50 px-4 py-3 text-sm text-teal-950">
+        <p className="font-semibold">Looking for manager PhonePe QR screenshots?</p>
+        <p className="mt-1 text-teal-900/90">
+          Those are verified under{' '}
+          <Link to="/admin/finance?tab=queue" className="font-semibold underline underline-offset-2">
+            Payment history
+          </Link>
+          {pendingPhonePeCount > 0 ? (
+            <>
+              {' '}
+              — <span className="font-semibold">{pendingPhonePeCount} awaiting verification</span>.
+            </>
+          ) : (
+            <> (filter Offline + Collected / Needs verification).</>
+          )}{' '}
+          This page is only for cash hand-off settlement batches and manager withdrawal approvals.
+        </p>
+      </div>
       <Card hover={false} className="p-5">
         <h2 className="font-semibold text-slate-900">Manager batch settlement</h2>
         <p className="mt-1 text-sm text-slate-600">
@@ -355,16 +387,24 @@ export default function AdminSettlementsPage() {
                         Requested {formatDate(r.requestedAt)}
                         {r.managerId?.phone ? ` · ${r.managerId.phone}` : ''}
                       </p>
+                      {r.payoutUpiId ? (
+                        <p className="mt-1 text-xs font-medium text-teal-800">
+                          Pay to UPI: {r.payoutUpiId}
+                          {r.payoutDisplayName ? ` · ${r.payoutDisplayName}` : ''}
+                        </p>
+                      ) : (
+                        <p className="mt-1 text-xs text-rose-700">No UPI on this request</p>
+                      )}
                     </div>
                     <div className="flex shrink-0 gap-2">
-                      <Button type="button" disabled={rowBusy} onClick={() => processPayout(r, 'approved')}>
+                      <Button type="button" disabled={rowBusy} onClick={() => openPayoutModal(r, 'approved')}>
                         {rowBusy ? '…' : 'Approve'}
                       </Button>
                       <Button
                         type="button"
                         variant="outline"
                         disabled={rowBusy}
-                        onClick={() => processPayout(r, 'rejected')}
+                        onClick={() => openPayoutModal(r, 'rejected')}
                       >
                         Reject
                       </Button>
@@ -388,6 +428,7 @@ export default function AdminSettlementsPage() {
                     </p>
                     <p className="text-xs text-slate-500">
                       {formatDate(r.processedAt || r.requestedAt)}
+                      {r.payoutUpiId ? ` · UPI: ${r.payoutUpiId}` : ''}
                       {r.payoutReference ? ` · Ref: ${r.payoutReference}` : ''}
                       {r.rejectReason ? ` · ${r.rejectReason}` : ''}
                     </p>
@@ -398,6 +439,72 @@ export default function AdminSettlementsPage() {
           </>
         )}
       </div>
+
+      {payoutModal ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog">
+          <Card hover={false} className="w-full max-w-md shadow-xl">
+            <h3 className="font-semibold text-slate-900">
+              {payoutModal.action === 'approved' ? 'Approve manager payout' : 'Reject payout'}
+            </h3>
+            <div className="mt-3 space-y-1 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2 text-sm">
+              <p className="font-medium text-slate-900">
+                {payoutModal.request.managerId?.name || 'Manager'} · ₹
+                {Number(payoutModal.request.amount).toFixed(2)}
+              </p>
+              {payoutModal.request.managerId?.phone ? (
+                <p className="text-xs text-slate-500">{payoutModal.request.managerId.phone}</p>
+              ) : null}
+              {payoutModal.request.payoutUpiId ? (
+                <p className="text-sm font-semibold text-teal-800">
+                  Pay to: {payoutModal.request.payoutUpiId}
+                  {payoutModal.request.payoutDisplayName
+                    ? ` (${payoutModal.request.payoutDisplayName})`
+                    : ''}
+                </p>
+              ) : (
+                <p className="text-xs text-rose-700">This request has no UPI ID saved.</p>
+              )}
+            </div>
+            {payoutModal.action === 'approved' ? (
+              <label className="mt-4 block text-xs font-medium text-slate-600">
+                Payout reference / UTR (optional)
+                <input
+                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+                  value={payoutRef}
+                  onChange={(e) => setPayoutRef(e.target.value)}
+                  placeholder="Bank / UPI transaction id after you pay"
+                />
+              </label>
+            ) : (
+              <label className="mt-4 block text-xs font-medium text-slate-600">
+                Reason (optional)
+                <input
+                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+                  value={payoutNote}
+                  onChange={(e) => setPayoutNote(e.target.value)}
+                  placeholder="Why rejected"
+                />
+              </label>
+            )}
+            <div className="mt-6 flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => setPayoutModal(null)}>
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                disabled={Boolean(payoutBusyId)}
+                onClick={submitPayoutModal}
+              >
+                {payoutBusyId
+                  ? '…'
+                  : payoutModal.action === 'approved'
+                    ? 'Confirm approve'
+                    : 'Confirm reject'}
+              </Button>
+            </div>
+          </Card>
+        </div>
+      ) : null}
     </div>
   )
 }

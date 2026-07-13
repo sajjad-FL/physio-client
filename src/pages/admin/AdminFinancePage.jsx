@@ -4,7 +4,7 @@ import { api } from '../../config/api'
 import toast from 'react-hot-toast'
 import AdminPageHeader, { AdminLink } from '../../components/admin/AdminPageHeader'
 import AdminFlowGuide from '../../components/admin/AdminFlowGuide'
-import AdminPaymentQueueTable, { PaymentQueueVerifySummary } from '../../components/admin/AdminPaymentQueueTable'
+import AdminPaymentQueueTable, { PaymentQueueVerifySummary, isManagerPhonePe } from '../../components/admin/AdminPaymentQueueTable'
 import AdminCaseContext from '../../components/admin/AdminCaseContext'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
@@ -64,16 +64,42 @@ const WALLET_FILTERS = [
 ]
 
 const QUEUE_MODE_TABS = [
-  { id: '', label: 'All' },
+  { id: '', label: 'All modes' },
   { id: 'offline', label: 'Offline' },
   { id: 'online', label: 'Online' },
 ]
+
+const QUEUE_CHANNEL_OPTIONS = [
+  { id: '', label: 'All channels' },
+  { id: 'cash', label: 'Cash / UPI' },
+  { id: 'phonepe_qr', label: 'PhonePe QR' },
+  { id: 'online', label: 'Online (Razorpay)' },
+]
+
+const QUEUE_COLLECTOR_OPTIONS = [
+  { id: '', label: 'Anyone' },
+  { id: 'manager', label: 'Care manager' },
+  { id: 'physio', label: 'Physiotherapist' },
+]
+
+const emptyQueueFilters = () => ({
+  search: '',
+  mode: '',
+  channel: '',
+  collector: '',
+  status: '',
+  dateFrom: '',
+  dateTo: '',
+  amountMin: '',
+  amountMax: '',
+})
 
 export default function AdminFinancePage() {
   // Tab handling
   const [activeTab, setActiveTab] = useState(() => {
     const params = new URLSearchParams(window.location.search)
-    return params.get('tab') || 'wallets'
+    const tab = params.get('tab') || 'wallets'
+    return tab === 'history' ? 'queue' : tab
   })
 
   useEffect(() => {
@@ -108,13 +134,17 @@ export default function AdminFinancePage() {
   const [payoutAction, setPayoutAction] = useState(null)
   const [payoutNote, setPayoutNote] = useState('')
 
-  // 2. Tab: Payment Queue States
+  // 2. Tab: Payment history
   const [queueSearch, setQueueSearch] = useState('')
   const [queueMode, setQueueMode] = useState('')
+  const [queueChannel, setQueueChannel] = useState('')
+  const [queueCollector, setQueueCollector] = useState('')
   const [queueStatus, setQueueStatus] = useState('')
   const [queueDateFrom, setQueueDateFrom] = useState('')
   const [queueDateTo, setQueueDateTo] = useState('')
-  const [queueApplied, setQueueApplied] = useState({ search: '', mode: '', status: '', dateFrom: '', dateTo: '' })
+  const [queueAmountMin, setQueueAmountMin] = useState('')
+  const [queueAmountMax, setQueueAmountMax] = useState('')
+  const [queueApplied, setQueueApplied] = useState(emptyQueueFilters)
   const [queuePage, setQueuePage] = useState(1)
   const [queueLoading, setQueueLoading] = useState(true)
   const [queuePayload, setQueuePayload] = useState(null)
@@ -192,14 +222,18 @@ export default function AdminFinancePage() {
           limit: 20,
           search: queueApplied.search || undefined,
           mode: queueApplied.mode || undefined,
+          channel: queueApplied.channel || undefined,
+          collector: queueApplied.collector || undefined,
           status: queueApplied.status || undefined,
           dateFrom: queueApplied.dateFrom || undefined,
           dateTo: queueApplied.dateTo || undefined,
+          amountMin: queueApplied.amountMin || undefined,
+          amountMax: queueApplied.amountMax || undefined,
         },
       })
       setQueuePayload(res.data)
     } catch (e) {
-      toast.error(e.response?.data?.message || 'Failed to load payment queue')
+      toast.error(e.response?.data?.message || 'Failed to load payment history')
       setQueuePayload(null)
     } finally {
       setQueueLoading(false)
@@ -230,30 +264,70 @@ export default function AdminFinancePage() {
     setWithdrawalPage(1)
   }
 
-  // Queue filter apply
+  function readQueueFilterDraft() {
+    return {
+      search: queueSearch.trim(),
+      mode: queueMode,
+      channel: queueChannel,
+      collector: queueCollector,
+      status: queueStatus,
+      dateFrom: queueDateFrom,
+      dateTo: queueDateTo,
+      amountMin: String(queueAmountMin || '').trim(),
+      amountMax: String(queueAmountMax || '').trim(),
+    }
+  }
+
   function applyQueueFilters(override = {}) {
-    setQueueApplied((prev) => ({
-      search: override.search !== undefined ? override.search : queueSearch.trim(),
-      mode: override.mode !== undefined ? override.mode : prev.mode,
-      status: override.status !== undefined ? override.status : queueStatus,
-      dateFrom: override.dateFrom !== undefined ? override.dateFrom : queueDateFrom,
-      dateTo: override.dateTo !== undefined ? override.dateTo : queueDateTo,
-    }))
+    const draft = readQueueFilterDraft()
+    setQueueApplied({ ...draft, ...override, search: override.search !== undefined ? override.search : draft.search })
     setQueuePage(1)
   }
 
   function setQueueModeTab(next) {
     setQueueMode(next)
-    applyQueueFilters({ mode: next })
+    const nextStatus = next === 'online' ? '' : queueStatus
+    setQueueStatus(nextStatus)
+    if (next === 'online') setQueueChannel('online')
+    else if (queueChannel === 'online') setQueueChannel('')
+    applyQueueFilters({
+      mode: next,
+      status: nextStatus,
+      channel: next === 'online' ? 'online' : queueChannel === 'online' ? '' : queueChannel,
+    })
+  }
+
+  function showNeedsVerificationQueue() {
+    const next = {
+      ...emptyQueueFilters(),
+      mode: 'offline',
+      status: 'collected',
+    }
+    setQueueSearch('')
+    setQueueMode('offline')
+    setQueueChannel('')
+    setQueueCollector('')
+    setQueueStatus('collected')
+    setQueueDateFrom('')
+    setQueueDateTo('')
+    setQueueAmountMin('')
+    setQueueAmountMax('')
+    setQueueApplied(next)
+    setQueuePage(1)
+    setActiveTab('queue')
   }
 
   function resetQueueFilters() {
     setQueueSearch('')
     setQueueMode('')
+    setQueueChannel('')
+    setQueueCollector('')
     setQueueStatus('')
     setQueueDateFrom('')
     setQueueDateTo('')
-    setQueueApplied({ search: '', mode: '', status: '', dateFrom: '', dateTo: '' })
+    setQueueAmountMin('')
+    setQueueAmountMax('')
+    setQueueApplied(emptyQueueFilters())
     setQueuePage(1)
   }
 
@@ -324,7 +398,8 @@ export default function AdminFinancePage() {
     try {
       await api.patch(`/withdraw/${requestId}`, {
         status: action === 'approve' ? 'approved' : 'rejected',
-        note: payoutNote.trim() || undefined,
+        payoutReference: action === 'approve' ? payoutNote.trim() || undefined : undefined,
+        note: action === 'reject' ? payoutNote.trim() || undefined : undefined,
       })
       toast.success(action === 'approve' ? 'Payout approved' : 'Payout rejected')
       setPayoutAction(null)
@@ -381,8 +456,8 @@ export default function AdminFinancePage() {
 
   const statTiles = useMemo(
     () => [
-      { label: 'Total revenue', value: summary?.totalRevenue, sub: 'Gross from paid bookings' },
-      { label: 'Platform fee collected', value: summary?.totalCommission, sub: 'Platform share' },
+      { label: 'Total revenue', value: summary?.totalRevenue, sub: 'Sum of verified installments (cash + PhonePe + online)' },
+      { label: 'Platform fee collected', value: summary?.totalCommission, sub: 'Platform share from settled cash, PhonePe QR, online & remitted physio fees' },
       { label: 'Platform fee due', value: summary?.pendingSettlements, sub: 'Owed by physiotherapists' },
       {
         label: 'Pending payouts',
@@ -397,7 +472,8 @@ export default function AdminFinancePage() {
   const queueRows = queuePayload?.data || []
   const queueTotalPages = queuePayload?.totalPages || 1
   const queueCounts = queuePayload?.counts || {}
-  const queuePendingVerification = queuePayload?.pendingVerification ?? 0
+  const queuePendingVerification =
+    queuePayload?.pendingVerification ?? summary?.pendingVerification ?? 0
 
   return (
     <div className="space-y-6">
@@ -411,7 +487,7 @@ export default function AdminFinancePage() {
       <AdminFlowGuide
         title="Finance flow"
         steps={[
-          'Use the Payment Queue tab to verify offline collections — verified amounts credit physiotherapist wallets and accrue platform commission.',
+          'Use Payment history to track every installment — filter by channel, collector, status, amount, or date. Verify PhonePe QR / offline collections from the same list.',
           'Use Commission due filter to find physiotherapists who owe the platform — record settlement when they pay back.',
           'Approve pending payout requests to debit withdrawable balance after you transfer funds externally.',
           'Open a physiotherapist row for full wallet history, settlements, and recent ledger activity.',
@@ -442,7 +518,7 @@ export default function AdminFinancePage() {
         <nav className="-mb-px flex space-x-6" aria-label="Tabs">
           {[
             { id: 'wallets', label: 'Physiotherapist wallets' },
-            { id: 'queue', label: 'Payment Queue' + (queuePendingVerification > 0 ? ` (${queuePendingVerification})` : '') },
+            { id: 'queue', label: 'Payment history' + (queuePendingVerification > 0 ? ` (${queuePendingVerification})` : '') },
             { id: 'withdrawals', label: 'Withdrawal Requests' + (summary?.pendingPayoutsCount > 0 ? ` (${summary.pendingPayoutsCount})` : '') },
           ].map((tab) => {
             const active = activeTab === tab.id
@@ -611,85 +687,267 @@ export default function AdminFinancePage() {
       )}
 
       {/* ────────────────────────────────────────────────────────────────────── */}
-      {/* Tab content: 2. Payment Queue */}
+      {/* Tab content: 2. Payment history */}
       {/* ────────────────────────────────────────────────────────────────────── */}
       {activeTab === 'queue' && (
-        <div className="space-y-6">
-          <Card hover={false} className="p-4 sm:p-5">
-            <div className="flex flex-wrap items-center gap-2">
-              {QUEUE_MODE_TABS.map((t) => {
-                const active = queueMode === t.id
-                return (
+        <div className="space-y-4">
+          <Card hover={false} className="overflow-hidden p-0">
+            <div className="border-b border-gray-100 px-4 py-4 sm:px-5">
+              <div className="flex flex-wrap items-end justify-between gap-3">
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-900">Payment history</h3>
+                  <p className="mt-0.5 text-xs text-gray-500">
+                    Cash, PhonePe QR, and online installments
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  {queuePendingVerification > 0 ? (
+                    <button
+                      type="button"
+                      onClick={showNeedsVerificationQueue}
+                      className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                        queueApplied.mode === 'offline' && queueApplied.status === 'collected'
+                          ? 'bg-amber-600 text-white'
+                          : 'bg-amber-50 text-amber-950 ring-1 ring-amber-200 hover:bg-amber-100'
+                      }`}
+                    >
+                      <span className="inline-block h-1.5 w-1.5 rounded-full bg-current" />
+                      {queuePendingVerification} need verification
+                    </button>
+                  ) : null}
+                  <p className="text-xs tabular-nums text-gray-500">
+                    <span className="font-medium text-gray-800">{queuePayload?.total ?? 0}</span>
+                    {' · '}
+                    {Number(queuePayload?.filteredAmountSum) > 0
+                      ? formatInr(queuePayload.filteredAmountSum)
+                      : '₹0'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-4 flex flex-col gap-3 lg:flex-row lg:items-center">
+                <div className="min-w-0 flex-1">
+                  <Input
+                    placeholder="Search patient, phone, manager, physio, issue, booking, note…"
+                    value={queueSearch}
+                    onChange={(e) => setQueueSearch(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && applyQueueFilters()}
+                  />
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  <Button type="button" onClick={() => applyQueueFilters()}>
+                    Apply
+                  </Button>
+                  <Button type="button" variant="ghost" onClick={resetQueueFilters}>
+                    Reset
+                  </Button>
+                </div>
+              </div>
+
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <div className="inline-flex rounded-lg bg-gray-100 p-0.5">
+                  {QUEUE_MODE_TABS.map((t) => {
+                    const active = queueMode === t.id
+                    return (
+                      <button
+                        key={t.id || 'all'}
+                        type="button"
+                        onClick={() => setQueueModeTab(t.id)}
+                        className={`rounded-md px-3 py-1.5 text-xs font-semibold transition ${
+                          active ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+                        }`}
+                      >
+                        {t.label}
+                      </button>
+                    )
+                  })}
+                </div>
+                <span className="hidden h-4 w-px bg-gray-200 sm:block" />
+                {[
+                  {
+                    id: '',
+                    label: 'All',
+                    count: queueCounts.all,
+                    active: !queueApplied.status,
+                    onClick: () => {
+                      setQueueStatus('')
+                      applyQueueFilters({ status: '' })
+                    },
+                    activeCls: 'bg-gray-900 text-white',
+                    idleCls: 'bg-white text-gray-700 ring-1 ring-gray-200 hover:bg-gray-50',
+                  },
+                  {
+                    id: 'needs',
+                    label: 'Needs verification',
+                    count: queuePendingVerification || queueCounts.collected,
+                    active: queueApplied.mode === 'offline' && queueApplied.status === 'collected',
+                    onClick: showNeedsVerificationQueue,
+                    activeCls: 'bg-amber-600 text-white',
+                    idleCls: 'bg-amber-50 text-amber-950 ring-1 ring-amber-200 hover:bg-amber-100',
+                  },
+                  {
+                    id: 'verified',
+                    label: 'Verified',
+                    count: queueCounts.verified,
+                    active: queueApplied.status === 'verified',
+                    onClick: () => {
+                      setQueueStatus('verified')
+                      applyQueueFilters({ status: 'verified' })
+                    },
+                    activeCls: 'bg-emerald-700 text-white',
+                    idleCls: 'bg-emerald-50 text-emerald-900 ring-1 ring-emerald-200 hover:bg-emerald-100',
+                  },
+                  ...(queueCounts.pending
+                    ? [
+                        {
+                          id: 'pending',
+                          label: 'Pending',
+                          count: queueCounts.pending,
+                          active: queueApplied.status === 'pending',
+                          onClick: () => {
+                            setQueueStatus('pending')
+                            applyQueueFilters({ status: 'pending' })
+                          },
+                          activeCls: 'bg-gray-800 text-white',
+                          idleCls: 'bg-white text-gray-700 ring-1 ring-gray-200 hover:bg-gray-50',
+                        },
+                      ]
+                    : []),
+                  ...(queueCounts.paid
+                    ? [
+                        {
+                          id: 'paid',
+                          label: 'Paid',
+                          count: queueCounts.paid,
+                          active: queueApplied.status === 'paid',
+                          onClick: () => {
+                            setQueueStatus('paid')
+                            applyQueueFilters({ status: 'paid' })
+                          },
+                          activeCls: 'bg-sky-700 text-white',
+                          idleCls: 'bg-sky-50 text-sky-900 ring-1 ring-sky-200 hover:bg-sky-100',
+                        },
+                      ]
+                    : []),
+                  ...(queueCounts.rejected
+                    ? [
+                        {
+                          id: 'rejected',
+                          label: 'Rejected',
+                          count: queueCounts.rejected,
+                          active: queueApplied.status === 'rejected',
+                          onClick: () => {
+                            setQueueStatus('rejected')
+                            applyQueueFilters({ status: 'rejected' })
+                          },
+                          activeCls: 'bg-rose-700 text-white',
+                          idleCls: 'bg-rose-50 text-rose-900 ring-1 ring-rose-200 hover:bg-rose-100',
+                        },
+                      ]
+                    : []),
+                  ...(queueCounts.refunded
+                    ? [
+                        {
+                          id: 'refunded',
+                          label: 'Refunded',
+                          count: queueCounts.refunded,
+                          active: queueApplied.status === 'refunded',
+                          onClick: () => {
+                            setQueueStatus('refunded')
+                            applyQueueFilters({ status: 'refunded' })
+                          },
+                          activeCls: 'bg-violet-700 text-white',
+                          idleCls: 'bg-violet-50 text-violet-900 ring-1 ring-violet-200 hover:bg-violet-100',
+                        },
+                      ]
+                    : []),
+                ].map((chip) => (
                   <button
-                    key={t.id || 'all'}
+                    key={chip.id || 'all-status'}
                     type="button"
-                    onClick={() => setQueueModeTab(t.id)}
-                    className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
-                      active ? 'bg-gray-900 text-white shadow-sm' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    onClick={chip.onClick}
+                    className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold transition ${
+                      chip.active ? chip.activeCls : chip.idleCls
                     }`}
                   >
-                    {t.label}
+                    {chip.label}
+                    <span className={`tabular-nums ${chip.active ? 'opacity-80' : 'opacity-60'}`}>
+                      {chip.count ?? 0}
+                    </span>
                   </button>
-                )
-              })}
-            </div>
+                ))}
+              </div>
 
-            <div className="mt-4 flex flex-wrap gap-3">
-              <div className="min-w-[180px] flex-1">
-                <label className="text-xs font-medium text-gray-500">Search</label>
+              <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-6">
+                <select
+                  aria-label="Channel"
+                  className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm"
+                  value={queueChannel}
+                  onChange={(e) => {
+                    const next = e.target.value
+                    setQueueChannel(next)
+                    const nextMode =
+                      next === 'online' ? 'online' : next === 'cash' || next === 'phonepe_qr' ? 'offline' : queueMode
+                    if (next === 'online') setQueueMode('online')
+                    else if (next === 'cash' || next === 'phonepe_qr') setQueueMode('offline')
+                    applyQueueFilters({ channel: next, mode: nextMode })
+                  }}
+                >
+                  {QUEUE_CHANNEL_OPTIONS.map((o) => (
+                    <option key={o.id || 'all-ch'} value={o.id}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  aria-label="Collected by"
+                  className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm"
+                  value={queueCollector}
+                  onChange={(e) => {
+                    const next = e.target.value
+                    setQueueCollector(next)
+                    applyQueueFilters({ collector: next })
+                  }}
+                >
+                  {QUEUE_COLLECTOR_OPTIONS.map((o) => (
+                    <option key={o.id || 'all-col'} value={o.id}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
                 <Input
-                  className="mt-1"
-                  placeholder="Physiotherapist, patient, issue, booking id"
-                  value={queueSearch}
-                  onChange={(e) => setQueueSearch(e.target.value)}
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="Min ₹"
+                  value={queueAmountMin}
+                  onChange={(e) => setQueueAmountMin(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && applyQueueFilters()}
                 />
-              </div>
-              <div className="w-full min-w-[140px] sm:w-40">
-                <label className="text-xs font-medium text-gray-500">Status</label>
-                <select
-                  className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm"
-                  value={queueStatus}
-                  onChange={(e) => setQueueStatus(e.target.value)}
-                >
-                  <option value="">All</option>
-                  <option value="pending">Pending</option>
-                  <option value="paid">Paid</option>
-                  <option value="collected">Collected</option>
-                  <option value="verified">Verified</option>
-                  <option value="rejected">Rejected</option>
-                  <option value="refunded">Refunded</option>
-                </select>
-              </div>
-              <div className="w-full min-w-[120px] sm:w-36">
-                <label className="text-xs font-medium text-gray-500">From</label>
-                <Input className="mt-1" type="date" value={queueDateFrom} onChange={(e) => setQueueDateFrom(e.target.value)} />
-              </div>
-              <div className="w-full min-w-[120px] sm:w-36">
-                <label className="text-xs font-medium text-gray-500">To</label>
-                <Input className="mt-1" type="date" value={queueDateTo} onChange={(e) => setQueueDateTo(e.target.value)} />
-              </div>
-              <div className="flex items-end gap-2">
-                <Button type="button" variant="outline" onClick={() => applyQueueFilters()}>
-                  Apply
-                </Button>
-                <Button type="button" variant="ghost" onClick={resetQueueFilters}>
-                  Reset
-                </Button>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="Max ₹"
+                  value={queueAmountMax}
+                  onChange={(e) => setQueueAmountMax(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && applyQueueFilters()}
+                />
+                <Input
+                  type="date"
+                  aria-label="From date"
+                  value={queueDateFrom}
+                  onChange={(e) => setQueueDateFrom(e.target.value)}
+                />
+                <Input
+                  type="date"
+                  aria-label="To date"
+                  value={queueDateTo}
+                  onChange={(e) => setQueueDateTo(e.target.value)}
+                />
               </div>
             </div>
 
-            <div className="mt-4 flex flex-wrap gap-2 text-xs text-gray-600">
-              <span className="rounded-full bg-gray-100 px-2 py-0.5">Total: {queueCounts.all ?? 0}</span>
-              <span className="rounded-full bg-amber-50 px-2 py-0.5 text-amber-900">Collected: {queueCounts.collected ?? 0}</span>
-              <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-emerald-900">Verified: {queueCounts.verified ?? 0}</span>
-              {queueCounts.pending ? <span className="rounded-full bg-gray-100 px-2 py-0.5">Pending: {queueCounts.pending}</span> : null}
-              {queueCounts.paid ? <span className="rounded-full bg-sky-50 px-2 py-0.5 text-sky-900">Paid: {queueCounts.paid}</span> : null}
-              {queueCounts.rejected ? <span className="rounded-full bg-rose-50 px-2 py-0.5 text-rose-900">Rejected: {queueCounts.rejected}</span> : null}
-            </div>
-          </Card>
-
-          <Card hover={false} className="overflow-hidden p-0">
             <AdminPaymentQueueTable
               rows={queueRows}
               loading={queueLoading}
@@ -702,9 +960,9 @@ export default function AdminFinancePage() {
                 setQueueRejectTarget(row)
                 setQueueRejectReason('')
               }}
-              openBookingLabel="Open Booking"
-              emptyTitle="No installments found in queue"
-              emptyHint="Adjust the filters or try a different search."
+              openBookingLabel="Open"
+              emptyTitle="No payments match your filters"
+              emptyHint="Try Reset, or clear channel / amount / date filters."
             />
           </Card>
         </div>
@@ -761,6 +1019,7 @@ export default function AdminFinancePage() {
                       <th className="px-4 py-3">Physiotherapist</th>
                       <th className="px-4 py-3">Withdrawable Balance</th>
                       <th className="px-4 py-3">Requested Amount</th>
+                      <th className="px-4 py-3">UPI</th>
                       <th className="px-4 py-3">Date Requested</th>
                       <th className="px-4 py-3 text-right">Actions</th>
                     </tr>
@@ -780,6 +1039,18 @@ export default function AdminFinancePage() {
                           </td>
                           <td className="px-4 py-3 tabular-nums text-emerald-800">{formatInr(row.wallet?.availableBalance)}</td>
                           <td className="px-4 py-3 tabular-nums font-semibold text-gray-900">{formatInr(pending.amount)}</td>
+                          <td className="px-4 py-3 text-xs text-gray-700">
+                            {pending.payoutUpiId ? (
+                              <>
+                                <div className="font-medium text-teal-800">{pending.payoutUpiId}</div>
+                                {pending.payoutDisplayName ? (
+                                  <div className="text-gray-500">{pending.payoutDisplayName}</div>
+                                ) : null}
+                              </>
+                            ) : (
+                              <span className="text-rose-600">No UPI</span>
+                            )}
+                          </td>
                           <td className="px-4 py-3 text-gray-600">{formatDateTime(pending.requestedAt)}</td>
                           <td className="px-4 py-3 text-right">
                             <div className="flex flex-wrap justify-end gap-2">
@@ -791,6 +1062,8 @@ export default function AdminFinancePage() {
                                     action: 'approve',
                                     physio: row,
                                     amount: pending.amount,
+                                    payoutUpiId: pending.payoutUpiId || '',
+                                    payoutDisplayName: pending.payoutDisplayName || '',
                                   })
                                 }
                                 disabled={busyAction === `w-${pending._id}`}
@@ -806,6 +1079,8 @@ export default function AdminFinancePage() {
                                     action: 'reject',
                                     physio: row,
                                     amount: pending.amount,
+                                    payoutUpiId: pending.payoutUpiId || '',
+                                    payoutDisplayName: pending.payoutDisplayName || '',
                                   })
                                 }
                                 disabled={busyAction === `w-${pending._id}`}
@@ -914,6 +1189,14 @@ export default function AdminFinancePage() {
                 <>This leaves the physiotherapist&apos;s balance unchanged. They can submit a new request later.</>
               )}
             </p>
+            {payoutAction.payoutUpiId ? (
+              <p className="mt-3 rounded-lg border border-teal-100 bg-teal-50 px-3 py-2 text-sm font-semibold text-teal-900">
+                Pay to UPI: {payoutAction.payoutUpiId}
+                {payoutAction.payoutDisplayName ? ` · ${payoutAction.payoutDisplayName}` : ''}
+              </p>
+            ) : (
+              <p className="mt-3 text-xs text-rose-700">No UPI ID on this withdrawal request.</p>
+            )}
             <label className="mt-4 block text-xs font-medium text-gray-600">
               {payoutAction.action === 'approve' ? 'Payout reference / UTR (optional)' : 'Reason (optional)'}
             </label>
@@ -954,9 +1237,25 @@ export default function AdminFinancePage() {
           <Card hover={false} className="max-w-md shadow-xl">
             <h3 className="type-page-title text-gray-900">Verify payment</h3>
             <p className="mt-2 text-sm text-gray-600">
-              Confirm <span className="font-semibold text-gray-900">{formatInr(queueVerifyTarget.amount)}</span> collected by{' '}
-              <span className="font-semibold text-gray-900">{queueVerifyTarget.physioName}</span>? This posts the ledger
-              entries for this installment.
+              Confirm <span className="font-semibold text-gray-900">{formatInr(queueVerifyTarget.amount)}</span>
+              {isManagerPhonePe(queueVerifyTarget) ? (
+                <>
+                  {' '}
+                  PhonePe QR collection by manager{' '}
+                  <span className="font-semibold text-gray-900">
+                    {queueVerifyTarget.managerName || 'Manager'}
+                  </span>
+                </>
+              ) : (
+                <>
+                  {' '}
+                  collected by{' '}
+                  <span className="font-semibold text-gray-900">
+                    {queueVerifyTarget.physioName || 'physiotherapist'}
+                  </span>
+                </>
+              )}
+              ? This posts the ledger entries for this installment.
             </p>
             <PaymentQueueVerifySummary row={queueVerifyTarget} />
             <div className="mt-6 flex justify-end gap-2">
@@ -976,7 +1275,11 @@ export default function AdminFinancePage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog">
           <Card hover={false} className="max-w-md shadow-xl">
             <h3 className="type-page-title text-gray-900">Reject collection</h3>
-            <p className="mt-1 text-sm text-gray-600">The physiotherapist can record a fresh collection after this.</p>
+            <p className="mt-1 text-sm text-gray-600">
+              {isManagerPhonePe(queueRejectTarget)
+                ? 'The manager can upload a new PhonePe screenshot after this.'
+                : 'The physiotherapist can record a fresh collection after this.'}
+            </p>
             <PaymentQueueVerifySummary row={queueRejectTarget} />
             <label className="mt-4 block text-xs font-medium text-gray-500">Reason</label>
             <textarea

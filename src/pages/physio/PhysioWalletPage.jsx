@@ -61,6 +61,9 @@ export default function PhysioWalletPage() {
   const [withdrawOpen, setWithdrawOpen] = useState(false)
   const [withdrawAmount, setWithdrawAmount] = useState('')
   const [withdrawSubmitting, setWithdrawSubmitting] = useState(false)
+  const [upiId, setUpiId] = useState('')
+  const [upiName, setUpiName] = useState('')
+  const [savingUpi, setSavingUpi] = useState(false)
 
   const loadPendingWithdraw = useCallback(async () => {
     try {
@@ -75,6 +78,8 @@ export default function PhysioWalletPage() {
     try {
       const res = await api.get('/physio/wallet')
       setDash(res.data)
+      setUpiId(res.data?.payoutUpiId || '')
+      setUpiName(res.data?.payoutDisplayName || '')
     } catch {
       toast.error('Failed to load wallet')
     } finally {
@@ -113,10 +118,42 @@ export default function PhysioWalletPage() {
   const onlineAvail = Number(w?.onlineAvailableBalance ?? w?.onlineEarning)
   const commissionDue = Number(w?.commissionDue)
   const hasPending = Boolean(pendingWithdraw)
+  const hasUpi = Boolean(String(dash?.payoutUpiId || '').trim())
   const showNetExplainer = Number.isFinite(commissionDue) && commissionDue > 0.009
+
+  async function saveUpi(e) {
+    e.preventDefault()
+    setSavingUpi(true)
+    try {
+      const { data } = await api.patch('/profile/payout', {
+        payoutUpiId: upiId.trim(),
+        payoutDisplayName: upiName.trim(),
+      })
+      toast.success(data.message || 'UPI saved')
+      setUpiId(data.payoutUpiId || '')
+      setUpiName(data.payoutDisplayName || '')
+      setDash((prev) =>
+        prev
+          ? {
+              ...prev,
+              payoutUpiId: data.payoutUpiId || '',
+              payoutDisplayName: data.payoutDisplayName || '',
+            }
+          : prev,
+      )
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Could not save UPI')
+    } finally {
+      setSavingUpi(false)
+    }
+  }
 
   async function submitWithdraw(e) {
     e.preventDefault()
+    if (!hasUpi) {
+      toast.error('Save your UPI ID before requesting a withdrawal')
+      return
+    }
     const raw = withdrawAmount.trim()
     const n = Number(raw)
     if (!Number.isFinite(n) || n <= 0) {
@@ -177,7 +214,7 @@ export default function PhysioWalletPage() {
                 type="button"
                 variant="outline"
                 className="w-full sm:w-auto"
-                disabled={loading || hasPending || !Number.isFinite(available) || available <= 0}
+                disabled={loading || hasPending || !Number.isFinite(available) || available <= 0 || !hasUpi}
                 onClick={() => {
                   setWithdrawAmount('')
                   setWithdrawOpen(true)
@@ -185,6 +222,9 @@ export default function PhysioWalletPage() {
               >
                 Withdraw money
               </Button>
+              {!hasUpi ? (
+                <p className="mt-2 text-xs text-amber-800">Save your UPI ID below before withdrawing.</p>
+              ) : null}
             </div>
           </Card>
           <Card hover={false} className="border-amber-100/80">
@@ -201,6 +241,43 @@ export default function PhysioWalletPage() {
           </Card>
         </div>
       )}
+
+      {!loading ? (
+        <Card hover={false} className="p-6">
+          <h2 className="text-sm font-semibold text-gray-900">Payout UPI</h2>
+          <p className="mt-1 text-xs text-gray-500">
+            Admin will transfer withdrawals to this UPI ID when they approve your request.
+          </p>
+          <form onSubmit={saveUpi} className="mt-4 grid gap-3 sm:grid-cols-2">
+            <label className="block text-sm font-medium text-gray-700">
+              UPI ID
+              <input
+                type="text"
+                value={upiId}
+                onChange={(e) => setUpiId(e.target.value)}
+                placeholder="yourname@oksbi"
+                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                required
+              />
+            </label>
+            <label className="block text-sm font-medium text-gray-700">
+              Name on UPI (optional)
+              <input
+                type="text"
+                value={upiName}
+                onChange={(e) => setUpiName(e.target.value)}
+                placeholder="Account holder name"
+                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+            </label>
+            <div className="sm:col-span-2">
+              <Button type="submit" loading={savingUpi} disabled={savingUpi}>
+                Save UPI
+              </Button>
+            </div>
+          </form>
+        </Card>
+      ) : null}
 
       {!loading && b && (
         <Card hover={false} className="overflow-hidden p-0">
@@ -354,6 +431,12 @@ export default function PhysioWalletPage() {
               Max request: {formatInr(w?.availableBalance)} (after commission due). Minimum ₹1. One pending request at a
               time.
             </p>
+            {dash?.payoutUpiId ? (
+              <p className="mt-2 rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-700">
+                Paying to <span className="font-semibold">{dash.payoutUpiId}</span>
+                {dash.payoutDisplayName ? ` (${dash.payoutDisplayName})` : ''}
+              </p>
+            ) : null}
             <label htmlFor="withdraw-amount" className="mt-4 block text-sm font-medium text-gray-700">
               Amount (INR)
             </label>

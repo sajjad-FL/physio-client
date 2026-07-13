@@ -14,6 +14,7 @@ import LocationSelectorRow from '../../components/location/LocationSelectorRow'
 import SeoNoIndex from '../../components/seo/SeoNoIndex'
 import { validateAvatarFile } from '../../utils/onboardingValidation'
 import { MAX_UPLOAD_SIZE_LABEL } from '../../constants/uploadLimits.js'
+import { prepareUploadFile } from '../../utils/compressImage.js'
 import { useReferralMyCode } from '../../hooks/useReferral'
 
 const GENDERS = [
@@ -256,7 +257,7 @@ export default function ProfilePage() {
     }
   }
 
-  function onPickFile(e) {
+  async function onPickFile(e) {
     const file = e.target.files?.[0]
     e.target.value = ''
     if (!file) return
@@ -264,15 +265,23 @@ export default function ProfilePage() {
       toast.error('Please choose a JPEG, PNG, or WebP image')
       return
     }
-    const avatarCheck = validateAvatarFile(file)
-    if (!avatarCheck.ok) {
-      toast.error(avatarCheck.message)
-      return
+    try {
+      if (file.size > 400 * 1024) toast.loading('Optimizing image…', { id: 'img-compress' })
+      const prepared = await prepareUploadFile(file, 'avatar')
+      toast.dismiss('img-compress')
+      const avatarCheck = validateAvatarFile(prepared)
+      if (!avatarCheck.ok) {
+        toast.error(avatarCheck.message)
+        return
+      }
+      if (previewLocal) URL.revokeObjectURL(previewLocal)
+      const objectUrl = URL.createObjectURL(prepared)
+      setPreviewLocal(objectUrl)
+      uploadFile(prepared, objectUrl)
+    } catch (err) {
+      toast.dismiss('img-compress')
+      toast.error(err?.message || 'Could not optimize image')
     }
-    if (previewLocal) URL.revokeObjectURL(previewLocal)
-    const objectUrl = URL.createObjectURL(file)
-    setPreviewLocal(objectUrl)
-    uploadFile(file, objectUrl)
   }
 
   async function uploadFile(file, objectUrl) {

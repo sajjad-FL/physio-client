@@ -3,6 +3,7 @@ import toast from 'react-hot-toast'
 import { resolveFileUrl } from '../../utils/serverOrigin'
 import { validateFile } from '../../utils/onboardingValidation'
 import { MAX_UPLOAD_SIZE_LABEL } from '../../constants/uploadLimits.js'
+import { isCompressibleImage, prepareUploadFile } from '../../utils/compressImage.js'
 
 function looksLikePdf(path) {
   return /\.pdf(\?|#|$)/i.test(String(path || ''))
@@ -35,7 +36,7 @@ export default function DocumentMultiUploadPreview({
   const atMax = totalCount >= maxFiles
 
   const addFiles = useCallback(
-    (incoming) => {
+    async (incoming) => {
       const list = Array.from(incoming || [])
       if (!list.length) return
 
@@ -46,18 +47,31 @@ export default function DocumentMultiUploadPreview({
       }
 
       const next = [...pendingFiles]
-      for (const file of list.slice(0, slotsLeft)) {
-        const r = validateFile(file, label || 'File')
-        if (!r.ok) {
-          setPickError(r.message)
-          toast.error(r.message)
-          return
+      try {
+        for (const file of list.slice(0, slotsLeft)) {
+          let prepared = file
+          if (isCompressibleImage(file)) {
+            if (file.size > 400 * 1024) toast.loading('Optimizing image…', { id: 'img-compress' })
+            prepared = await prepareUploadFile(file, 'document')
+          }
+          const r = validateFile(prepared, label || 'File')
+          if (!r.ok) {
+            setPickError(r.message)
+            toast.error(r.message)
+            toast.dismiss('img-compress')
+            return
+          }
+          next.push(prepared)
         }
-        next.push(file)
+        toast.dismiss('img-compress')
+        setPickError('')
+        onFilesChange(next)
+      } catch (err) {
+        toast.dismiss('img-compress')
+        const message = err?.message || 'Could not optimize image'
+        setPickError(message)
+        toast.error(message)
       }
-
-      setPickError('')
-      onFilesChange(next)
     },
     [label, maxFiles, onFilesChange, pendingFiles, totalCount],
   )

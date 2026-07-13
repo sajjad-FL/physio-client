@@ -22,6 +22,8 @@ import { formatPhysioSessionFeeLabel } from '../../utils/physioSessionFee.js'
 import { ID_PROOF_TYPE_OPTIONS } from '../../constants/idProofTypes.js'
 import { MAX_UPLOAD_SIZE_LABEL } from '../../constants/uploadLimits.js'
 import { formatPhysioDisplayName, stripPhysioNameAffixes } from '../../utils/physioDisplayName.js'
+import { prepareUploadFile } from '../../utils/compressImage.js'
+import toast from 'react-hot-toast'
 
 const baseInputClass =
   'h-11 w-full rounded-lg border bg-white px-3 text-sm text-ink shadow-sm outline-none focus:ring-2 focus:ring-brand/20'
@@ -724,10 +726,29 @@ export default function PhysioOnboardingPage() {
                 id="ob-avatar"
                 type="file"
                 accept="image/*"
-                onChange={(e) => {
+                onChange={async (e) => {
                   const f = e.target.files?.[0] || null
-                  setAvatarFile(f)
-                  patchField('avatar', f)
+                  e.target.value = ''
+                  if (!f) {
+                    setAvatarFile(null)
+                    patchField('avatar', null)
+                    return
+                  }
+                  try {
+                    if (f.size > 400 * 1024) toast.loading('Optimizing image…', { id: 'img-compress' })
+                    const prepared = await prepareUploadFile(f, 'avatar')
+                    toast.dismiss('img-compress')
+                    const r = validateAvatarFile(prepared)
+                    if (!r.ok) {
+                      toast.error(r.message)
+                      return
+                    }
+                    setAvatarFile(prepared)
+                    patchField('avatar', prepared)
+                  } catch (err) {
+                    toast.dismiss('img-compress')
+                    toast.error(err?.message || 'Could not optimize image')
+                  }
                 }}
                 aria-invalid={Boolean(fieldErrors.avatar)}
               />

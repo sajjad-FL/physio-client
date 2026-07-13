@@ -7,6 +7,7 @@ import { resolveFileUrl } from '../../utils/serverOrigin'
 import { formatInr } from '../../utils/shopDisplay'
 import AdminPageHeader from '../../components/admin/AdminPageHeader'
 import Pagination from '../../components/Pagination'
+import { prepareUploadFile } from '../../utils/compressImage.js'
 
 function emptyForm() {
   return {
@@ -82,15 +83,27 @@ export default function AdminProductsPage() {
     setFieldErrors({})
   }
 
-  function onImagesPick(e) {
+  async function onImagesPick(e) {
     const files = Array.from(e.target.files || [])
     e.target.value = ''
-    setForm((prev) => ({
-      ...prev,
-      imageFiles: [...prev.imageFiles, ...files],
-      newPreviews: [...prev.newPreviews, ...files.map((f) => URL.createObjectURL(f))],
-    }))
-    setFieldErrors((prev) => ({ ...prev, images: '' }))
+    if (!files.length) return
+    try {
+      if (files.some((f) => f.size > 400 * 1024)) toast.loading('Optimizing images…', { id: 'img-compress' })
+      const prepared = []
+      for (const file of files) {
+        prepared.push(await prepareUploadFile(file, 'product'))
+      }
+      toast.dismiss('img-compress')
+      setForm((prev) => ({
+        ...prev,
+        imageFiles: [...prev.imageFiles, ...prepared],
+        newPreviews: [...prev.newPreviews, ...prepared.map((f) => URL.createObjectURL(f))],
+      }))
+      setFieldErrors((prev) => ({ ...prev, images: '' }))
+    } catch (err) {
+      toast.dismiss('img-compress')
+      toast.error(err?.message || 'Could not optimize images')
+    }
   }
 
   async function removeExistingImage(index) {

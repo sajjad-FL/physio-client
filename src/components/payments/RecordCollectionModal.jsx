@@ -3,12 +3,15 @@ import toast from 'react-hot-toast'
 import Modal from '../ui/Modal'
 import Button from '../ui/Button'
 import { api } from '../../config/api'
+import { assetUrl } from '../../utils/assetUrl'
 import { normalizeSessionRows } from '../physio/physioBookingHelpers'
 import {
   buildSessionPaymentMap,
   defaultCollectionSessionId,
   sessionRowKey,
 } from '../../utils/sessionPaymentMap'
+import { prepareUploadFile } from '../../utils/compressImage.js'
+import { MAX_UPLOAD_BYTES } from '../../constants/uploadLimits.js'
 
 function roundMoney2(n) {
   return Math.round((Number(n) + Number.EPSILON) * 100) / 100
@@ -17,6 +20,7 @@ function roundMoney2(n) {
 /**
  * Record a cash / UPI collection for a booking. Amount defaults to
  * one-session fee and caps at outstanding balance.
+ * Managers can choose Cash (handoff) or PhonePe QR (screenshot → admin confirm).
  */
 export default function RecordCollectionModal({
   open,
@@ -48,6 +52,13 @@ export default function RecordCollectionModal({
   )
 
   const [selectedSessionId, setSelectedSessionId] = useState(defaultSessionId || '')
+  const [method, setMethod] = useState('cash')
+  const [qrUrl, setQrUrl] = useState('')
+  const [qrConfigured, setQrConfigured] = useState(true)
+  const [qrLoading, setQrLoading] = useState(false)
+  const [qrExpanded, setQrExpanded] = useState(false)
+  const [proofFile, setProofFile] = useState(null)
+  const [proofPreview, setProofPreview] = useState('')
 
   const defaultAmount = useMemo(() => {
     if (outstanding <= 0) return 0
@@ -64,11 +75,13 @@ export default function RecordCollectionModal({
   const amountOverLimit =
     Number.isFinite(parsedAmount) && parsedAmount > 0 && parsedAmount > outstanding + 0.009
   const amountInvalid = amount !== '' && amount !== null && (!Number.isFinite(parsedAmount) || parsedAmount <= 0)
+  const phonePeReady = method !== 'phonepe_qr' || (qrConfigured && Boolean(proofFile))
   const canSubmit =
     outstanding > 0 &&
     Number.isFinite(parsedAmount) &&
     parsedAmount > 0 &&
-    parsedAmount <= outstanding + 0.009
+    parsedAmount <= outstanding + 0.009 &&
+    phonePeReady
 
   function handleAmountChange(e) {
     const raw = e.target.value
@@ -90,6 +103,12 @@ export default function RecordCollectionModal({
     }
   }
 
+  function clearProof() {
+    if (proofPreview) URL.revokeObjectURL(proofPreview)
+    setProofFile(null)
+    setProofPreview('')
+  }
+
   useEffect(() => {
     if (open) {
       setAmount(defaultAmount)
@@ -97,8 +116,62 @@ export default function RecordCollectionModal({
       setError('')
       setSubmitting(false)
       setSelectedSessionId(defaultSessionId || '')
+      setMethod('cash')
+      setQrExpanded(false)
+      clearProof()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reset only when modal opens
   }, [open, defaultAmount, defaultSessionId])
+
+  useEffect(() => {
+    if (!open || !isManager || method !== 'phonepe_qr') return undefined
+    let cancelled = false
+    setQrLoading(true)
+    api
+      .get('/manager/payment-qr')
+      .then(({ data }) => {
+        if (cancelled) return
+        setQrUrl(data.phonePeQrUrl || '')
+        setQrConfigured(Boolean(data.configured && data.phonePeQrUrl))
+      })
+      .catch(() => {
+        if (cancelled) return
+        setQrUrl('')
+        setQrConfigured(false)
+      })
+      .finally(() => {
+        if (!cancelled) setQrLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [open, isManager, method])
+
+  async function onProofChange(e) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    if (!/^image\/(jpeg|png|webp)$/.test(file.type)) {
+      setError('Payment screenshot must be JPEG, PNG, or WebP')
+      return
+    }
+    try {
+      if (file.size > 400 * 1024) toast.loading('Optimizing image…', { id: 'img-compress' })
+      const prepared = await prepareUploadFile(file, 'payment')
+      toast.dismiss('img-compress')
+      if (prepared.size > MAX_UPLOAD_BYTES) {
+        setError('Screenshot is still too large after optimization')
+        return
+      }
+      if (proofPreview) URL.revokeObjectURL(proofPreview)
+      setProofFile(prepared)
+      setProofPreview(URL.createObjectURL(prepared))
+      setError('')
+    } catch (err) {
+      toast.dismiss('img-compress')
+      setError(err?.message || 'Could not optimize screenshot')
+    }
+  }
 
   async function handleSubmit(e) {
     e?.preventDefault?.()
@@ -112,20 +185,42 @@ export default function RecordCollectionModal({
       setError(`Cannot record more than the pending payment of ₹${outstanding.toFixed(2)}`)
       return
     }
+    if (isManager && method === 'phonepe_qr') {
+      if (!qrConfigured) {
+        setError('PhonePe QR is not set up. Ask admin to upload it under Platform settings.')
+        return
+      }
+      if (!proofFile) {
+        setError('Upload a screenshot of the PhonePe payment')
+        return
+      }
+    }
     setSubmitting(true)
     try {
       const path = apiPath || `/physio/bookings/${booking?._id}/collections`
-      const payload = { amount: amt, note: note.trim() }
-      if (isManager && hasMultiSession && selectedSessionId) {
-        payload.sessionId = selectedSessionId
+      if (isManager && method === 'phonepe_qr') {
+        const form = new FormData()
+        form.append('amount', String(amt))
+        form.append('collectionChannel', 'phonepe_qr')
+        if (note.trim()) form.append('note', note.trim())
+        if (hasMultiSession && selectedSessionId) form.append('sessionId', selectedSessionId)
+        form.append('proof', proofFile)
+        await api.post(path, form)
+        toast.success(successMessage || 'Screenshot submitted — waiting for admin to confirm.')
+      } else {
+        const payload = { amount: amt, note: note.trim() }
+        if (isManager) payload.collectionChannel = 'cash'
+        if (isManager && hasMultiSession && selectedSessionId) {
+          payload.sessionId = selectedSessionId
+        }
+        await api.post(path, payload)
+        toast.success(
+          successMessage ||
+            (apiPath?.includes('/manager/')
+              ? 'Collection recorded — see Finance for cash waiting on admin.'
+              : 'Collection recorded. Awaiting admin verification.'),
+        )
       }
-      await api.post(path, payload)
-      toast.success(
-        successMessage ||
-          (apiPath?.includes('/manager/')
-            ? 'Collection recorded — see Finance for cash waiting on admin.'
-            : 'Collection recorded. Awaiting admin verification.'),
-      )
       onRecorded?.()
       onClose?.()
     } catch (err) {
@@ -138,12 +233,13 @@ export default function RecordCollectionModal({
   }
 
   const outstandingLabel = `₹${outstanding.toFixed(2)}`
+  const qrSrc = assetUrl(qrUrl)
 
   const defaultDescription = apiPath?.includes('/manager/') ? (
     <>
       Pending:{' '}
-      <strong className="font-semibold text-slate-800">{outstandingLabel}</strong>. This updates the
-      patient plan and shows under Finance as cash waiting for admin.
+      <strong className="font-semibold text-slate-800">{outstandingLabel}</strong>. Choose cash handoff or
+      PhonePe QR (patient pays admin QR; you upload the screenshot).
     </>
   ) : (
     <>
@@ -154,101 +250,213 @@ export default function RecordCollectionModal({
   )
 
   return (
-    <Modal
-      open={open}
-      onClose={submitting ? undefined : onClose}
-      title={title}
-      description={description ?? defaultDescription}
-    >
-      <form className="space-y-4" onSubmit={handleSubmit}>
-        <label className="block">
-          <span className="text-xs font-semibold uppercase tracking-wide text-ink-muted">Amount (₹)</span>
-          <input
-            type="number"
-            inputMode="decimal"
-            min={0}
-            max={outstanding}
-            step="0.01"
-            value={amount}
-            onChange={handleAmountChange}
-            onBlur={handleAmountBlur}
-            aria-invalid={amountOverLimit || amountInvalid}
-            className={[
-              'mt-1.5 w-full rounded-xl border px-3 py-2 text-sm focus:outline-none focus:ring-2',
-              amountOverLimit || amountInvalid
-                ? 'border-rose-400 focus:border-rose-500 focus:ring-rose-500/20'
-                : 'border-slate-200 focus:border-teal-600 focus:ring-teal-600/20',
-            ].join(' ')}
-            disabled={submitting}
-          />
-          <p className="mt-1 text-[11px] text-ink-muted">
-            Maximum: <strong className="font-semibold text-slate-700">₹{outstanding.toFixed(2)}</strong> (pending)
-          </p>
-          {perSession > 0 ? (
-            <p className="mt-0.5 text-[11px] text-ink-muted">
-              Suggested: <strong className="font-semibold text-slate-700">₹{perSession.toFixed(2)}</strong> per
-              session.
-            </p>
+    <>
+      <Modal
+        open={open}
+        onClose={submitting ? undefined : onClose}
+        title={title}
+        description={description ?? defaultDescription}
+      >
+        <form className="space-y-4" onSubmit={handleSubmit}>
+          {isManager ? (
+            <div>
+              <span className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
+                Payment method
+              </span>
+              <div className="mt-1.5 grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  disabled={submitting}
+                  onClick={() => setMethod('cash')}
+                  className={[
+                    'rounded-xl border px-3 py-2 text-sm font-medium transition',
+                    method === 'cash'
+                      ? 'border-teal-600 bg-teal-50 text-teal-900'
+                      : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50',
+                  ].join(' ')}
+                >
+                  Cash
+                </button>
+                <button
+                  type="button"
+                  disabled={submitting}
+                  onClick={() => setMethod('phonepe_qr')}
+                  className={[
+                    'rounded-xl border px-3 py-2 text-sm font-medium transition',
+                    method === 'phonepe_qr'
+                      ? 'border-teal-600 bg-teal-50 text-teal-900'
+                      : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50',
+                  ].join(' ')}
+                >
+                  PhonePe QR
+                </button>
+              </div>
+            </div>
           ) : null}
-          {amountOverLimit ? (
-            <p className="mt-1 text-xs font-medium text-rose-700">
-              Amount cannot exceed pending payment of ₹{outstanding.toFixed(2)}.
-            </p>
-          ) : null}
-        </label>
 
-        {isManager && hasMultiSession ? (
+          {isManager && method === 'phonepe_qr' ? (
+            <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
+              {qrLoading ? (
+                <p className="text-sm text-slate-600">Loading QR…</p>
+              ) : !qrConfigured || !qrSrc ? (
+                <p className="text-sm text-rose-800">
+                  PhonePe QR is not configured. Ask admin to upload it under Platform settings.
+                </p>
+              ) : (
+                <div className="flex flex-col items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setQrExpanded(true)}
+                    className="overflow-hidden rounded-xl border border-slate-200 bg-white p-2"
+                  >
+                    <img src={qrSrc} alt="PhonePe QR" className="h-40 w-40 object-contain" />
+                  </button>
+                  <p className="text-center text-xs text-slate-600">
+                    Tap QR to enlarge. Patient scans and pays, then upload the payment screenshot below.
+                  </p>
+                </div>
+              )}
+
+              <label className="block">
+                <span className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
+                  Payment screenshot
+                </span>
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={onProofChange}
+                  disabled={submitting || !qrConfigured}
+                  className="mt-1.5 block w-full text-sm text-slate-700 file:mr-3 file:rounded-lg file:border-0 file:bg-teal-600 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white"
+                />
+                {proofPreview ? (
+                  <img
+                    src={proofPreview}
+                    alt="Payment screenshot preview"
+                    className="mt-2 max-h-32 rounded-lg border border-slate-200 object-contain"
+                  />
+                ) : null}
+              </label>
+            </div>
+          ) : null}
+
           <label className="block">
-            <span className="text-xs font-semibold uppercase tracking-wide text-ink-muted">For session</span>
-            <select
-              value={selectedSessionId}
-              onChange={(e) => setSelectedSessionId(e.target.value)}
-              className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20"
+            <span className="text-xs font-semibold uppercase tracking-wide text-ink-muted">Amount (₹)</span>
+            <input
+              type="number"
+              inputMode="decimal"
+              min={0}
+              max={outstanding}
+              step="0.01"
+              value={amount}
+              onChange={handleAmountChange}
+              onBlur={handleAmountBlur}
+              aria-invalid={amountOverLimit || amountInvalid}
+              className={[
+                'mt-1.5 w-full rounded-xl border px-3 py-2 text-sm focus:outline-none focus:ring-2',
+                amountOverLimit || amountInvalid
+                  ? 'border-rose-400 focus:border-rose-500 focus:ring-rose-500/20'
+                  : 'border-slate-200 focus:border-teal-600 focus:ring-teal-600/20',
+              ].join(' ')}
               disabled={submitting}
-            >
-              {sessionRows
-                .filter((r) => r.sessionId)
-                .map((r) => {
-                  const rec = sessionPaymentMap[sessionRowKey(r)]?.recorded || 0
-                  const pendingForSession =
-                    perSession > 0 ? Math.max(0, roundMoney2(perSession - rec)) : outstanding
-                  return (
-                    <option key={r.sessionId} value={r.sessionId}>
-                      Session #{r.n} — ₹{pendingForSession.toFixed(0)} pending
-                      {rec > 0 ? ` (${rec.toFixed(0)} recorded)` : ''}
-                    </option>
-                  )
-                })}
-            </select>
+            />
+            <p className="mt-1 text-[11px] text-ink-muted">
+              Maximum: <strong className="font-semibold text-slate-700">₹{outstanding.toFixed(2)}</strong> (pending)
+            </p>
+            {perSession > 0 ? (
+              <p className="mt-0.5 text-[11px] text-ink-muted">
+                Suggested: <strong className="font-semibold text-slate-700">₹{perSession.toFixed(2)}</strong> per
+                session.
+              </p>
+            ) : null}
+            {amountOverLimit ? (
+              <p className="mt-1 text-xs font-medium text-rose-700">
+                Amount cannot exceed pending payment of ₹{outstanding.toFixed(2)}.
+              </p>
+            ) : null}
           </label>
-        ) : null}
 
-        <label className="block">
-          <span className="text-xs font-semibold uppercase tracking-wide text-ink-muted">Note (optional)</span>
-          <textarea
-            rows={2}
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            maxLength={500}
-            placeholder="e.g. Cash received after session 2"
-            className="mt-1.5 w-full resize-none rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20"
-            disabled={submitting}
+          {isManager && hasMultiSession ? (
+            <label className="block">
+              <span className="text-xs font-semibold uppercase tracking-wide text-ink-muted">For session</span>
+              <select
+                value={selectedSessionId}
+                onChange={(e) => setSelectedSessionId(e.target.value)}
+                className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20"
+                disabled={submitting}
+              >
+                {sessionRows
+                  .filter((r) => r.sessionId)
+                  .map((r) => {
+                    const rec = sessionPaymentMap[sessionRowKey(r)]?.recorded || 0
+                    const pendingForSession =
+                      perSession > 0 ? Math.max(0, roundMoney2(perSession - rec)) : outstanding
+                    return (
+                      <option key={r.sessionId} value={r.sessionId}>
+                        Session #{r.n} — ₹{pendingForSession.toFixed(0)} pending
+                        {rec > 0 ? ` (${rec.toFixed(0)} recorded)` : ''}
+                      </option>
+                    )
+                  })}
+              </select>
+            </label>
+          ) : null}
+
+          <label className="block">
+            <span className="text-xs font-semibold uppercase tracking-wide text-ink-muted">Note (optional)</span>
+            <textarea
+              rows={2}
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              maxLength={500}
+              placeholder={
+                method === 'phonepe_qr' ? 'e.g. UPI ref after session 2' : 'e.g. Cash received after session 2'
+              }
+              className="mt-1.5 w-full resize-none rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20"
+              disabled={submitting}
+            />
+          </label>
+
+          {error ? (
+            <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-900">{error}</div>
+          ) : null}
+
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button type="button" variant="outline" onClick={onClose} disabled={submitting}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={submitting || !canSubmit}>
+              {submitting
+                ? 'Saving…'
+                : method === 'phonepe_qr'
+                  ? 'Submit screenshot'
+                  : 'Record collection'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {qrExpanded && qrSrc ? (
+        <div
+          className="fixed inset-0 z-[80] flex items-center justify-center bg-black/70 p-4"
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setQrExpanded(false)}
+        >
+          <button
+            type="button"
+            className="absolute right-4 top-4 rounded-lg bg-white/90 px-3 py-1.5 text-sm font-medium text-slate-900"
+            onClick={() => setQrExpanded(false)}
+          >
+            Close
+          </button>
+          <img
+            src={qrSrc}
+            alt="PhonePe QR enlarged"
+            className="max-h-[90vh] max-w-full rounded-2xl bg-white object-contain p-4"
+            onClick={(e) => e.stopPropagation()}
           />
-        </label>
-
-        {error ? (
-          <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-900">{error}</div>
-        ) : null}
-
-        <div className="flex flex-wrap justify-end gap-2">
-          <Button type="button" variant="outline" onClick={onClose} disabled={submitting}>
-            Cancel
-          </Button>
-          <Button type="submit" disabled={submitting || !canSubmit}>
-            {submitting ? 'Saving…' : 'Record collection'}
-          </Button>
         </div>
-      </form>
-    </Modal>
+      ) : null}
+    </>
   )
 }

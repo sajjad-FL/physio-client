@@ -75,7 +75,8 @@ function StepStrip({ cashHold, available }) {
 
 export default function ManagerFinancePage() {
   const [searchParams, setSearchParams] = useSearchParams()
-  const tab = searchParams.get('tab') === 'earnings' ? 'earnings' : 'cash'
+  const tabParam = searchParams.get('tab')
+  const tab = tabParam === 'earnings' ? 'earnings' : tabParam === 'payout' ? 'payout' : 'cash'
 
   const [entries, setEntries] = useState([])
   const [openTotal, setOpenTotal] = useState(0)
@@ -85,6 +86,9 @@ export default function ManagerFinancePage() {
   const [withdrawOpen, setWithdrawOpen] = useState(false)
   const [withdrawAmount, setWithdrawAmount] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [upiId, setUpiId] = useState('')
+  const [upiName, setUpiName] = useState('')
+  const [savingUpi, setSavingUpi] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -98,6 +102,8 @@ export default function ManagerFinancePage() {
       setOpenTotal(Number(lRes.data?.openTotal || 0))
       setWallet(wRes.data)
       setTransactions(tRes.data?.transactions || [])
+      setUpiId(wRes.data?.payoutUpiId || '')
+      setUpiName(wRes.data?.payoutDisplayName || '')
     } catch (e) {
       toast.error(e.response?.data?.message || 'Failed to load finance')
       setEntries([])
@@ -120,13 +126,47 @@ export default function ManagerFinancePage() {
 
   const available = Number(wallet?.availableBalance || 0)
   const pendingWithdraw = wallet?.pendingWithdraw
+  const hasUpi = Boolean(String(wallet?.payoutUpiId || '').trim())
 
   function setTab(next) {
-    setSearchParams(next === 'earnings' ? { tab: 'earnings' } : { tab: 'cash' }, { replace: true })
+    const params =
+      next === 'earnings' ? { tab: 'earnings' } : next === 'payout' ? { tab: 'payout' } : { tab: 'cash' }
+    setSearchParams(params, { replace: true })
+  }
+
+  async function saveUpi(e) {
+    e.preventDefault()
+    setSavingUpi(true)
+    try {
+      const { data } = await api.patch('/profile/payout', {
+        payoutUpiId: upiId.trim(),
+        payoutDisplayName: upiName.trim(),
+      })
+      toast.success(data.message || 'UPI saved')
+      setUpiId(data.payoutUpiId || '')
+      setUpiName(data.payoutDisplayName || '')
+      setWallet((prev) =>
+        prev
+          ? {
+              ...prev,
+              payoutUpiId: data.payoutUpiId || '',
+              payoutDisplayName: data.payoutDisplayName || '',
+            }
+          : prev,
+      )
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Could not save UPI')
+    } finally {
+      setSavingUpi(false)
+    }
   }
 
   async function submitWithdraw(e) {
     e.preventDefault()
+    if (!hasUpi) {
+      toast.error('Save your UPI ID before requesting a withdrawal')
+      return
+    }
     const amt = Number(withdrawAmount)
     if (!Number.isFinite(amt) || amt <= 0) {
       toast.error('Enter a valid amount')
@@ -185,7 +225,8 @@ export default function ManagerFinancePage() {
           <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Withdrawable commission</p>
           <p className="mt-1 text-2xl font-bold tabular-nums text-emerald-700">{inr(available)}</p>
           <p className="mt-1 text-xs text-slate-500">
-            Pending cut: {inr(wallet?.pendingCommission || 0)}
+            Pending cut: {inr((wallet?.pendingCommission || 0) + (wallet?.pendingPhonePeCut || 0))}
+            {Number(wallet?.pendingPhonePeCut) > 0 ? ' (incl. PhonePe awaiting confirm)' : ''}
           </p>
         </button>
       </div>
@@ -195,7 +236,7 @@ export default function ManagerFinancePage() {
         <button
           type="button"
           onClick={() => setTab('cash')}
-          className={`flex-1 rounded-lg px-3 py-2 text-sm font-semibold transition ${
+          className={`flex-1 rounded-lg px-2 py-2 text-sm font-semibold transition sm:px-3 ${
             tab === 'cash' ? 'bg-white text-teal-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
           }`}
         >
@@ -204,17 +245,72 @@ export default function ManagerFinancePage() {
         <button
           type="button"
           onClick={() => setTab('earnings')}
-          className={`flex-1 rounded-lg px-3 py-2 text-sm font-semibold transition ${
+          className={`flex-1 rounded-lg px-2 py-2 text-sm font-semibold transition sm:px-3 ${
             tab === 'earnings' ? 'bg-white text-teal-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
           }`}
         >
           My earnings
         </button>
+        <button
+          type="button"
+          onClick={() => setTab('payout')}
+          className={`flex-1 rounded-lg px-2 py-2 text-sm font-semibold transition sm:px-3 ${
+            tab === 'payout' ? 'bg-white text-teal-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          Payout UPI
+        </button>
       </div>
 
       {tab === 'cash' ? (
         <div className="space-y-2">
-          {entries.length === 0 ? (
+          {(wallet?.pendingPhonePe || []).length > 0 ? (
+            <div className="space-y-2">
+              <p className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                PhonePe — pending admin confirm
+              </p>
+              {wallet.pendingPhonePe.map((p) => {
+                const ref = p.bookingRef
+                const patientName = ref?.patientName || 'Patient'
+                const issue = ref?.issue || 'Home visit'
+                const bookingId = ref?.id
+                return (
+                  <Card key={p._id} hover={false} className="border-sky-100 bg-sky-50/40 p-4">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-slate-900">{inr(p.amount)}</p>
+                        <p className="mt-0.5 text-sm text-slate-700">{patientName}</p>
+                        <p className="text-xs text-slate-500">{issue}</p>
+                        <span className="mt-2 inline-flex rounded-full bg-sky-50 px-2.5 py-0.5 text-[11px] font-semibold text-sky-900 ring-1 ring-sky-200">
+                          Pending admin confirm
+                        </span>
+                        {Number(p.managerCommissionAmount) > 0 ? (
+                          <p className="mt-2 text-xs font-medium text-emerald-700">
+                            Your cut: {inr(p.managerCommissionAmount)} — credited after admin confirms
+                          </p>
+                        ) : null}
+                      </div>
+                      <div className="flex shrink-0 flex-col items-end gap-2">
+                        <span className="text-xs text-slate-500">
+                          {p.createdAt ? new Date(p.createdAt).toLocaleDateString('en-IN') : ''}
+                        </span>
+                        {bookingId ? (
+                          <Link
+                            to={`/manager/bookings/${bookingId}`}
+                            className="text-xs font-semibold text-teal-700 hover:text-teal-900"
+                          >
+                            View case →
+                          </Link>
+                        ) : null}
+                      </div>
+                    </div>
+                  </Card>
+                )
+              })}
+            </div>
+          ) : null}
+
+          {entries.length === 0 && !(wallet?.pendingPhonePe || []).length ? (
             <Card hover={false} className="p-6 text-center">
               <p className="text-sm font-medium text-slate-800">No cash recorded yet</p>
               <p className="mt-1 text-sm text-slate-600">
@@ -227,8 +323,14 @@ export default function ManagerFinancePage() {
                 Go to cases needing collection
               </Link>
             </Card>
-          ) : (
-            entries.map((e) => {
+          ) : entries.length === 0 ? null : (
+            <>
+              {(wallet?.pendingPhonePe || []).length > 0 ? (
+                <p className="mt-3 px-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Cash handoff
+                </p>
+              ) : null}
+              {entries.map((e) => {
               const ref = e.bookingRef
               const booking = e.bookingId
               const patientName =
@@ -275,10 +377,11 @@ export default function ManagerFinancePage() {
                   </div>
                 </Card>
               )
-            })
+            })}
+            </>
           )}
         </div>
-      ) : (
+      ) : tab === 'earnings' ? (
         <div className="space-y-4">
           {!wallet ? (
             <Card hover={false} className="p-6 text-center text-sm text-slate-600">
@@ -296,9 +399,11 @@ export default function ManagerFinancePage() {
                 </Card>
                 <Card hover={false} className="p-5">
                   <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Pending commission</p>
-                  <p className="mt-1 text-2xl font-bold text-slate-900">{inr(wallet.pendingCommission)}</p>
+                  <p className="mt-1 text-2xl font-bold text-slate-900">
+                    {inr((wallet.pendingCommission || 0) + (wallet.pendingPhonePeCut || 0))}
+                  </p>
                   <p className="mt-1 text-xs text-slate-500">
-                    Unlocks when admin settles cash you still hold —{' '}
+                    Cash handoff + PhonePe awaiting confirm —{' '}
                     <button
                       type="button"
                       onClick={() => setTab('cash')}
@@ -321,7 +426,7 @@ export default function ManagerFinancePage() {
                   </div>
                   <Button
                     type="button"
-                    disabled={available < 1 || Boolean(pendingWithdraw)}
+                    disabled={available < 1 || Boolean(pendingWithdraw) || !hasUpi}
                     onClick={() => {
                       setWithdrawAmount(String(available))
                       setWithdrawOpen(true)
@@ -330,11 +435,25 @@ export default function ManagerFinancePage() {
                     Withdraw money
                   </Button>
                 </div>
+                {!hasUpi ? (
+                  <p className="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-900 ring-1 ring-amber-100">
+                    Save your UPI ID in the{' '}
+                    <button
+                      type="button"
+                      onClick={() => setTab('payout')}
+                      className="font-semibold text-teal-800 underline"
+                    >
+                      Payout UPI
+                    </button>{' '}
+                    tab before requesting a withdrawal.
+                  </p>
+                ) : null}
                 {pendingWithdraw ? (
                   <p className="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-900 ring-1 ring-amber-100">
                     Withdrawal of {inr(pendingWithdraw.amount)} requested on{' '}
                     {new Date(pendingWithdraw.requestedAt).toLocaleDateString('en-IN')} — waiting for admin
                     approval.
+                    {pendingWithdraw.payoutUpiId ? ` · UPI: ${pendingWithdraw.payoutUpiId}` : ''}
                   </p>
                 ) : null}
               </Card>
@@ -379,13 +498,56 @@ export default function ManagerFinancePage() {
             </>
           )}
         </div>
-      )}
+      ) : tab === 'payout' ? (
+        <Card hover={false} className="p-5">
+          <h3 className="font-semibold text-slate-900">Payout UPI</h3>
+          <p className="mt-1 text-xs text-slate-500">
+            Admin will transfer your commission to this UPI ID when they approve a withdrawal.
+          </p>
+          {hasUpi ? (
+            <p className="mt-3 rounded-xl bg-emerald-50 px-3 py-2 text-xs text-emerald-900 ring-1 ring-emerald-100">
+              Saved: <span className="font-semibold">{wallet?.payoutUpiId}</span>
+              {wallet?.payoutDisplayName ? ` · ${wallet.payoutDisplayName}` : ''}
+            </p>
+          ) : null}
+          <form onSubmit={saveUpi} className="mt-4 space-y-3">
+            <label className="block text-sm font-medium text-slate-700">
+              UPI ID
+              <input
+                type="text"
+                value={upiId}
+                onChange={(e) => setUpiId(e.target.value)}
+                placeholder="yourname@oksbi"
+                className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+                required
+              />
+            </label>
+            <label className="block text-sm font-medium text-slate-700">
+              Name on UPI (optional)
+              <input
+                type="text"
+                value={upiName}
+                onChange={(e) => setUpiName(e.target.value)}
+                placeholder="Account holder name"
+                className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+              />
+            </label>
+            <Button type="submit" loading={savingUpi} disabled={savingUpi}>
+              Save UPI
+            </Button>
+          </form>
+        </Card>
+      ) : null}
 
       {withdrawOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal>
           <form onSubmit={submitWithdraw} className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
             <h3 className="font-semibold text-slate-900">Withdraw commission</h3>
             <p className="mt-1 text-xs text-slate-500">Withdrawable balance: {inr(available)}</p>
+            <p className="mt-2 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-700">
+              Paying to <span className="font-semibold">{wallet?.payoutUpiId}</span>
+              {wallet?.payoutDisplayName ? ` (${wallet.payoutDisplayName})` : ''}
+            </p>
             <label className="mt-4 block text-sm font-medium text-slate-700">
               Amount (₹)
               <input

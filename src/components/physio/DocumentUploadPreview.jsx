@@ -3,6 +3,7 @@ import toast from 'react-hot-toast'
 import { resolveFileUrl } from '../../utils/serverOrigin'
 import { validateFile } from '../../utils/onboardingValidation'
 import { MAX_UPLOAD_SIZE_LABEL } from '../../constants/uploadLimits.js'
+import { isCompressibleImage, prepareUploadFile } from '../../utils/compressImage.js'
 
 function looksLikePdf(path) {
   return /\.pdf(\?|#|$)/i.test(String(path || ''))
@@ -55,17 +56,28 @@ export default function DocumentUploadPreview({
   const filled = hasFile || hasServer
 
   const pickFile = useCallback(
-    (f) => {
+    async (f) => {
       if (!f) {
         onFileChange(null)
         return
       }
-      const r = validateFile(f, label || 'File')
-      if (!r.ok) {
-        toast.error(r.message)
-        return
+      try {
+        let next = f
+        if (isCompressibleImage(f)) {
+          if (f.size > 400 * 1024) toast.loading('Optimizing image…', { id: 'img-compress' })
+          next = await prepareUploadFile(f, 'document')
+          toast.dismiss('img-compress')
+        }
+        const r = validateFile(next, label || 'File')
+        if (!r.ok) {
+          toast.error(r.message)
+          return
+        }
+        onFileChange(next)
+      } catch (err) {
+        toast.dismiss('img-compress')
+        toast.error(err?.message || 'Could not optimize image')
       }
-      onFileChange(f)
     },
     [onFileChange, label],
   )

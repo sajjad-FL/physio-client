@@ -27,6 +27,7 @@ import { ID_PROOF_TYPE_OPTIONS } from '../constants/idProofTypes.js'
 import { absoluteUrl } from '../utils/siteMeta'
 import { MAX_UPLOAD_SIZE_LABEL } from '../constants/uploadLimits.js'
 import { formatPhysioDisplayName } from '../utils/physioDisplayName.js'
+import { prepareUploadFile } from '../utils/compressImage.js'
 
 const baseInputClass =
   'h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm text-slate-900 shadow-sm outline-none transition-all duration-200 placeholder:text-slate-400 focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20'
@@ -731,21 +732,29 @@ export default function RegisterPhysioPage() {
                   type="file"
                   accept="image/*"
                   className="sr-only"
-                  onChange={(e) => {
+                  onChange={async (e) => {
                     const f = e.target.files?.[0] || null
                     e.target.value = ''
                     if (!f) return
-                    const r = validateAvatarFile(f)
-                    if (!r.ok) {
-                      toast.error(r.message)
-                      return
+                    try {
+                      if (f.size > 400 * 1024) toast.loading('Optimizing image…', { id: 'img-compress' })
+                      const prepared = await prepareUploadFile(f, 'avatar')
+                      toast.dismiss('img-compress')
+                      const r = validateAvatarFile(prepared)
+                      if (!r.ok) {
+                        toast.error(r.message)
+                        return
+                      }
+                      setAvatarFile(prepared)
+                      patchField('avatar', prepared)
+                      setAvatarPreview((prev) => {
+                        if (prev) URL.revokeObjectURL(prev)
+                        return URL.createObjectURL(prepared)
+                      })
+                    } catch (err) {
+                      toast.dismiss('img-compress')
+                      toast.error(err?.message || 'Could not optimize image')
                     }
-                    setAvatarFile(f)
-                    patchField('avatar', f)
-                    setAvatarPreview((prev) => {
-                      if (prev) URL.revokeObjectURL(prev)
-                      return URL.createObjectURL(f)
-                    })
                   }}
                 />
                 <button

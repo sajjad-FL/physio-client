@@ -1,9 +1,11 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import { api } from '../../config/api'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import { DEFAULT_QUALIFICATION_DECLARATION } from '../../constants/qualificationDeclaration'
+import { assetUrl } from '../../utils/assetUrl'
+import { prepareUploadFile } from '../../utils/compressImage.js'
 
 export default function AdminPlatformSettingsPage() {
   const [loading, setLoading] = useState(true)
@@ -15,6 +17,11 @@ export default function AdminPlatformSettingsPage() {
   const [referralSignupBonusAmount, setReferralSignupBonusAmount] = useState(100)
   const [referralUpdatedAt, setReferralUpdatedAt] = useState(null)
   const [signupBonusUpdatedAt, setSignupBonusUpdatedAt] = useState(null)
+  const [phonePeQrUrl, setPhonePeQrUrl] = useState('')
+  const [phonePeQrUpdatedAt, setPhonePeQrUpdatedAt] = useState(null)
+  const [uploadingQr, setUploadingQr] = useState(false)
+  const [clearingQr, setClearingQr] = useState(false)
+  const qrInputRef = useRef(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -28,6 +35,8 @@ export default function AdminPlatformSettingsPage() {
       const bonus = Number(data.referralSignupBonusAmount)
       setReferralSignupBonusAmount(Number.isFinite(bonus) && bonus >= 0 ? Math.round(bonus) : 100)
       setSignupBonusUpdatedAt(data.referralSignupBonusAmountUpdatedAt || null)
+      setPhonePeQrUrl(data.phonePeQrUrl || '')
+      setPhonePeQrUpdatedAt(data.phonePeQrUpdatedAt || null)
     } catch (e) {
       toast.error(e.response?.data?.message || 'Failed to load platform settings')
     } finally {
@@ -87,9 +96,55 @@ export default function AdminPlatformSettingsPage() {
     }
   }
 
+  async function onUploadQr(e) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setUploadingQr(true)
+    try {
+      if (file.size > 400 * 1024) toast.loading('Optimizing image…', { id: 'img-compress' })
+      const prepared = await prepareUploadFile(file, 'payment')
+      toast.dismiss('img-compress')
+      const form = new FormData()
+      form.append('qr', prepared)
+      const { data } = await api.post('/admin/platform/settings/phonepe-qr', form)
+      setPhonePeQrUrl(data.phonePeQrUrl || '')
+      setPhonePeQrUpdatedAt(data.phonePeQrUpdatedAt || null)
+      toast.success(data.message || 'PhonePe QR saved')
+    } catch (err) {
+      toast.dismiss('img-compress')
+      toast.error(err.response?.data?.message || err?.message || 'Upload failed')
+    } finally {
+      setUploadingQr(false)
+    }
+  }
+
+  async function onClearQr() {
+    if (
+      !window.confirm(
+        'Remove the PhonePe QR? Managers will not be able to collect via PhonePe until you upload another.',
+      )
+    ) {
+      return
+    }
+    setClearingQr(true)
+    try {
+      const { data } = await api.delete('/admin/platform/settings/phonepe-qr')
+      setPhonePeQrUrl('')
+      setPhonePeQrUpdatedAt(data.phonePeQrUpdatedAt || null)
+      toast.success(data.message || 'PhonePe QR removed')
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Could not remove QR')
+    } finally {
+      setClearingQr(false)
+    }
+  }
+
   if (loading) {
     return <p className="p-4 text-sm text-slate-600">Loading platform settings…</p>
   }
+
+  const qrSrc = assetUrl(phonePeQrUrl)
 
   return (
     <div className="mx-auto max-w-2xl space-y-6 p-4">
@@ -100,6 +155,57 @@ export default function AdminPlatformSettingsPage() {
           submitting. Leaving the saved text empty (restore default) uses the built-in PhysiOkhom template.
         </p>
       </div>
+
+      <Card>
+        <h2 className="type-page-title text-slate-900">PhonePe QR</h2>
+        <p className="mt-2 text-sm text-slate-600">
+          Managers show this QR to patients for UPI payment. After the patient pays, the manager uploads a
+          screenshot for you to confirm in Finance → Payment queue. Cash collections stay unchanged.
+        </p>
+        {phonePeQrUpdatedAt ? (
+          <p className="mt-2 text-xs text-slate-500">
+            Last updated: {new Date(phonePeQrUpdatedAt).toLocaleString()}
+          </p>
+        ) : null}
+
+        <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-start">
+          <div className="flex h-48 w-48 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
+            {qrSrc ? (
+              <img src={qrSrc} alt="PhonePe QR code" className="h-full w-full object-contain p-2" />
+            ) : (
+              <span className="px-3 text-center text-xs text-slate-500">No QR uploaded yet</span>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <input
+              ref={qrInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+              onChange={onUploadQr}
+            />
+            <Button
+              type="button"
+              loading={uploadingQr}
+              disabled={uploadingQr || clearingQr}
+              onClick={() => qrInputRef.current?.click()}
+            >
+              {phonePeQrUrl ? 'Replace QR' : 'Upload QR'}
+            </Button>
+            {phonePeQrUrl ? (
+              <Button
+                type="button"
+                variant="outline"
+                loading={clearingQr}
+                disabled={uploadingQr || clearingQr}
+                onClick={onClearQr}
+              >
+                Remove
+              </Button>
+            ) : null}
+          </div>
+        </div>
+      </Card>
 
       <Card>
         <h2 className="type-page-title text-slate-900">Qualification declaration</h2>
