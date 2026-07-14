@@ -5,6 +5,12 @@ import toast from 'react-hot-toast'
 import AdminPageHeader, { AdminLink } from '../../components/admin/AdminPageHeader'
 import AdminFlowGuide from '../../components/admin/AdminFlowGuide'
 import AdminPaymentQueueTable, { PaymentQueueVerifySummary, isManagerPhonePe } from '../../components/admin/AdminPaymentQueueTable'
+import AdminPaymentFiltersDrawer from '../../components/admin/AdminPaymentFiltersDrawer'
+import {
+  AdminWalletFiltersDrawer,
+  AdminWithdrawFiltersDrawer,
+} from '../../components/admin/AdminFinanceFilterDrawers'
+import { MobileFilterIconButton } from '../../components/admin/AdminFilterSheet'
 import AdminCaseContext from '../../components/admin/AdminCaseContext'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
@@ -95,6 +101,29 @@ const emptyQueueFilters = () => ({
   amountMax: '',
 })
 
+const emptyWithdrawFilters = () => ({
+  search: '',
+  payee: '',
+  status: 'pending',
+  dateFrom: '',
+  dateTo: '',
+  amountMin: '',
+  amountMax: '',
+})
+
+const WITHDRAW_PAYEE_TABS = [
+  { id: '', label: 'All payees' },
+  { id: 'manager', label: 'Care managers' },
+  { id: 'physio', label: 'Physiotherapists' },
+]
+
+const WITHDRAW_STATUS_TABS = [
+  { id: 'pending', label: 'Pending' },
+  { id: 'approved', label: 'Approved' },
+  { id: 'rejected', label: 'Rejected' },
+  { id: '', label: 'All' },
+]
+
 export default function AdminFinancePage() {
   // Tab handling
   const [activeTab, setActiveTab] = useState(() => {
@@ -152,14 +181,22 @@ export default function AdminFinancePage() {
   const [queueVerifyTarget, setQueueVerifyTarget] = useState(null)
   const [queueRejectTarget, setQueueRejectTarget] = useState(null)
   const [queueRejectReason, setQueueRejectReason] = useState('')
+  const [queueFiltersOpen, setQueueFiltersOpen] = useState(false)
+  const [walletFiltersOpen, setWalletFiltersOpen] = useState(false)
+  const [withdrawFiltersOpen, setWithdrawFiltersOpen] = useState(false)
 
-  // 3. Tab: Withdrawal Requests States
+  // 3. Tab: Withdrawal Requests States (physio + manager)
   const [withdrawalRows, setWithdrawalRows] = useState([])
-  const [withdrawalPage, setWithdrawalPage] = useState(1)
-  const [withdrawalTotalPages, setWithdrawalTotalPages] = useState(1)
   const [withdrawalLoading, setWithdrawalLoading] = useState(true)
   const [withdrawalSearch, setWithdrawalSearch] = useState('')
-  const [withdrawalAppliedSearch, setWithdrawalAppliedSearch] = useState('')
+  const [withdrawalPayee, setWithdrawalPayee] = useState('')
+  const [withdrawalStatus, setWithdrawalStatus] = useState('pending')
+  const [withdrawalDateFrom, setWithdrawalDateFrom] = useState('')
+  const [withdrawalDateTo, setWithdrawalDateTo] = useState('')
+  const [withdrawalAmountMin, setWithdrawalAmountMin] = useState('')
+  const [withdrawalAmountMax, setWithdrawalAmountMax] = useState('')
+  const [withdrawalApplied, setWithdrawalApplied] = useState(emptyWithdrawFilters)
+  const [selectedWithdrawal, setSelectedWithdrawal] = useState(null)
 
   // Load finance summary stats
   const loadSummary = useCallback(async () => {
@@ -192,26 +229,65 @@ export default function AdminFinancePage() {
     }
   }, [walletPage, walletAppliedSearch, walletFilter])
 
-  // Load Withdrawal Requests tab (uses filter="payout" from backend)
+  // Load Withdrawal Requests tab — physio + manager from /withdraw
   const loadWithdrawals = useCallback(async () => {
     setWithdrawalLoading(true)
     try {
-      const res = await api.get('/admin/finance/physios', {
+      const res = await api.get('/withdraw', {
         params: {
-          page: withdrawalPage,
-          limit: 20,
-          search: withdrawalAppliedSearch || undefined,
-          filter: 'payout',
+          payee: withdrawalApplied.payee || undefined,
         },
       })
-      setWithdrawalRows(res.data?.data || [])
-      setWithdrawalTotalPages(res.data?.totalPages || 1)
+      const all = Array.isArray(res.data) ? res.data : []
+      let rows = all
+
+      if (withdrawalApplied.status) {
+        rows = rows.filter((r) => r.status === withdrawalApplied.status)
+      }
+
+      const q = withdrawalApplied.search.trim().toLowerCase()
+      if (q) {
+        rows = rows.filter((r) => {
+          const name = String(r.managerId?.name || r.physioId?.name || '').toLowerCase()
+          const phone = String(r.managerId?.phone || r.physioId?.phone || '')
+          const upi = String(r.payoutUpiId || '').toLowerCase()
+          return name.includes(q) || phone.includes(q) || upi.includes(q)
+        })
+      }
+
+      if (withdrawalApplied.dateFrom) {
+        const from = new Date(`${withdrawalApplied.dateFrom}T00:00:00`)
+        rows = rows.filter((r) => {
+          const d = new Date(r.requestedAt || r.createdAt)
+          return !Number.isNaN(d.getTime()) && d >= from
+        })
+      }
+      if (withdrawalApplied.dateTo) {
+        const to = new Date(`${withdrawalApplied.dateTo}T23:59:59.999`)
+        rows = rows.filter((r) => {
+          const d = new Date(r.requestedAt || r.createdAt)
+          return !Number.isNaN(d.getTime()) && d <= to
+        })
+      }
+
+      const min = Number(withdrawalApplied.amountMin)
+      if (Number.isFinite(min) && withdrawalApplied.amountMin !== '') {
+        rows = rows.filter((r) => Number(r.amount) >= min)
+      }
+      const max = Number(withdrawalApplied.amountMax)
+      if (Number.isFinite(max) && withdrawalApplied.amountMax !== '') {
+        rows = rows.filter((r) => Number(r.amount) <= max)
+      }
+
+      rows.sort((a, b) => new Date(b.requestedAt || 0) - new Date(a.requestedAt || 0))
+      setWithdrawalRows(rows)
     } catch (e) {
       toast.error(e.response?.data?.message || 'Failed to load withdrawal requests')
+      setWithdrawalRows([])
     } finally {
       setWithdrawalLoading(false)
     }
-  }, [withdrawalPage, withdrawalAppliedSearch])
+  }, [withdrawalApplied])
 
   // Load Payment Queue Tab
   const loadQueue = useCallback(async () => {
@@ -259,10 +335,125 @@ export default function AdminFinancePage() {
     setWalletPage(1)
   }
 
-  // Withdrawal search apply
-  function applyWithdrawalSearch() {
-    setWithdrawalAppliedSearch(withdrawalSearch.trim())
-    setWithdrawalPage(1)
+  // Withdrawal filters
+  function readWithdrawFilterDraft() {
+    return {
+      search: withdrawalSearch.trim(),
+      payee: withdrawalPayee,
+      status: withdrawalStatus,
+      dateFrom: withdrawalDateFrom,
+      dateTo: withdrawalDateTo,
+      amountMin: String(withdrawalAmountMin || '').trim(),
+      amountMax: String(withdrawalAmountMax || '').trim(),
+    }
+  }
+
+  function applyWithdrawalFilters(override = {}) {
+    setWithdrawalApplied({ ...readWithdrawFilterDraft(), ...override })
+  }
+
+  function resetWithdrawalFilters() {
+    setWithdrawalSearch('')
+    setWithdrawalPayee('')
+    setWithdrawalStatus('pending')
+    setWithdrawalDateFrom('')
+    setWithdrawalDateTo('')
+    setWithdrawalAmountMin('')
+    setWithdrawalAmountMax('')
+    setWithdrawalApplied(emptyWithdrawFilters())
+  }
+
+  function applyWithdrawalFiltersFromDrawer(next) {
+    setWithdrawalSearch(next.search || '')
+    setWithdrawalPayee(next.payee || '')
+    setWithdrawalStatus(next.status ?? 'pending')
+    setWithdrawalDateFrom(next.dateFrom || '')
+    setWithdrawalDateTo(next.dateTo || '')
+    setWithdrawalAmountMin(next.amountMin || '')
+    setWithdrawalAmountMax(next.amountMax || '')
+    setWithdrawalApplied({
+      search: String(next.search || '').trim(),
+      payee: next.payee || '',
+      status: next.status ?? 'pending',
+      dateFrom: next.dateFrom || '',
+      dateTo: next.dateTo || '',
+      amountMin: String(next.amountMin || '').trim(),
+      amountMax: String(next.amountMax || '').trim(),
+    })
+  }
+
+  function countWithdrawAdvancedFilters() {
+    const a = withdrawalApplied
+    let n = 0
+    if (a.status && a.status !== 'pending') n += 1
+    if (a.payee) n += 1
+    if (a.dateFrom) n += 1
+    if (a.dateTo) n += 1
+    if (a.amountMin) n += 1
+    if (a.amountMax) n += 1
+    if (a.search) n += 1
+    return n
+  }
+
+  function resetWalletFilters() {
+    setWalletSearch('')
+    setWalletAppliedSearch('')
+    setWalletFilter('active')
+    setWalletPage(1)
+  }
+
+  function applyWalletFiltersFromDrawer(next) {
+    setWalletFilter(next.filter || 'active')
+    setWalletSearch(next.search || '')
+    setWalletAppliedSearch(String(next.search || '').trim())
+    setWalletPage(1)
+  }
+
+  function countWalletAdvancedFilters() {
+    let n = 0
+    if (walletFilter && walletFilter !== 'active') n += 1
+    if (walletAppliedSearch) n += 1
+    return n
+  }
+
+  function openWithdrawalDetail(row) {
+    setSelectedWithdrawal(row)
+  }
+
+  function closeWithdrawalDetail() {
+    setSelectedWithdrawal(null)
+  }
+
+  function startPayoutFromRow(row, action) {
+    const payee = withdrawPayee(row)
+    setPayoutAction({
+      requestId: row._id,
+      action,
+      payeeName: payee.name,
+      payeeKind: payee.kind,
+      amount: row.amount,
+      payoutUpiId: row.payoutUpiId || '',
+      payoutDisplayName: row.payoutDisplayName || '',
+    })
+  }
+
+  function withdrawPayee(row) {
+    if (row?.managerId) {
+      return {
+        kind: 'manager',
+        label: 'Care manager',
+        name: row.managerId?.name || 'Care manager',
+        phone: row.managerId?.phone || '',
+        id: row.managerId?._id || row.managerId,
+      }
+    }
+    return {
+      kind: 'physio',
+      label: 'Physiotherapist',
+      name: row.physioId?.name || 'Physiotherapist',
+      phone: row.physioId?.phone || '',
+      id: row.physioId?._id || row.physioId,
+    }
   }
 
   function readQueueFilterDraft() {
@@ -283,6 +474,44 @@ export default function AdminFinancePage() {
     const draft = readQueueFilterDraft()
     setQueueApplied({ ...draft, ...override, search: override.search !== undefined ? override.search : draft.search })
     setQueuePage(1)
+  }
+
+  function applyQueueFiltersFromDrawer(next) {
+    setQueueSearch(next.search ?? queueSearch)
+    setQueueMode(next.mode || '')
+    setQueueChannel(next.channel || '')
+    setQueueCollector(next.collector || '')
+    setQueueStatus(next.status || '')
+    setQueueDateFrom(next.dateFrom || '')
+    setQueueDateTo(next.dateTo || '')
+    setQueueAmountMin(next.amountMin || '')
+    setQueueAmountMax(next.amountMax || '')
+    setQueueApplied({
+      search: String(next.search ?? queueSearch).trim(),
+      mode: next.mode || '',
+      channel: next.channel || '',
+      collector: next.collector || '',
+      status: next.status || '',
+      dateFrom: next.dateFrom || '',
+      dateTo: next.dateTo || '',
+      amountMin: String(next.amountMin || '').trim(),
+      amountMax: String(next.amountMax || '').trim(),
+    })
+    setQueuePage(1)
+  }
+
+  function countQueueAdvancedFilters() {
+    const a = queueApplied
+    let n = 0
+    if (a.mode) n += 1
+    if (a.channel) n += 1
+    if (a.collector) n += 1
+    if (a.status) n += 1
+    if (a.dateFrom) n += 1
+    if (a.dateTo) n += 1
+    if (a.amountMin) n += 1
+    if (a.amountMax) n += 1
+    return n
   }
 
   function setQueueModeTab(next) {
@@ -391,7 +620,7 @@ export default function AdminFinancePage() {
     }
   }
 
-  // Payout approvals (Approve/Reject withdrawals)
+  // Payout approvals (Approve/Reject withdrawals) — physio or manager
   async function submitPayoutAction() {
     if (!payoutAction) return
     const { requestId, action } = payoutAction
@@ -405,6 +634,7 @@ export default function AdminFinancePage() {
       toast.success(action === 'approve' ? 'Payout approved' : 'Payout rejected')
       setPayoutAction(null)
       setPayoutNote('')
+      setSelectedWithdrawal(null)
       loadSummary()
       if (activeTab === 'wallets') loadWallets()
       if (activeTab === 'withdrawals') loadWithdrawals()
@@ -463,7 +693,7 @@ export default function AdminFinancePage() {
       {
         label: 'Pending payouts',
         value: summary?.pendingPayoutsAmount,
-        sub: `${summary?.pendingPayoutsCount ?? 0} request${summary?.pendingPayoutsCount === 1 ? '' : 's'}`,
+        sub: `${summary?.pendingPayoutsCount ?? 0} request${summary?.pendingPayoutsCount === 1 ? '' : 's'} (physio + care manager)`,
       },
     ],
     [summary],
@@ -477,10 +707,10 @@ export default function AdminFinancePage() {
     queuePayload?.pendingVerification ?? summary?.pendingVerification ?? 0
 
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 max-w-full space-y-6 overflow-x-hidden">
       <AdminPageHeader
         title="Wallets & payouts"
-        subtitle="Track physiotherapist earnings, record commission settlements, and approve withdrawal requests."
+        subtitle="Track physiotherapist earnings, settle platform fees, and approve physio or care manager withdrawal requests."
         breadcrumbs={[{ label: 'Admin', to: '/admin' }, { label: 'Wallets & payouts' }]}
         actions={<AdminLink to="/admin/physios">Physiotherapists →</AdminLink>}
       />
@@ -490,7 +720,7 @@ export default function AdminFinancePage() {
         steps={[
           'Use Payment history to track every installment — filter by channel, collector, status, amount, or date. Verify PhonePe QR / offline collections from the same list.',
           'Use Commission due filter to find physiotherapists who owe the platform — record settlement when they pay back.',
-          'Approve pending payout requests to debit withdrawable balance after you transfer funds externally.',
+          'Approve pending payout requests (physiotherapists and care managers) on Withdrawal Requests after you transfer funds externally.',
           'Open a physiotherapist row for full wallet history, settlements, and recent ledger activity.',
         ]}
       />
@@ -515,12 +745,33 @@ export default function AdminFinancePage() {
       )}
 
       {/* Tabs Menu */}
-      <div className="border-b border-gray-200 bg-white px-4 py-1 rounded-xl shadow-sm">
-        <nav className="-mb-px flex space-x-6" aria-label="Tabs">
+      <div className="min-w-0 rounded-xl border border-gray-100 bg-white shadow-sm">
+        <nav
+          className="flex gap-1 overflow-x-auto overscroll-x-contain px-2 scrollbar-none sm:gap-2 sm:px-3"
+          aria-label="Tabs"
+        >
           {[
-            { id: 'wallets', label: 'Physiotherapist wallets' },
-            { id: 'queue', label: 'Payment history' + (queuePendingVerification > 0 ? ` (${queuePendingVerification})` : '') },
-            { id: 'withdrawals', label: 'Withdrawal Requests' + (summary?.pendingPayoutsCount > 0 ? ` (${summary.pendingPayoutsCount})` : '') },
+            {
+              id: 'wallets',
+              short: 'Wallets',
+              label: 'Physiotherapist wallets',
+            },
+            {
+              id: 'queue',
+              short: queuePendingVerification > 0 ? `Payments (${queuePendingVerification})` : 'Payments',
+              label:
+                'Payment history' + (queuePendingVerification > 0 ? ` (${queuePendingVerification})` : ''),
+            },
+            {
+              id: 'withdrawals',
+              short:
+                summary?.pendingPayoutsCount > 0
+                  ? `Withdrawals (${summary.pendingPayoutsCount})`
+                  : 'Withdrawals',
+              label:
+                'Withdrawal Requests' +
+                (summary?.pendingPayoutsCount > 0 ? ` (${summary.pendingPayoutsCount})` : ''),
+            },
           ].map((tab) => {
             const active = activeTab === tab.id
             return (
@@ -528,13 +779,14 @@ export default function AdminFinancePage() {
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
-                className={`whitespace-nowrap border-b-2 py-4 px-1 text-sm font-semibold transition-all ${
+                className={`shrink-0 border-b-2 px-3 py-3 text-sm font-semibold transition-all sm:px-4 sm:py-3.5 ${
                   active
                     ? 'border-teal-600 text-teal-600'
                     : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
                 }`}
               >
-                {tab.label}
+                <span className="sm:hidden">{tab.short}</span>
+                <span className="hidden sm:inline">{tab.label}</span>
               </button>
             )
           })}
@@ -547,58 +799,79 @@ export default function AdminFinancePage() {
       {activeTab === 'wallets' && (
         <div className="space-y-6">
           <Card hover={false} className="p-4 sm:p-5">
-            <div className="flex flex-wrap items-center gap-2">
-              {WALLET_FILTERS.map((f) => {
-                const active = walletFilter === f.id
-                return (
-                  <button
-                    key={f.id}
-                    type="button"
-                    onClick={() => {
-                      setWalletFilter(f.id)
-                      setWalletPage(1)
-                    }}
-                    className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
-                      active ? 'bg-gray-900 text-white shadow-sm' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
-                  >
-                    {f.label}
-                  </button>
-                )
-              })}
-            </div>
-            <div className="mt-4 flex flex-wrap gap-3">
-              <div className="min-w-[200px] flex-1">
-                <label className="text-xs font-medium text-gray-500">Search physiotherapist</label>
+            {/* Mobile: search + filter icon */}
+            <div className="flex items-center gap-2 sm:hidden">
+              <div className="min-w-0 flex-1">
                 <Input
-                  className="mt-1"
                   placeholder="Name or phone"
                   value={walletSearch}
                   onChange={(e) => setWalletSearch(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && applyWalletSearch()}
                 />
               </div>
-              <div className="flex items-end gap-2">
-                <Button type="button" variant="outline" onClick={applyWalletSearch}>
-                  Apply
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() => {
-                    setWalletSearch('')
-                    setWalletAppliedSearch('')
-                    setWalletFilter('active')
-                    setWalletPage(1)
-                  }}
-                >
-                  Reset
-                </Button>
+              <MobileFilterIconButton
+                count={countWalletAdvancedFilters()}
+                onClick={() => setWalletFiltersOpen(true)}
+              />
+            </div>
+            {countWalletAdvancedFilters() > 0 ? (
+              <div className="mt-2 flex items-center justify-between gap-2 sm:hidden">
+                <p className="text-xs text-gray-500">
+                  {walletFilter !== 'active' ? WALLET_FILTERS.find((f) => f.id === walletFilter)?.label : 'Filtered'}
+                  {walletAppliedSearch ? ` · “${walletAppliedSearch}”` : ''}
+                </p>
+                <button type="button" className="text-xs font-semibold text-teal-700" onClick={resetWalletFilters}>
+                  Clear
+                </button>
+              </div>
+            ) : null}
+
+            {/* Desktop filters */}
+            <div className="hidden sm:block">
+              <div className="flex flex-wrap items-center gap-2">
+                {WALLET_FILTERS.map((f) => {
+                  const active = walletFilter === f.id
+                  return (
+                    <button
+                      key={f.id}
+                      type="button"
+                      onClick={() => {
+                        setWalletFilter(f.id)
+                        setWalletPage(1)
+                      }}
+                      className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
+                        active ? 'bg-gray-900 text-white shadow-sm' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      {f.label}
+                    </button>
+                  )
+                })}
+              </div>
+              <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+                <div className="min-w-0 flex-1 sm:min-w-[200px]">
+                  <label className="text-xs font-medium text-gray-500">Search physiotherapist</label>
+                  <Input
+                    className="mt-1"
+                    placeholder="Name or phone"
+                    value={walletSearch}
+                    onChange={(e) => setWalletSearch(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && applyWalletSearch()}
+                  />
+                </div>
+                <div className="flex items-stretch gap-2 sm:items-end">
+                  <Button type="button" variant="outline" className="flex-1 sm:flex-none" onClick={applyWalletSearch}>
+                    Apply
+                  </Button>
+                  <Button type="button" variant="ghost" className="flex-1 sm:flex-none" onClick={resetWalletFilters}>
+                    Reset
+                  </Button>
+                </div>
               </div>
             </div>
           </Card>
 
-          <Card hover={false} className="overflow-hidden p-0">
+          <Card hover={false} className="min-w-0 overflow-hidden p-0">
             {walletLoading ? (
               <div className="p-12 text-center text-sm text-gray-500">Loading…</div>
             ) : walletRows.length === 0 ? (
@@ -606,77 +879,148 @@ export default function AdminFinancePage() {
                 <p className="text-sm font-medium text-gray-900">No physiotherapist wallets found</p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[960px] text-left text-sm">
-                  <thead className="sticky top-0 z-10 border-b border-gray-200 bg-gray-50/95 text-xs font-semibold uppercase tracking-wide text-gray-500 backdrop-blur">
-                    <tr>
-                      <th className="px-4 py-3">Physiotherapist</th>
-                      <th className="px-4 py-3">Total Earned</th>
-                      <th className="px-4 py-3">Withdrawable</th>
-                      <th className="px-4 py-3">Platform Fee Owed</th>
-                      <th className="px-4 py-3">Pending Payout</th>
-                      <th className="px-4 py-3 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {walletRows.map((row) => {
-                      const due = Number(row.wallet?.commissionDue || 0)
-                      const pending = row.pendingWithdrawal
-                      return (
-                        <tr
-                          key={row._id}
-                          className="cursor-pointer hover:bg-gray-50/80"
+              <>
+                {/* Mobile cards */}
+                <ul className="divide-y divide-gray-100 md:hidden">
+                  {walletRows.map((row) => {
+                    const due = Number(row.wallet?.commissionDue || 0)
+                    const pending = row.pendingWithdrawal
+                    return (
+                      <li key={row._id} className="p-4">
+                        <button
+                          type="button"
+                          className="w-full text-left"
                           onClick={() => openPhysioDetail(row)}
                         >
-                          <td className="px-4 py-3">
-                            <div className="font-medium text-gray-900">{row.name}</div>
-                            {row.phone && <div className="text-xs text-gray-500">{row.phone}</div>}
-                          </td>
-                          <td className="px-4 py-3 tabular-nums text-gray-800">{formatInr(row.wallet?.totalEarned)}</td>
-                          <td className="px-4 py-3 tabular-nums text-emerald-800">{formatInr(row.wallet?.availableBalance)}</td>
-                          <td className="px-4 py-3">
-                            <div className="flex items-center gap-2">
-                              <span className="tabular-nums font-medium text-amber-900">{formatInr(due)}</span>
-                              <DueBadge due={due} />
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="truncate font-medium text-gray-900">{row.name}</p>
+                              {row.phone ? <p className="text-xs text-gray-500">{row.phone}</p> : null}
                             </div>
-                          </td>
-                          <td className="px-4 py-3">
-                            {pending ? (
-                              <div>
-                                <div className="tabular-nums font-medium text-gray-900">{formatInr(pending.amount)}</div>
-                                <div className="text-xs text-gray-500">{formatDateTime(pending.requestedAt)}</div>
+                            <DueBadge due={due} />
+                          </div>
+                          <dl className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                            <div>
+                              <dt className="text-gray-500">Total earned</dt>
+                              <dd className="mt-0.5 tabular-nums font-medium text-gray-900">
+                                {formatInr(row.wallet?.totalEarned)}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt className="text-gray-500">Withdrawable</dt>
+                              <dd className="mt-0.5 tabular-nums font-medium text-emerald-800">
+                                {formatInr(row.wallet?.availableBalance)}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt className="text-gray-500">Platform fee owed</dt>
+                              <dd className="mt-0.5 tabular-nums font-medium text-amber-900">{formatInr(due)}</dd>
+                            </div>
+                            <div>
+                              <dt className="text-gray-500">Pending payout</dt>
+                              <dd className="mt-0.5 tabular-nums font-medium text-gray-900">
+                                {pending ? formatInr(pending.amount) : '—'}
+                              </dd>
+                            </div>
+                          </dl>
+                        </button>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          {due > 0.009 && (
+                            <button
+                              type="button"
+                              onClick={() => openSettle(row)}
+                              disabled={busyAction === `s-${row._id}`}
+                              className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-800 shadow-sm transition hover:bg-gray-50 disabled:opacity-50"
+                            >
+                              Mark Fee Collected
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => openPhysioDetail(row)}
+                            className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+                          >
+                            View Transactions
+                          </button>
+                        </div>
+                      </li>
+                    )
+                  })}
+                </ul>
+
+                {/* Desktop table */}
+                <div className="hidden overflow-x-auto md:block">
+                  <table className="w-full min-w-[960px] text-left text-sm">
+                    <thead className="sticky top-0 z-10 border-b border-gray-200 bg-gray-50/95 text-xs font-semibold uppercase tracking-wide text-gray-500 backdrop-blur">
+                      <tr>
+                        <th className="px-4 py-3">Physiotherapist</th>
+                        <th className="px-4 py-3">Total Earned</th>
+                        <th className="px-4 py-3">Withdrawable</th>
+                        <th className="px-4 py-3">Platform Fee Owed</th>
+                        <th className="px-4 py-3">Pending Payout</th>
+                        <th className="px-4 py-3 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {walletRows.map((row) => {
+                        const due = Number(row.wallet?.commissionDue || 0)
+                        const pending = row.pendingWithdrawal
+                        return (
+                          <tr
+                            key={row._id}
+                            className="cursor-pointer hover:bg-gray-50/80"
+                            onClick={() => openPhysioDetail(row)}
+                          >
+                            <td className="px-4 py-3">
+                              <div className="font-medium text-gray-900">{row.name}</div>
+                              {row.phone && <div className="text-xs text-gray-500">{row.phone}</div>}
+                            </td>
+                            <td className="px-4 py-3 tabular-nums text-gray-800">{formatInr(row.wallet?.totalEarned)}</td>
+                            <td className="px-4 py-3 tabular-nums text-emerald-800">{formatInr(row.wallet?.availableBalance)}</td>
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-2">
+                                <span className="tabular-nums font-medium text-amber-900">{formatInr(due)}</span>
+                                <DueBadge due={due} />
                               </div>
-                            ) : (
-                              <span className="text-xs text-gray-400">—</span>
-                            )}
-                          </td>
-                          <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
-                            <div className="flex flex-wrap justify-end gap-2">
-                              {due > 0.009 && (
+                            </td>
+                            <td className="px-4 py-3">
+                              {pending ? (
+                                <div>
+                                  <div className="tabular-nums font-medium text-gray-900">{formatInr(pending.amount)}</div>
+                                  <div className="text-xs text-gray-500">{formatDateTime(pending.requestedAt)}</div>
+                                </div>
+                              ) : (
+                                <span className="text-xs text-gray-400">—</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+                              <div className="flex flex-wrap justify-end gap-2">
+                                {due > 0.009 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => openSettle(row)}
+                                    disabled={busyAction === `s-${row._id}`}
+                                    className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-800 shadow-sm transition hover:bg-gray-50 disabled:opacity-50"
+                                  >
+                                    Mark Fee Collected
+                                  </button>
+                                )}
                                 <button
                                   type="button"
-                                  onClick={() => openSettle(row)}
-                                  disabled={busyAction === `s-${row._id}`}
-                                  className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-800 shadow-sm transition hover:bg-gray-50 disabled:opacity-50"
+                                  onClick={() => openPhysioDetail(row)}
+                                  className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50"
                                 >
-                                  Mark Fee Collected
+                                  View Transactions
                                 </button>
-                              )}
-                              <button
-                                type="button"
-                                onClick={() => openPhysioDetail(row)}
-                                className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50"
-                              >
-                                View Transactions
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
+                              </div>
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             )}
             {!walletLoading && walletRows.length > 0 && (
               <div className="border-t border-gray-100 px-4 py-3">
@@ -684,6 +1028,16 @@ export default function AdminFinancePage() {
               </div>
             )}
           </Card>
+
+          {walletFiltersOpen ? (
+            <AdminWalletFiltersDrawer
+              draft={{ filter: walletFilter, search: walletSearch }}
+              filterOptions={WALLET_FILTERS}
+              onClose={() => setWalletFiltersOpen(false)}
+              onApply={applyWalletFiltersFromDrawer}
+              onReset={resetWalletFilters}
+            />
+          ) : null}
         </div>
       )}
 
@@ -692,10 +1046,10 @@ export default function AdminFinancePage() {
       {/* ────────────────────────────────────────────────────────────────────── */}
       {activeTab === 'queue' && (
         <div className="space-y-4">
-          <Card hover={false} className="overflow-hidden p-0">
+          <Card hover={false} className="min-w-0 overflow-hidden p-0">
             <div className="border-b border-gray-100 px-4 py-4 sm:px-5">
-              <div className="flex flex-wrap items-end justify-between gap-3">
-                <div>
+              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
+                <div className="min-w-0">
                   <h3 className="text-sm font-semibold text-gray-900">Payment history</h3>
                   <p className="mt-0.5 text-xs text-gray-500">
                     Cash, PhonePe QR, and online installments
@@ -726,7 +1080,38 @@ export default function AdminFinancePage() {
                 </div>
               </div>
 
-              <div className="mt-4 flex flex-col gap-3 lg:flex-row lg:items-center">
+              <div className="mt-4 flex items-center gap-2 lg:hidden">
+                <div className="min-w-0 flex-1">
+                  <Input
+                    placeholder="Search patient, phone, manager…"
+                    value={queueSearch}
+                    onChange={(e) => setQueueSearch(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && applyQueueFilters()}
+                  />
+                </div>
+                <MobileFilterIconButton
+                  count={countQueueAdvancedFilters()}
+                  onClick={() => setQueueFiltersOpen(true)}
+                />
+              </div>
+
+              {countQueueAdvancedFilters() > 0 ? (
+                <div className="mt-2 flex items-center justify-between gap-2 lg:hidden">
+                  <p className="text-xs text-gray-500">
+                    {countQueueAdvancedFilters()} filter{countQueueAdvancedFilters() === 1 ? '' : 's'} active
+                  </p>
+                  <button
+                    type="button"
+                    className="text-xs font-semibold text-teal-700"
+                    onClick={resetQueueFilters}
+                  >
+                    Clear
+                  </button>
+                </div>
+              ) : null}
+
+              {/* Desktop filters (unchanged layout) */}
+              <div className="mt-4 hidden flex-col gap-3 lg:flex lg:flex-row lg:items-center">
                 <div className="min-w-0 flex-1">
                   <Input
                     placeholder="Search patient, phone, manager, physio, issue, booking, note…"
@@ -745,8 +1130,8 @@ export default function AdminFinancePage() {
                 </div>
               </div>
 
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                <div className="inline-flex rounded-lg bg-gray-100 p-0.5">
+              <div className="mt-3 hidden max-w-full flex-wrap items-center gap-2 overflow-x-auto lg:flex">
+                <div className="inline-flex shrink-0 rounded-lg bg-gray-100 p-0.5">
                   {QUEUE_MODE_TABS.map((t) => {
                     const active = queueMode === t.id
                     return (
@@ -879,7 +1264,7 @@ export default function AdminFinancePage() {
                 ))}
               </div>
 
-              <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-6">
+              <div className="mt-3 hidden gap-2 sm:grid-cols-2 lg:grid lg:grid-cols-6">
                 <select
                   aria-label="Channel"
                   className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm"
@@ -966,6 +1351,37 @@ export default function AdminFinancePage() {
               emptyHint="Try Reset, or clear channel / amount / date filters."
             />
           </Card>
+
+          {queueFiltersOpen ? (
+            <AdminPaymentFiltersDrawer
+              draft={readQueueFilterDraft()}
+              modeTabs={QUEUE_MODE_TABS}
+              channelOptions={QUEUE_CHANNEL_OPTIONS}
+              collectorOptions={QUEUE_COLLECTOR_OPTIONS}
+              statusOptions={[
+                { id: '', label: 'All', count: queueCounts.all },
+                {
+                  id: 'needs',
+                  label: 'Needs verification',
+                  count: queuePendingVerification || queueCounts.collected || 0,
+                },
+                { id: 'verified', label: 'Verified', count: queueCounts.verified },
+                ...(queueCounts.pending
+                  ? [{ id: 'pending', label: 'Pending', count: queueCounts.pending }]
+                  : []),
+                ...(queueCounts.paid ? [{ id: 'paid', label: 'Paid', count: queueCounts.paid }] : []),
+                ...(queueCounts.rejected
+                  ? [{ id: 'rejected', label: 'Rejected', count: queueCounts.rejected }]
+                  : []),
+                ...(queueCounts.refunded
+                  ? [{ id: 'refunded', label: 'Refunded', count: queueCounts.refunded }]
+                  : []),
+              ]}
+              onClose={() => setQueueFiltersOpen(false)}
+              onApply={applyQueueFiltersFromDrawer}
+              onReset={resetQueueFilters}
+            />
+          ) : null}
         </div>
       )}
 
@@ -973,144 +1389,365 @@ export default function AdminFinancePage() {
       {/* Tab content: 3. Withdrawal Requests */}
       {/* ────────────────────────────────────────────────────────────────────── */}
       {activeTab === 'withdrawals' && (
-        <div className="space-y-6">
-          <Card hover={false} className="p-4 sm:p-5">
-            <div className="flex flex-wrap gap-3">
-              <div className="min-w-[200px] flex-1">
-                <label className="text-xs font-medium text-gray-500">Search physiotherapist</label>
+        <div className="space-y-4 sm:space-y-6">
+          <Card hover={false} className="p-3 sm:p-5">
+            <p className="mb-3 hidden text-xs leading-relaxed text-gray-500 sm:block">
+              Payouts from physiotherapists and care managers. Click a row to review details before approve/reject.
+              Manager cash settlements stay on{' '}
+              <Link to="/admin/manager-settlements" className="font-semibold text-teal-700 underline underline-offset-2">
+                Manager settlements
+              </Link>
+              .
+            </p>
+            <p className="mb-3 text-xs leading-relaxed text-gray-500 sm:hidden">
+              Tap a request to review, then approve or reject.{' '}
+              <Link to="/admin/manager-settlements" className="font-semibold text-teal-700 underline underline-offset-2">
+                Manager settlements
+              </Link>
+            </p>
+
+            {/* Mobile: search + filter icon */}
+            <div className="flex items-center gap-2 sm:hidden">
+              <div className="min-w-0 flex-1">
                 <Input
-                  className="mt-1"
-                  placeholder="Name or phone"
+                  placeholder="Name, phone, or UPI"
                   value={withdrawalSearch}
                   onChange={(e) => setWithdrawalSearch(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && applyWithdrawalSearch()}
+                  onKeyDown={(e) => e.key === 'Enter' && applyWithdrawalFilters()}
                 />
               </div>
-              <div className="flex items-end gap-2">
-                <Button type="button" variant="outline" onClick={applyWithdrawalSearch}>
+              <MobileFilterIconButton
+                count={countWithdrawAdvancedFilters()}
+                onClick={() => setWithdrawFiltersOpen(true)}
+              />
+            </div>
+            {countWithdrawAdvancedFilters() > 0 ? (
+              <div className="mt-2 flex items-center justify-between gap-2 sm:hidden">
+                <p className="text-xs text-gray-500">
+                  {countWithdrawAdvancedFilters()} filter
+                  {countWithdrawAdvancedFilters() === 1 ? '' : 's'} active
+                </p>
+                <button
+                  type="button"
+                  className="text-xs font-semibold text-teal-700"
+                  onClick={resetWithdrawalFilters}
+                >
+                  Clear
+                </button>
+              </div>
+            ) : null}
+
+            {/* Desktop filters */}
+            <div className="mt-1 hidden space-y-3 sm:block">
+              <div className="flex gap-1.5 overflow-x-auto overscroll-x-contain pb-0.5 scrollbar-none">
+                {WITHDRAW_STATUS_TABS.map((t) => {
+                  const active = withdrawalStatus === t.id
+                  return (
+                    <button
+                      key={t.id || 'all-status'}
+                      type="button"
+                      onClick={() => {
+                        setWithdrawalStatus(t.id)
+                        applyWithdrawalFilters({ status: t.id })
+                      }}
+                      className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                        active ? 'bg-gray-900 text-white shadow-sm' : 'bg-gray-100 text-gray-700'
+                      }`}
+                    >
+                      {t.label}
+                      {t.id === 'pending' && summary?.pendingPayoutsCount > 0
+                        ? ` (${summary.pendingPayoutsCount})`
+                        : ''}
+                    </button>
+                  )
+                })}
+              </div>
+
+              <div className="flex gap-1.5 overflow-x-auto overscroll-x-contain pb-0.5 scrollbar-none">
+                {WITHDRAW_PAYEE_TABS.map((t) => {
+                  const active = withdrawalPayee === t.id
+                  return (
+                    <button
+                      key={t.id || 'all-payee'}
+                      type="button"
+                      onClick={() => {
+                        setWithdrawalPayee(t.id)
+                        applyWithdrawalFilters({ payee: t.id })
+                      }}
+                      className={`shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                        active
+                          ? 'bg-teal-600 text-white shadow-sm'
+                          : 'bg-white text-gray-700 ring-1 ring-gray-200'
+                      }`}
+                    >
+                      {t.label}
+                    </button>
+                  )
+                })}
+              </div>
+
+              <div className="min-w-0">
+                <label className="text-xs font-medium text-gray-500">Search</label>
+                <Input
+                  className="mt-1"
+                  placeholder="Name, phone, or UPI"
+                  value={withdrawalSearch}
+                  onChange={(e) => setWithdrawalSearch(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && applyWithdrawalFilters()}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="min-w-0">
+                  <label className="text-xs font-medium text-gray-500">From date</label>
+                  <Input
+                    className="mt-1"
+                    type="date"
+                    value={withdrawalDateFrom}
+                    onChange={(e) => setWithdrawalDateFrom(e.target.value)}
+                  />
+                </div>
+                <div className="min-w-0">
+                  <label className="text-xs font-medium text-gray-500">To date</label>
+                  <Input
+                    className="mt-1"
+                    type="date"
+                    value={withdrawalDateTo}
+                    onChange={(e) => setWithdrawalDateTo(e.target.value)}
+                  />
+                </div>
+                <div className="min-w-0">
+                  <label className="text-xs font-medium text-gray-500">Min amount (₹)</label>
+                  <Input
+                    className="mt-1"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="0"
+                    value={withdrawalAmountMin}
+                    onChange={(e) => setWithdrawalAmountMin(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && applyWithdrawalFilters()}
+                  />
+                </div>
+                <div className="min-w-0">
+                  <label className="text-xs font-medium text-gray-500">Max amount (₹)</label>
+                  <Input
+                    className="mt-1"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="Any"
+                    value={withdrawalAmountMax}
+                    onChange={(e) => setWithdrawalAmountMax(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && applyWithdrawalFilters()}
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={() => applyWithdrawalFilters()}>
                   Apply
                 </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() => {
-                    setWithdrawalSearch('')
-                    setWithdrawalAppliedSearch('')
-                    setWithdrawalPage(1)
-                  }}
-                >
+                <Button type="button" variant="ghost" onClick={resetWithdrawalFilters}>
                   Reset
                 </Button>
               </div>
             </div>
           </Card>
 
-          <Card hover={false} className="overflow-hidden p-0">
+          <Card hover={false} className="min-w-0 overflow-hidden p-0">
             {withdrawalLoading ? (
               <div className="p-12 text-center text-sm text-gray-500">Loading…</div>
             ) : withdrawalRows.length === 0 ? (
               <div className="p-12 text-center">
-                <p className="text-sm font-medium text-gray-900">No pending withdrawals requests</p>
+                <p className="text-sm font-medium text-gray-900">No withdrawal requests match your filters</p>
+                <p className="mt-1 text-xs text-gray-500">Try Reset, or clear status / date / amount filters.</p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[960px] text-left text-sm">
-                  <thead className="sticky top-0 z-10 border-b border-gray-200 bg-gray-50/95 text-xs font-semibold uppercase tracking-wide text-gray-500 backdrop-blur">
-                    <tr>
-                      <th className="px-4 py-3">Physiotherapist</th>
-                      <th className="px-4 py-3">Withdrawable Balance</th>
-                      <th className="px-4 py-3">Requested Amount</th>
-                      <th className="px-4 py-3">UPI</th>
-                      <th className="px-4 py-3">Date Requested</th>
-                      <th className="px-4 py-3 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {withdrawalRows.map((row) => {
-                      const pending = row.pendingWithdrawal
-                      if (!pending) return null
-                      return (
-                        <tr
-                          key={row._id}
-                          className="hover:bg-gray-50/80"
-                        >
-                          <td className="px-4 py-3" onClick={() => openPhysioDetail(row)}>
-                            <div className="font-medium text-gray-900">{row.name}</div>
-                            {row.phone && <div className="text-xs text-gray-500">{row.phone}</div>}
-                          </td>
-                          <td className="px-4 py-3 tabular-nums text-emerald-800">{formatInr(row.wallet?.availableBalance)}</td>
-                          <td className="px-4 py-3 tabular-nums font-semibold text-gray-900">{formatInr(pending.amount)}</td>
-                          <td className="px-4 py-3 text-xs text-gray-700">
-                            {pending.payoutUpiId ? (
-                              <>
-                                <div className="font-medium text-teal-800">{pending.payoutUpiId}</div>
-                                {pending.payoutDisplayName ? (
-                                  <div className="text-gray-500">{pending.payoutDisplayName}</div>
-                                ) : null}
-                              </>
-                            ) : (
-                              <span className="text-rose-600">No UPI</span>
-                            )}
-                          </td>
-                          <td className="px-4 py-3 text-gray-600">{formatDateTime(pending.requestedAt)}</td>
-                          <td className="px-4 py-3 text-right">
-                            <div className="flex flex-wrap justify-end gap-2">
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setPayoutAction({
-                                    requestId: pending._id,
-                                    action: 'approve',
-                                    physio: row,
-                                    amount: pending.amount,
-                                    payoutUpiId: pending.payoutUpiId || '',
-                                    payoutDisplayName: pending.payoutDisplayName || '',
-                                  })
-                                }
-                                disabled={busyAction === `w-${pending._id}`}
-                                className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:opacity-50"
-                              >
-                                Approve payout
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setPayoutAction({
-                                    requestId: pending._id,
-                                    action: 'reject',
-                                    physio: row,
-                                    amount: pending.amount,
-                                    payoutUpiId: pending.payoutUpiId || '',
-                                    payoutDisplayName: pending.payoutDisplayName || '',
-                                  })
-                                }
-                                disabled={busyAction === `w-${pending._id}`}
-                                className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-rose-700 shadow-sm transition hover:bg-rose-50 disabled:opacity-50"
-                              >
-                                Reject
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => openPhysioDetail(row)}
-                                className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50"
-                              >
-                                Details
-                              </button>
+              <>
+                <ul className="divide-y divide-gray-100 md:hidden">
+                  {withdrawalRows.map((row) => {
+                    const payee = withdrawPayee(row)
+                    return (
+                      <li key={row._id} className="p-3.5">
+                        <button type="button" className="w-full text-left" onClick={() => openWithdrawalDetail(row)}>
+                          <div className="flex items-start gap-3">
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate font-semibold text-gray-900">{payee.name}</p>
+                              {payee.phone ? <p className="mt-0.5 text-xs text-gray-500">{payee.phone}</p> : null}
                             </div>
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-            {!withdrawalLoading && withdrawalRows.length > 0 && (
-              <div className="border-t border-gray-100 px-4 py-3">
-                <Pagination page={withdrawalPage} totalPages={withdrawalTotalPages} onPageChange={setWithdrawalPage} />
-              </div>
+                            <div className="flex shrink-0 flex-col items-end gap-1">
+                              <WithdrawStatusBadge status={row.status} />
+                              <span
+                                className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ring-1 ${
+                                  payee.kind === 'manager'
+                                    ? 'bg-teal-50 text-teal-900 ring-teal-200'
+                                    : 'bg-slate-50 text-slate-700 ring-slate-200'
+                                }`}
+                              >
+                                {payee.kind === 'manager' ? 'Manager' : 'Physio'}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="mt-3 flex items-end justify-between gap-3">
+                            <div>
+                              <p className="text-[11px] text-gray-500">Requested</p>
+                              <p className="tabular-nums text-base font-semibold text-gray-900">
+                                {formatInr(row.amount)}
+                              </p>
+                            </div>
+                            <p className="text-right text-[11px] leading-snug text-gray-500">
+                              {formatDateTime(row.requestedAt)}
+                            </p>
+                          </div>
+
+                          <div className="mt-2.5 rounded-lg bg-gray-50 px-2.5 py-2">
+                            <p className="text-[10px] font-medium uppercase tracking-wide text-gray-500">
+                              UPI
+                            </p>
+                            {row.payoutUpiId ? (
+                              <p className="mt-0.5 break-all text-sm font-medium text-teal-800">{row.payoutUpiId}</p>
+                            ) : (
+                              <p className="mt-0.5 text-sm font-medium text-rose-600">No UPI</p>
+                            )}
+                          </div>
+
+                          <p className="mt-2.5 text-xs font-semibold text-teal-700">View details →</p>
+                        </button>
+                        {row.status === 'pending' ? (
+                          <div className="mt-3 grid grid-cols-2 gap-2">
+                            <button
+                              type="button"
+                              onClick={() => startPayoutFromRow(row, 'approve')}
+                              disabled={busyAction === `w-${row._id}`}
+                              className="rounded-lg bg-emerald-600 px-3 py-2.5 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:opacity-50"
+                            >
+                              Approve
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => startPayoutFromRow(row, 'reject')}
+                              disabled={busyAction === `w-${row._id}`}
+                              className="rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-xs font-semibold text-rose-700 shadow-sm transition hover:bg-rose-50 disabled:opacity-50"
+                            >
+                              Reject
+                            </button>
+                          </div>
+                        ) : null}
+                      </li>
+                    )
+                  })}
+                </ul>
+
+                <div className="hidden overflow-x-auto md:block">
+                  <table className="w-full min-w-[920px] text-left text-sm">
+                    <thead className="sticky top-0 z-10 border-b border-gray-200 bg-gray-50/95 text-xs font-semibold uppercase tracking-wide text-gray-500 backdrop-blur">
+                      <tr>
+                        <th className="px-4 py-3">Payee</th>
+                        <th className="px-4 py-3">Type</th>
+                        <th className="px-4 py-3">Status</th>
+                        <th className="px-4 py-3">Requested</th>
+                        <th className="px-4 py-3">UPI</th>
+                        <th className="px-4 py-3">Date</th>
+                        <th className="px-4 py-3 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {withdrawalRows.map((row) => {
+                        const payee = withdrawPayee(row)
+                        return (
+                          <tr
+                            key={row._id}
+                            className="cursor-pointer hover:bg-gray-50/80"
+                            onClick={() => openWithdrawalDetail(row)}
+                          >
+                            <td className="px-4 py-3">
+                              <div className="font-medium text-gray-900">{payee.name}</div>
+                              {payee.phone ? <div className="text-xs text-gray-500">{payee.phone}</div> : null}
+                            </td>
+                            <td className="px-4 py-3">
+                              <span
+                                className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ring-1 ${
+                                  payee.kind === 'manager'
+                                    ? 'bg-teal-50 text-teal-900 ring-teal-200'
+                                    : 'bg-slate-50 text-slate-700 ring-slate-200'
+                                }`}
+                              >
+                                {payee.label}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3">
+                              <WithdrawStatusBadge status={row.status} />
+                            </td>
+                            <td className="px-4 py-3 tabular-nums font-semibold text-gray-900">
+                              {formatInr(row.amount)}
+                            </td>
+                            <td className="px-4 py-3 text-xs text-gray-700">
+                              {row.payoutUpiId ? (
+                                <>
+                                  <div className="font-medium text-teal-800">{row.payoutUpiId}</div>
+                                  {row.payoutDisplayName ? (
+                                    <div className="text-gray-500">{row.payoutDisplayName}</div>
+                                  ) : null}
+                                </>
+                              ) : (
+                                <span className="text-rose-600">No UPI</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 text-gray-600">{formatDateTime(row.requestedAt)}</td>
+                            <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+                              <div className="flex flex-wrap justify-end gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => openWithdrawalDetail(row)}
+                                  className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+                                >
+                                  Details
+                                </button>
+                                {row.status === 'pending' ? (
+                                  <>
+                                    <button
+                                      type="button"
+                                      onClick={() => startPayoutFromRow(row, 'approve')}
+                                      disabled={busyAction === `w-${row._id}`}
+                                      className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:opacity-50"
+                                    >
+                                      Approve
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => startPayoutFromRow(row, 'reject')}
+                                      disabled={busyAction === `w-${row._id}`}
+                                      className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-rose-700 shadow-sm transition hover:bg-rose-50 disabled:opacity-50"
+                                    >
+                                      Reject
+                                    </button>
+                                  </>
+                                ) : null}
+                              </div>
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             )}
           </Card>
+
+          {withdrawFiltersOpen ? (
+            <AdminWithdrawFiltersDrawer
+              draft={readWithdrawFilterDraft()}
+              statusTabs={WITHDRAW_STATUS_TABS}
+              payeeTabs={WITHDRAW_PAYEE_TABS}
+              pendingCount={summary?.pendingPayoutsCount || 0}
+              onClose={() => setWithdrawFiltersOpen(false)}
+              onApply={applyWithdrawalFiltersFromDrawer}
+              onReset={resetWithdrawalFilters}
+            />
+          ) : null}
         </div>
       )}
 
@@ -1118,8 +1755,31 @@ export default function AdminFinancePage() {
       {/* Shared Modals and Drawers */}
       {/* ────────────────────────────────────────────────────────────────────── */}
 
+      {/* Withdrawal request detail drawer */}
+      {selectedWithdrawal && !payoutAction ? (
+        <WithdrawalDetailDrawer
+          row={selectedWithdrawal}
+          payee={withdrawPayee(selectedWithdrawal)}
+          busy={busyAction === `w-${selectedWithdrawal._id}`}
+          onClose={closeWithdrawalDetail}
+          onApprove={() => startPayoutFromRow(selectedWithdrawal, 'approve')}
+          onReject={() => startPayoutFromRow(selectedWithdrawal, 'reject')}
+          onOpenPhysioWallet={() => {
+            const payee = withdrawPayee(selectedWithdrawal)
+            if (payee.kind !== 'physio' || !payee.id) return
+            closeWithdrawalDetail()
+            openPhysioDetail({
+              _id: payee.id,
+              name: payee.name,
+              phone: payee.phone,
+              wallet: {},
+            })
+          }}
+        />
+      ) : null}
+
       {/* Detail Drawer (View Transactions) */}
-      {selectedPhysio && !settleOpen && !payoutAction && (
+      {selectedPhysio && !settleOpen && !payoutAction && !selectedWithdrawal && (
         <DetailDrawer
           physio={selectedPhysio}
           detail={physioDetail}
@@ -1127,7 +1787,15 @@ export default function AdminFinancePage() {
           onClose={closePhysioDetail}
           onSettle={() => openSettle(selectedPhysio)}
           onPayoutAction={(action, pending) =>
-            setPayoutAction({ requestId: pending._id, action, physio: selectedPhysio, amount: pending.amount })
+            setPayoutAction({
+              requestId: pending._id,
+              action,
+              payeeName: selectedPhysio.name,
+              payeeKind: 'physio',
+              amount: pending.amount,
+              payoutUpiId: pending.payoutUpiId || '',
+              payoutDisplayName: pending.payoutDisplayName || '',
+            })
           }
         />
       )}
@@ -1185,11 +1853,12 @@ export default function AdminFinancePage() {
               {payoutAction.action === 'approve' ? (
                 <>
                   Debit <span className="font-semibold text-gray-900">{formatInr(payoutAction.amount)}</span> from{' '}
-                  <span className="font-semibold text-gray-900">{payoutAction.physio?.name}</span>&apos;s balance
+                  <span className="font-semibold text-gray-900">{payoutAction.payeeName || 'payee'}</span>
+                  {payoutAction.payeeKind === 'manager' ? "'s settled commission" : "'s balance"}
                   and record a withdrawal transaction.
                 </>
               ) : (
-                <>This leaves the physiotherapist&apos;s balance unchanged. They can submit a new request later.</>
+                <>This leaves the payee&apos;s balance unchanged. They can submit a new request later.</>
               )}
             </p>
             {payoutAction.payoutUpiId ? (
@@ -1311,6 +1980,138 @@ export default function AdminFinancePage() {
           </Card>
         </div>
       )}
+    </div>
+  )
+}
+
+function WithdrawalDetailDrawer({ row, payee, busy, onClose, onApprove, onReject, onOpenPhysioWallet }) {
+  const isPending = row.status === 'pending'
+  return (
+    <div className="fixed inset-0 z-40 flex justify-end bg-black/30" role="presentation" onClick={onClose}>
+      <div
+        className="h-full w-full max-w-lg overflow-y-auto border-l border-gray-200 bg-white shadow-xl"
+        role="dialog"
+        aria-modal
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="sticky top-0 z-10 border-b border-gray-100 bg-white px-5 py-4">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Withdrawal request</p>
+              <h2 className="type-page-title mt-0.5 text-gray-900">{payee.name}</h2>
+              {payee.phone ? <p className="text-xs text-gray-500">{payee.phone}</p> : null}
+            </div>
+            <button
+              type="button"
+              className="rounded-lg p-1 text-gray-500 hover:bg-gray-100"
+              onClick={onClose}
+              aria-label="Close"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+
+        <div className="space-y-5 px-5 py-5">
+          <div className="flex flex-wrap items-center gap-2">
+            <span
+              className={`inline-flex rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ring-1 ${
+                payee.kind === 'manager'
+                  ? 'bg-teal-50 text-teal-900 ring-teal-200'
+                  : 'bg-slate-50 text-slate-700 ring-slate-200'
+              }`}
+            >
+              {payee.label}
+            </span>
+            <WithdrawStatusBadge status={row.status} />
+          </div>
+
+          <div className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
+            <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Amount requested</p>
+            <p className="type-stat mt-1 text-gray-900">{formatInr(row.amount)}</p>
+          </div>
+
+          <dl className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
+            <div className="rounded-xl border border-gray-100 px-3 py-2">
+              <dt className="text-xs text-gray-500">Requested at</dt>
+              <dd className="mt-0.5 font-medium text-gray-900">{formatDateTime(row.requestedAt)}</dd>
+            </div>
+            <div className="rounded-xl border border-gray-100 px-3 py-2">
+              <dt className="text-xs text-gray-500">Processed at</dt>
+              <dd className="mt-0.5 font-medium text-gray-900">
+                {row.processedAt ? formatDateTime(row.processedAt) : '—'}
+              </dd>
+            </div>
+            <div className="rounded-xl border border-gray-100 px-3 py-2 sm:col-span-2">
+              <dt className="text-xs text-gray-500">Pay to UPI</dt>
+              <dd className="mt-0.5">
+                {row.payoutUpiId ? (
+                  <>
+                    <p className="font-semibold text-teal-900">{row.payoutUpiId}</p>
+                    {row.payoutDisplayName ? (
+                      <p className="text-xs text-gray-500">{row.payoutDisplayName}</p>
+                    ) : null}
+                  </>
+                ) : (
+                  <p className="font-medium text-rose-700">No UPI on this request</p>
+                )}
+              </dd>
+            </div>
+            {row.note ? (
+              <div className="rounded-xl border border-gray-100 px-3 py-2 sm:col-span-2">
+                <dt className="text-xs text-gray-500">Request note</dt>
+                <dd className="mt-0.5 text-gray-800">{row.note}</dd>
+              </div>
+            ) : null}
+            {row.payoutReference ? (
+              <div className="rounded-xl border border-gray-100 px-3 py-2 sm:col-span-2">
+                <dt className="text-xs text-gray-500">Payout reference</dt>
+                <dd className="mt-0.5 font-medium text-gray-900">{row.payoutReference}</dd>
+              </div>
+            ) : null}
+            {row.rejectReason ? (
+              <div className="rounded-xl border border-rose-100 bg-rose-50/50 px-3 py-2 sm:col-span-2">
+                <dt className="text-xs text-rose-700">Reject reason</dt>
+                <dd className="mt-0.5 text-rose-900">{row.rejectReason}</dd>
+              </div>
+            ) : null}
+            <div className="rounded-xl border border-gray-100 px-3 py-2 sm:col-span-2">
+              <dt className="text-xs text-gray-500">Request ID</dt>
+              <dd className="mt-0.5 break-all font-mono text-xs text-gray-600">{row._id}</dd>
+            </div>
+          </dl>
+
+          {isPending ? (
+            <Card hover={false} className="border border-amber-100 bg-amber-50/50 p-4">
+              <p className="text-sm font-medium text-amber-950">
+                Verify the UPI ID, then transfer ₹{Number(row.amount).toFixed(2)} externally before approving.
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Button type="button" disabled={busy} onClick={onApprove}>
+                  Approve payout
+                </Button>
+                <Button type="button" variant="outline" className="text-rose-700" disabled={busy} onClick={onReject}>
+                  Reject
+                </Button>
+              </div>
+            </Card>
+          ) : null}
+
+          {payee.kind === 'physio' && onOpenPhysioWallet ? (
+            <Button type="button" variant="outline" onClick={onOpenPhysioWallet}>
+              Open physiotherapist wallet
+            </Button>
+          ) : payee.kind === 'manager' ? (
+            <Link
+              to="/admin/manager-settlements"
+              className="inline-flex text-sm font-semibold text-teal-700 underline underline-offset-2"
+              onClick={onClose}
+            >
+              Open manager settlements →
+            </Link>
+          ) : null}
+        </div>
+      </div>
     </div>
   )
 }

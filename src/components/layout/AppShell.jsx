@@ -156,7 +156,7 @@ export default function AppShell({
         {sidebar}
       </aside>
 
-      <div className="flex min-h-screen flex-col lg:pl-64">
+      <div className="flex min-h-screen min-w-0 flex-col lg:pl-64">
         <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b border-slate-200/90 bg-white/90 px-4 shadow-sm backdrop-blur-md sm:px-6">
           <div className="flex min-w-0 items-center gap-3">
             <button
@@ -181,7 +181,7 @@ export default function AppShell({
 
         <main
           className={[
-            'mx-auto w-full max-w-7xl flex-1 px-4 py-4 md:px-6 md:py-6 lg:px-8',
+            'mx-auto w-full min-w-0 max-w-7xl flex-1 overflow-x-hidden px-4 py-4 md:px-6 md:py-6 lg:px-8',
             bottomNavItems?.length ? 'pb-[calc(5.5rem+env(safe-area-inset-bottom))] lg:pb-6' : '',
             contentClassName,
           ]

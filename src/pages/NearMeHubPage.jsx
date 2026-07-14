@@ -35,7 +35,7 @@ function buildFaq(city, localities) {
     return [
       {
         q: 'How can I find a physiotherapist near me in Assam?',
-        a: 'Open PhysiOkhom near-me pages, choose your city, and continue to the matching city page to book a verified home visit physiotherapist.',
+        a: 'Open PhysiOkhom near-me pages, choose your city, and book a home visit. A Care Manager leads your complimentary assessment and care plan; a verified physiotherapist is assigned for treatment visits after you consent.',
       },
       {
         q: 'Do you provide home physiotherapy in multiple Assam cities?',
@@ -52,17 +52,17 @@ function buildFaq(city, localities) {
   return [
     {
       q: `How do I book a physiotherapist near me in ${city.name}?`,
-      a: `Open the ${city.name} near-me guide, select your locality, and proceed to booking. PhysiOkhom matches you with a verified home visit physiotherapist.`,
+      a: `Open the ${city.name} near-me guide, select your locality, and book a slot. A Care Manager handles your complimentary home assessment and care plan; after you consent, a verified physiotherapist is assigned for treatment visits.`,
     },
     {
       q: `Which localities in ${city.name} are covered?`,
       a: localityLine
         ? `Coverage includes localities like ${localityLine}, with support across nearby areas depending on slot availability.`
-        : `Coverage is available across major neighborhoods in ${city.name}; share your full address during booking for accurate matching.`,
+        : `Coverage is available across major neighborhoods in ${city.name}; share your full address during booking so we can schedule visits in your locality.`,
     },
     {
       q: `Can I get same-day home physiotherapy in ${city.name}?`,
-      a: `Same-day or next-day appointments may be available in ${city.name} based on open slots and clinician availability in your locality.`,
+      a: `Same-day or next-day Care Manager assessment slots may be available in ${city.name} based on open slots in your locality. Treatment visits follow once your care plan is consented.`,
     },
   ]
 }
@@ -123,8 +123,8 @@ export default function NearMeHubPage() {
     ? `Physiotherapist Near Me in ${city.name} | PhysiOkhom`
     : 'Physiotherapist Near Me in Assam | PhysiOkhom Locality Hub'
   const description = city
-    ? `Find a home visit physiotherapist near you in ${city.name}, ${city.state}. PhysiOkhom covers local areas like ${localities.slice(0, 3).join(', ')} with verified clinicians.`
-    : 'Explore city and locality pages to find a verified home visit physiotherapist near you in Assam.'
+    ? `Book Care Manager–led home physiotherapy near you in ${city.name}, ${city.state}. Coverage includes areas like ${localities.slice(0, 3).join(', ')} — assessment, care plan, then verified treatment visits.`
+    : 'Explore city and locality pages to book Care Manager–led home physiotherapy near you in Assam.'
   const faq = buildFaq(city, localities)
   const ldJson = JSON.stringify(buildStructuredData({ city, canonical, faq, citySlug }))
 
@@ -155,8 +155,8 @@ export default function NearMeHubPage() {
           </h1>
           <p className="mt-4 max-w-3xl text-base leading-relaxed text-slate-600">
             {city
-              ? `Use this local guide to discover physiotherapy home visits around ${city.name}. Choose your locality and continue to the city booking page.`
-              : 'Browse city-level coverage and locality clusters to find the nearest available physiotherapist for home treatment.'}
+              ? `Use this local guide for Care Manager–led home physiotherapy around ${city.name}. Choose your locality, book a slot, and continue to assessment and care planning.`
+              : 'Browse city-level coverage and locality clusters to book home visit physiotherapy with Care Manager support near you.'}
           </p>
         </section>
 

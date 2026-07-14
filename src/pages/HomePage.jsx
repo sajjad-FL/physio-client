@@ -69,12 +69,12 @@ import illustrationNeuroRehab from '../assets/illustration_neuro_rehab.png'
 
 const HOME_TITLE = 'PhysiOkhom — Home Visit Physiotherapy in Assam'
 const HOME_DESCRIPTION =
-  'Looking for a physiotherapist near you in Assam? PhysiOkhom connects patients with verified home visit physiotherapists in Guwahati, Barpeta, Bongaigaon, Bijni, and Kokrajhar for back pain, knee pain, post-surgery rehab, and stroke recovery.'
+  'Home visit physiotherapy in Assam with Care Manager–led assessment and care plans. Book a slot in Guwahati, Barpeta, Bongaigaon, Bijni, or Kokrajhar — then approve your plan and start therapy at home.'
 
 const HOME_FAQ = [
   {
     q: 'How do I find a physiotherapist near me?',
-    a: 'PhysiOkhom lists verified physiotherapists you can book for home visits. Create an account, share your location when you book, and we match you with an available clinician for your time slot.',
+    a: 'Book a home visit on PhysiOkhom with your location, date, and time slot. We assign a Care Manager who assesses you at home, builds a care plan, and then assigns a verified physiotherapist for your treatment sessions.',
     cat: 'Booking',
   },
   {
@@ -89,7 +89,27 @@ const HOME_FAQ = [
   },
   {
     q: 'How does booking work?',
-    a: 'You choose a date and time slot, pay online to confirm, and our team assigns a qualified physiotherapist. You can track your booking in your dashboard.',
+    a: 'Choose a date and time slot for your home visit. A Care Manager is assigned for a complimentary assessment and creates your care plan. After you consent to the plan in the app, your manager assigns a physiotherapist and treatment begins.',
+    cat: 'Booking',
+  },
+  {
+    q: 'What happens after I book?',
+    a: 'Your Care Manager visits for a complimentary assessment, writes a care plan, and asks for one-tap consent. Once the plan is live, a physiotherapist is assigned for your sessions. You track everything in your dashboard.',
+    cat: 'Booking',
+  },
+  {
+    q: 'Do I approve a care plan?',
+    a: 'Yes. After the complimentary assessment, your Care Manager shares a care plan in the app. One tap to consent makes the plan live — then physio visits and payments follow that plan.',
+    cat: 'Booking',
+  },
+  {
+    q: 'Who assigns the physiotherapist?',
+    a: 'Your Care Manager (or our admin team) assigns a verified physiotherapist after your plan is live. There is no separate physio accept or decline step.',
+    cat: 'Therapists',
+  },
+  {
+    q: 'What about technique bookings if I already have a Care Manager?',
+    a: 'If you are already under an active Care Manager, technique bookings (such as dry needling or cupping) skip a new assessment and care plan. Your manager assigns a physiotherapist for that visit directly.',
     cat: 'Booking',
   },
   {
@@ -99,10 +119,12 @@ const HOME_FAQ = [
   },
   {
     q: 'How do payments work?',
-    a: 'We accept credit/debit cards, UPI, and Netbanking through Razorpay. You can pay per session or buy a package.',
+    a: 'Session fees are collected by your Care Manager after the plan is live — typically cash handoff or PhonePe QR. You do not pay online at booking to confirm the slot. Packages and per-session pricing are set in your care plan.',
     cat: 'Payments',
   },
 ]
+
+const FAQ_CATEGORIES = ['All', 'Booking', 'Therapists', 'Payments']
 
 function homeStructuredData({ siteBase, ogImage, areas }) {
   const cityAreas = SERVICE_CITIES.map((c) => ({
@@ -183,8 +205,6 @@ const TECHNIQUES = [
   { title: 'Kinesio Taping', slug: 'kinesio-taping', image: techniqueKinesio,   bg: 'bg-[#e6f4f3]', color: 'text-[#0d6b6b]' },
   { title: 'IASTM',          slug: 'iastm', image: techniqueIastm,     bg: 'bg-[#f0f9ff]', color: 'text-[#0369a1]', imgClass: 'scale-110' },
 ]
-
-const FAQ_CATEGORIES = ['All', 'Booking', 'Therapists', 'Payments']
 
 /* ─── Small components ──────────────────────────────────────────────────── */
 
@@ -392,7 +412,7 @@ export default function HomePage() {
   const handleClaimConsultation = () => {
     setConsultationClaimed(true)
     alert(
-      'Consultation Claimed!\n\nOur Care Coordinator will call you in the next 15 minutes to understand your symptoms and match you with the right specialist.'
+      'Got it!\n\nAfter you book a home visit, your Care Manager will schedule a complimentary in-home assessment and share a care plan for your consent.'
     )
   }
 
@@ -516,19 +536,19 @@ export default function HomePage() {
                   {userName ? (
                     <>
                       Hello, {userName} 👋 <br />
-                      Connect with expert physiotherapists near you
+                      Home visit physiotherapy with Care Manager support
                     </>
                   ) : (
                     <>
-                      Connect with expert <br />
-                      physiotherapists near you
+                      Home visit physiotherapy <br />
+                      with Care Manager support
                     </>
                   )}
                 </h1>
 
                 {/* Subtitle */}
                 <p className="type-body max-w-2xl text-slate-300 sm:text-lg">
-                  PhysiOkhom connects patients with qualified, clinical physiotherapy specialists for post-surgery rehab, stroke recovery, and more. 
+                  Book a slot, get a complimentary Care Manager assessment and care plan, then verified physiotherapists treat you at home.
                   {areaLine ? (
                     <>
                       {' '}Currently serving <span className="font-semibold text-teal-300 underline decoration-teal-500/30 decoration-2 underline-offset-4">{areaLine}</span>.
@@ -561,14 +581,22 @@ export default function HomePage() {
                   </button>
                 </div>
 
-                {/* Register link */}
+                {/* Auth CTAs for first-time visitors */}
                 {!token && (
-                  <p className="text-sm text-slate-400">
-                    New here?{' '}
-                    <Link to="/register" className="font-semibold text-teal-400 hover:text-teal-300 hover:underline">
-                      Create a free account →
+                  <div className="flex flex-wrap items-center gap-3">
+                    <Link
+                      to="/register"
+                      className="inline-flex h-11 items-center justify-center rounded-xl bg-teal-600 px-5 text-sm font-semibold text-white shadow-sm shadow-teal-600/30 transition hover:bg-teal-500"
+                    >
+                      Create free account
                     </Link>
-                  </p>
+                    <Link
+                      to="/login"
+                      className="inline-flex h-11 items-center justify-center rounded-xl border border-white/20 bg-white/5 px-5 text-sm font-semibold text-white backdrop-blur-sm transition hover:bg-white/10"
+                    >
+                      Log in
+                    </Link>
+                  </div>
                 )}
 
                 {/* Stats pills */}
@@ -622,41 +650,39 @@ export default function HomePage() {
                     ))}
                   </div>
 
-                  {/* Step 2 Match Clinician */}
+                  {/* Step 2 Care Manager */}
                   <p className="text-xs font-bold text-slate-800 mb-2.5 flex items-center gap-1.5">
                     <span className="flex h-4 w-4 items-center justify-center rounded-full bg-slate-200 text-[10px] font-extrabold text-slate-700">2</span>
-                    clinical Appointed
+                    Care Manager visit
                   </p>
                   <div className="space-y-3">
                     <div className="flex items-center gap-3 p-3 bg-slate-50/80 border border-slate-100 rounded-2xl">
                       <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-600 text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-sm">
-                        AD
+                        CM
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5">
-                          <p className="text-xs font-bold text-slate-900 truncate">Dr. Abhijit , PT</p>
+                          <p className="text-xs font-bold text-slate-900 truncate">Care Manager</p>
                           <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-teal-500 text-white text-[8px] font-bold">✓</span>
                         </div>
-                        <p className="text-[10px] text-slate-500 font-medium truncate">Ortho Specialist · 8+ yrs exp</p>
+                        <p className="text-[10px] text-slate-500 font-medium truncate">Complimentary home assessment</p>
                         <div className="flex items-center gap-1 mt-0.5">
-                          <Star size={9} className="fill-amber-400 text-amber-400" />
-                          <span className="text-[9px] font-bold text-slate-600">4.9</span>
-                          <span className="text-[9px] text-slate-400 font-medium">(42 reviews)</span>
+                          <span className="text-[9px] font-bold text-slate-600">Then care plan → your consent</span>
                         </div>
                       </div>
                       <div className="shrink-0 text-right">
-                        <span className="inline-block text-[9px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md">
-                          Assigned
+                        <span className="inline-block text-[9px] font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded-md">
+                          Next step
                         </span>
                       </div>
                     </div>
 
                     <div className="flex items-center justify-between p-3 border border-dashed border-teal-500/30 bg-teal-50/20 rounded-2xl">
                       <div className="flex items-center gap-2">
-                        <Clock size={14} className="text-teal-600" />
+                        <Stethoscope size={14} className="text-teal-600" />
                         <div>
-                          <p className="text-[10px] font-bold text-slate-800">GPS Session Enabled</p>
-                          <p className="text-[8px] text-slate-500 font-semibold">Live tracking on appointment arrival</p>
+                          <p className="text-[10px] font-bold text-slate-800">Physio after plan consent</p>
+                          <p className="text-[8px] text-slate-500 font-semibold">Manager assigns your therapist for visits</p>
                         </div>
                       </div>
                       <span className="flex h-1.5 w-1.5 rounded-full bg-teal-600 animate-ping" />
@@ -702,7 +728,7 @@ export default function HomePage() {
                     </div>
                     <div>
                       <h4 className="font-bold text-sm text-slate-900 group-hover:text-teal-700 transition-colors">Create Free Account</h4>
-                      <p className="text-xs text-slate-500 mt-1">Sign up with your phone number to store reports and log slots.</p>
+                      <p className="text-xs text-slate-500 mt-1">Sign up with your phone number to book visits and approve your care plan.</p>
                     </div>
                     <ChevronRight size={14} className="text-slate-400 group-hover:translate-x-0.5 transition-transform ml-auto shrink-0 self-center" />
                   </Link>
@@ -726,13 +752,13 @@ export default function HomePage() {
                     <div className="flex-1">
                       <div className="flex items-center gap-1.5">
                         <h4 className={`font-bold text-sm ${consultationClaimed ? 'text-emerald-800 line-through' : 'text-slate-900 group-hover:text-teal-700 transition-colors'}`}>
-                          Claim Phone Assessment
+                          Care Manager assessment
                         </h4>
                         {!consultationClaimed && (
                           <span className="text-[9px] font-bold bg-amber-500 text-white px-1.5 py-0.5 rounded uppercase">Free</span>
                         )}
                       </div>
-                      <p className="text-xs text-slate-500 mt-1">Get a free 10-minute assessment call from senior clinical consultants.</p>
+                      <p className="text-xs text-slate-500 mt-1">Complimentary home assessment, then a care plan you consent to in the app.</p>
                     </div>
                     {!consultationClaimed && (
                       <ChevronRight size={14} className="text-slate-400 group-hover:translate-x-0.5 transition-transform ml-auto shrink-0 self-center" />
@@ -748,8 +774,8 @@ export default function HomePage() {
                       3
                     </div>
                     <div>
-                      <h4 className="font-bold text-sm text-slate-900 group-hover:text-teal-700 transition-colors">Schedule At-Home Visit</h4>
-                      <p className="text-xs text-slate-500 mt-1">Pick a date & match with a background-verified therapist near you.</p>
+                      <h4 className="font-bold text-sm text-slate-900 group-hover:text-teal-700 transition-colors">Book a home visit</h4>
+                      <p className="text-xs text-slate-500 mt-1">Pick a date and slot — we assign your Care Manager, then a physiotherapist after plan consent.</p>
                     </div>
                     <ChevronRight size={14} className="text-slate-400 group-hover:translate-x-0.5 transition-transform ml-auto shrink-0 self-center" />
                   </Link>
@@ -1055,63 +1081,80 @@ export default function HomePage() {
               labelIcon={Sparkles}
               label="Simple process"
               title="How it works"
-              subtitle="Three simple steps from booking to clinical treatment at your doorstep."
+              subtitle="From booking a slot to therapy at home — Care Manager–led assessment, your plan consent, then a physiotherapist for visits."
               center
             />
 
-            <div className="mt-10 md:mt-16 grid grid-cols-1 gap-8 sm:grid-cols-2 md:grid-cols-3 w-full">
-              {/* Step 1 */}
-              <div className="glass-card group relative rounded-2xl p-5 sm:p-8 border border-slate-100 hover:shadow-lg transition-all">
-                <div className="absolute top-[2.8rem] -right-4 hidden h-0.5 w-8 bg-teal-100 md:block" aria-hidden />
-                <div className="mb-5 flex items-center justify-between">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-teal-500 to-teal-600 text-sm font-bold text-white shadow-md">
-                    1
-                  </span>
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-50 border border-teal-100/50">
-                    <Search size={18} className="text-teal-700" />
+            <div className="mt-10 md:mt-16 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 w-full">
+              {[
+                {
+                  n: 1,
+                  Icon: Calendar,
+                  title: 'Book a home visit',
+                  body: 'Pick a date and time slot, share your concern and location. No online payment needed to reserve the slot.',
+                  badge: 'Slot reserved',
+                  badgeCls: 'text-teal-700 bg-teal-50',
+                },
+                {
+                  n: 2,
+                  Icon: Users,
+                  title: 'Care Manager assigned',
+                  body: 'We assign a Care Manager for your area who owns assessment, the care plan, and coordinating your visits.',
+                  badge: 'Your care owner',
+                  badgeCls: 'text-emerald-700 bg-emerald-50',
+                },
+                {
+                  n: 3,
+                  Icon: Stethoscope,
+                  title: 'Complimentary assessment',
+                  body: 'Your Care Manager visits at home (complimentary), understands your condition, and drafts a personalised care plan.',
+                  badge: 'At your door',
+                  badgeCls: 'text-blue-700 bg-blue-50',
+                },
+                {
+                  n: 4,
+                  Icon: CheckCircle2,
+                  title: 'Consent to your plan',
+                  body: 'Review sessions and pricing in the app. One tap to consent makes the plan live — treatment can begin.',
+                  badge: 'One-tap consent',
+                  badgeCls: 'text-teal-700 bg-teal-50',
+                },
+                {
+                  n: 5,
+                  Icon: BadgeCheck,
+                  title: 'Physiotherapist assigned',
+                  body: 'Your Care Manager assigns a verified physiotherapist for treatment sessions. No accept/decline wait.',
+                  badge: 'Verified grads',
+                  badgeCls: 'text-emerald-700 bg-emerald-50',
+                },
+                {
+                  n: 6,
+                  Icon: Home,
+                  title: 'Recover at home',
+                  body: 'Sessions at your door. Pay your Care Manager by cash or PhonePe as the plan progresses; track visits in-app.',
+                  badge: 'Cash or PhonePe',
+                  badgeCls: 'text-amber-800 bg-amber-50',
+                },
+              ].map((step) => (
+                <div
+                  key={step.n}
+                  className="glass-card group relative rounded-2xl p-5 sm:p-7 border border-slate-100 hover:shadow-lg transition-all"
+                >
+                  <div className="mb-5 flex items-center justify-between">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-teal-500 to-teal-600 text-sm font-bold text-white shadow-md">
+                      {step.n}
+                    </span>
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-50 border border-teal-100/50">
+                      <step.Icon size={18} className="text-teal-700" />
+                    </div>
+                  </div>
+                  <h3 className="type-page-title text-slate-900">{step.title}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-slate-500">{step.body}</p>
+                  <div className={`mt-4 inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded ${step.badgeCls}`}>
+                    <Sparkles size={9} /> {step.badge}
                   </div>
                 </div>
-                <h3 className="type-page-title text-slate-900">Book Online</h3>
-                <p className="mt-2 text-sm leading-relaxed text-slate-500">Choose your preferred date, share physical concerns, and confirm slots in minutes.</p>
-                <div className="mt-4 inline-flex items-center gap-1 text-[10px] font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded">
-                  <Sparkles size={9} /> Instant Confirmation
-                </div>
-              </div>
-
-              {/* Step 2 */}
-              <div className="glass-card group relative rounded-2xl p-5 sm:p-8 border border-slate-100 hover:shadow-lg transition-all">
-                <div className="absolute top-[2.8rem] -right-4 hidden h-0.5 w-8 bg-teal-100 md:block" aria-hidden />
-                <div className="mb-5 flex items-center justify-between">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-teal-500 to-teal-600 text-sm font-bold text-white shadow-md">
-                    2
-                  </span>
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-50 border border-teal-100/50">
-                    <Users size={18} className="text-teal-700" />
-                  </div>
-                </div>
-                <h3 className="type-page-title text-slate-900">Get Matched</h3>
-                <p className="mt-2 text-sm leading-relaxed text-slate-500">We assign an MPT/BPT verified clinical physiotherapist specializing in your condition.</p>
-                <div className="mt-4 inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">
-                  <ShieldCheck size={9} /> Verified Graduates
-                </div>
-              </div>
-
-              {/* Step 3 */}
-              <div className="glass-card group relative rounded-2xl p-5 sm:p-8 border border-slate-100 hover:shadow-lg transition-all">
-                <div className="mb-5 flex items-center justify-between">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-teal-500 to-teal-600 text-sm font-bold text-white shadow-md">
-                    3
-                  </span>
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-50 border border-teal-100/50">
-                    <Home size={18} className="text-teal-700" />
-                  </div>
-                </div>
-                <h3 className="type-page-title text-slate-900">Recover At Home</h3>
-                <p className="mt-2 text-sm leading-relaxed text-slate-500">Receive regular physical treatment at home. Log all daily session summaries in-app.</p>
-                <div className="mt-4 inline-flex items-center gap-1 text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded">
-                  <Activity size={9} /> Interactive Progress
-                </div>
-              </div>
+              ))}
             </div>
           </div>
         </section>
@@ -1277,7 +1320,7 @@ export default function HomePage() {
                     </span>
                   </div>
                   <p className="text-emerald-100 text-xs mt-1 max-w-md">
-                    Need help matching symptoms with the right therapist? Chat directly with our medical coordinate team 24/7.
+                    Questions about booking, your Care Manager visit, or care plan consent? Chat with our team 24/7.
                   </p>
                 </div>
               </div>
@@ -1569,7 +1612,7 @@ export default function HomePage() {
               Ready to recover?
             </h2>
             <p className="mx-auto mt-4 max-w-lg text-slate-300 text-sm leading-relaxed">
-              Register with your phone, pick an available slot, confirm your appointment — we handle the rest.
+              Register with your phone, book a home visit slot, meet your Care Manager for assessment, consent to your plan — then start therapy at home.
             </p>
             
             <div className="mt-10 flex flex-col items-stretch gap-4 sm:flex-row sm:justify-center max-w-sm mx-auto sm:max-w-none">
@@ -1577,7 +1620,7 @@ export default function HomePage() {
                 to="/book"
                 className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-teal-600 px-8 text-base font-semibold text-white shadow-lg hover:bg-teal-700"
               >
-                Find clinicians near me
+                Book a home visit
                 <ArrowRight size={16} />
               </Link>
               <Link

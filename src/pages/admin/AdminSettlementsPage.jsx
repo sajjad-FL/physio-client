@@ -1,144 +1,35 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { api } from '../../config/api'
+import AdminPageHeader, { AdminLink } from '../../components/admin/AdminPageHeader'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
-import AdminCaseContext, { resolveAdminCaseContext } from '../../components/admin/AdminCaseContext'
-
-const LEDGER_STATUS_LABEL = {
-  open: 'Awaiting settlement',
-  batched: 'In settlement batch',
-  settled: 'Settled',
-  disputed: 'Disputed',
-}
-
-function ledgerStatusLabel(status) {
-  return LEDGER_STATUS_LABEL[status] || status || '—'
-}
+import { resolveAdminCaseContext } from '../../components/admin/AdminCaseContext'
 
 function formatDate(d) {
-  if (!d) return ''
+  if (!d) return '—'
   try {
     return new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
   } catch {
-    return ''
+    return '—'
   }
 }
 
-function LedgerEntryCard({ entry, selectable, checked, onToggle }) {
-  const collectedLabel = entry.collectedAt ? `Collected ${formatDate(entry.collectedAt)}` : null
+function formatInr(n) {
+  return `₹${Number(n || 0).toFixed(2)}`
+}
+
+function caseLabel(entry) {
   const ctx = resolveAdminCaseContext(entry)
-
-  return (
-    <li className="rounded-xl border border-slate-200 bg-white p-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex min-w-0 flex-1 items-start gap-3">
-          {selectable ? (
-            <input
-              type="checkbox"
-              className="mt-1"
-              checked={checked}
-              onChange={onToggle}
-            />
-          ) : null}
-          <div className="min-w-0 flex-1">
-            <p className="font-medium text-slate-900">₹{Number(entry.amount).toFixed(2)}</p>
-            <AdminCaseContext source={entry} showLink={false} className="mt-0.5" />
-            <p className="mt-1 text-xs font-medium text-amber-800">{ledgerStatusLabel(entry.status)}</p>
-            {Number(entry.managerCommissionAmount) > 0 ? (
-              <p className="text-xs font-medium text-emerald-700">
-                Manager commission: ₹{Number(entry.managerCommissionAmount).toFixed(2)}
-              </p>
-            ) : null}
-            {entry.distribution?.distributedAt ? (
-              <p className="text-xs text-slate-500">
-                Distributed: physio ₹{Number(entry.distribution.physioShare || 0).toFixed(2)} · manager ₹
-                {Number(entry.distribution.managerShare || 0).toFixed(2)} · platform ₹
-                {Number(entry.distribution.platformShare || 0).toFixed(2)}
-              </p>
-            ) : null}
-            {collectedLabel ? <p className="text-xs text-slate-500">{collectedLabel}</p> : null}
-            {entry.note ? <p className="mt-1 text-xs text-slate-500">{entry.note}</p> : null}
-          </div>
-        </div>
-        {ctx?.id ? (
-          <Link
-            to={`/admin/bookings/${ctx.id}`}
-            className="shrink-0 text-xs font-semibold text-blue-700 hover:text-blue-900"
-          >
-            View case →
-          </Link>
-        ) : null}
-      </div>
-    </li>
-  )
+  return [ctx?.patientName, ctx?.issue].filter(Boolean).join(' · ') || 'Case'
 }
 
-function BatchCard({ batch, busy, onSettle }) {
-  const entries = batch.entries || []
-  const created = formatDate(batch.createdAt)
-
-  return (
-    <Card hover={false} className="p-4">
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div className="min-w-0 flex-1">
-          <p className="font-medium text-slate-900">
-            {batch.managerId?.name || 'Manager'} · ₹{Number(batch.expectedAmount).toFixed(2)}
-          </p>
-          <p className="text-xs text-slate-500">
-            {batch.status}
-            {created ? ` · Created ${created}` : ''}
-            {batch.entryCount != null ? ` · ${batch.entryCount} case${batch.entryCount === 1 ? '' : 's'}` : ''}
-          </p>
-        </div>
-        {batch.status === 'open' ? (
-          <Button type="button" disabled={busy} onClick={() => onSettle(batch._id)}>
-            Mark settled
-          </Button>
-        ) : null}
-      </div>
-      {batch.status === 'open' && batch.distributionPreview ? (
-        <p className="mt-2 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-700 ring-1 ring-slate-200">
-          On settle: physio ₹{Number(batch.distributionPreview.physioTotal || 0).toFixed(2)} · manager
-          commission ₹{Number(batch.distributionPreview.managerTotal || 0).toFixed(2)} · platform ₹
-          {Number(batch.distributionPreview.platformTotal || 0).toFixed(2)}
-        </p>
-      ) : null}
-      {batch.status === 'settled' && batch.distributedAt ? (
-        <p className="mt-2 rounded-lg bg-emerald-50 px-3 py-2 text-xs text-emerald-800 ring-1 ring-emerald-100">
-          Distributed: physio ₹{Number(batch.physioPayoutTotal || 0).toFixed(2)} · manager commission ₹
-          {Number(batch.commissionTotal || 0).toFixed(2)}
-        </p>
-      ) : null}
-      {entries.length > 0 ? (
-        <ul className="mt-3 space-y-2 border-t border-slate-100 pt-3">
-          {entries.map((e) => {
-            const ctx = resolveAdminCaseContext(e)
-            const label = [ctx?.patientName, ctx?.issue].filter(Boolean).join(' · ') || 'Case'
-            return (
-              <li key={e._id} className="flex flex-wrap items-center justify-between gap-2 text-sm">
-                <span className="min-w-0 text-slate-700">
-                  <span className="font-medium text-slate-900">₹{Number(e.amount).toFixed(2)}</span>
-                  <span className="mx-1 text-slate-400">·</span>
-                  {label}
-                </span>
-                {ctx?.id ? (
-                  <Link
-                    to={`/admin/bookings/${ctx.id}`}
-                    className="shrink-0 text-xs font-semibold text-blue-700 hover:text-blue-900"
-                  >
-                    View case →
-                  </Link>
-                ) : null}
-              </li>
-            )
-          })}
-        </ul>
-      ) : null}
-    </Card>
-  )
-}
+const TABS = [
+  { id: 'settle', label: 'Settle' },
+  { id: 'batches', label: 'Open batches' },
+  { id: 'history', label: 'History' },
+]
 
 export default function AdminSettlementsPage() {
   const [managers, setManagers] = useState([])
@@ -147,19 +38,21 @@ export default function AdminSettlementsPage() {
   const [batches, setBatches] = useState([])
   const [selectedEntryIds, setSelectedEntryIds] = useState([])
   const [busy, setBusy] = useState(false)
-  const [payoutRequests, setPayoutRequests] = useState([])
-  const [payoutBusyId, setPayoutBusyId] = useState(null)
-  const [payoutModal, setPayoutModal] = useState(null) // { request, action: 'approved'|'rejected' }
-  const [payoutRef, setPayoutRef] = useState('')
-  const [payoutNote, setPayoutNote] = useState('')
+  const [activeTab, setActiveTab] = useState('settle')
+  const [selectedBatch, setSelectedBatch] = useState(null)
   const [pendingPhonePeCount, setPendingPhonePeCount] = useState(0)
+  const [pendingManagerPayouts, setPendingManagerPayouts] = useState(0)
+  const [historySearch, setHistorySearch] = useState('')
+  const [historyDateFrom, setHistoryDateFrom] = useState('')
+  const [historyDateTo, setHistoryDateTo] = useState('')
+  const [historySort, setHistorySort] = useState('newest')
 
-  const loadPayoutRequests = useCallback(async () => {
+  const loadBatches = useCallback(async () => {
     try {
-      const res = await api.get('/withdraw', { params: { payee: 'manager' } })
-      setPayoutRequests(Array.isArray(res.data) ? res.data : [])
+      const res = await api.get('/admin/settlement-batches')
+      setBatches(res.data?.batches || [])
     } catch {
-      setPayoutRequests([])
+      setBatches([])
     }
   }, [])
 
@@ -167,20 +60,26 @@ export default function AdminSettlementsPage() {
     api.get('/admin/care-managers').then((res) => {
       setManagers(res.data?.managers || [])
     })
-    api.get('/admin/settlement-batches').then((res) => {
-      setBatches(res.data?.batches || [])
-    })
-    loadPayoutRequests()
+    loadBatches()
     api
       .get('/admin/payments', { params: { mode: 'offline', status: 'collected', limit: 1 } })
-      .then((res) => {
-        setPendingPhonePeCount(Number(res.data?.pendingVerification || 0))
-      })
+      .then((res) => setPendingPhonePeCount(Number(res.data?.pendingVerification || 0)))
       .catch(() => setPendingPhonePeCount(0))
-  }, [loadPayoutRequests])
+    api
+      .get('/withdraw', { params: { payee: 'manager' } })
+      .then((res) => {
+        const list = Array.isArray(res.data) ? res.data : []
+        setPendingManagerPayouts(list.filter((r) => r.status === 'pending').length)
+      })
+      .catch(() => setPendingManagerPayouts(0))
+  }, [loadBatches])
 
   const loadLedger = useCallback(async (managerId) => {
-    if (!managerId) return
+    if (!managerId) {
+      setLedger(null)
+      setSelectedEntryIds([])
+      return
+    }
     try {
       const res = await api.get(`/admin/managers/${managerId}/ledger`)
       setLedger(res.data)
@@ -191,26 +90,28 @@ export default function AdminSettlementsPage() {
   }, [])
 
   useEffect(() => {
-    if (selectedManagerId) loadLedger(selectedManagerId)
+    loadLedger(selectedManagerId)
   }, [selectedManagerId, loadLedger])
 
   function toggleEntry(id) {
-    setSelectedEntryIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
-    )
+    setSelectedEntryIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
+  }
+
+  function selectAllOpen() {
+    setSelectedEntryIds(openEntries.map((e) => e._id))
   }
 
   async function createBatch() {
     if (!selectedManagerId || !selectedEntryIds.length) return
     setBusy(true)
     try {
-      await api.post(
-        `/admin/managers/${selectedManagerId}/settlement-batches`,
-        { ledgerEntryIds: selectedEntryIds },      )
-      toast.success('Settlement batch created')
+      await api.post(`/admin/managers/${selectedManagerId}/settlement-batches`, {
+        ledgerEntryIds: selectedEntryIds,
+      })
+      toast.success('Batch created')
       await loadLedger(selectedManagerId)
-      const res = await api.get('/admin/settlement-batches')
-      setBatches(res.data?.batches || [])
+      await loadBatches()
+      setActiveTab('batches')
     } catch (err) {
       toast.error(err.response?.data?.message || 'Could not create batch')
     } finally {
@@ -222,10 +123,11 @@ export default function AdminSettlementsPage() {
     setBusy(true)
     try {
       await api.patch(`/admin/settlement-batches/${batchId}/settle`, {})
-      toast.success('Batch settled')
-      const res = await api.get('/admin/settlement-batches')
-      setBatches(res.data?.batches || [])
+      toast.success('Marked settled')
+      setSelectedBatch(null)
+      await loadBatches()
       if (selectedManagerId) await loadLedger(selectedManagerId)
+      setActiveTab('history')
     } catch (err) {
       toast.error(err.response?.data?.message || 'Could not settle batch')
     } finally {
@@ -233,278 +135,604 @@ export default function AdminSettlementsPage() {
     }
   }
 
-  async function submitPayoutModal() {
-    if (!payoutModal) return
-    const { request, action } = payoutModal
-    setPayoutBusyId(String(request._id))
-    try {
-      await api.patch(`/withdraw/${request._id}`, {
-        status: action,
-        payoutReference: action === 'approved' ? payoutRef.trim() : '',
-        note: action === 'rejected' ? payoutNote.trim() : '',
-      })
-      toast.success(action === 'approved' ? 'Payout approved' : 'Request rejected')
-      setPayoutModal(null)
-      setPayoutRef('')
-      setPayoutNote('')
-      await loadPayoutRequests()
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Could not process request')
-    } finally {
-      setPayoutBusyId(null)
+  const openEntries = useMemo(
+    () => (ledger?.entries || []).filter((e) => e.status === 'open'),
+    [ledger],
+  )
+
+  const visibleBatches = useMemo(() => {
+    let list = batches
+    if (selectedManagerId) {
+      list = list.filter((b) => String(b.managerId?._id || b.managerId) === String(selectedManagerId))
     }
-  }
+    return {
+      open: list.filter((b) => b.status === 'open'),
+      settled: list.filter((b) => b.status !== 'open'),
+    }
+  }, [batches, selectedManagerId])
 
-  function openPayoutModal(request, action) {
-    setPayoutRef('')
-    setPayoutNote('')
-    setPayoutModal({ request, action })
-  }
+  const historyRows = useMemo(() => {
+    let list = [...visibleBatches.settled]
+    const q = historySearch.trim().toLowerCase()
+    if (q) {
+      list = list.filter((b) => {
+        const name = String(b.managerId?.name || '').toLowerCase()
+        const phone = String(b.managerId?.phone || '')
+        return name.includes(q) || phone.includes(q)
+      })
+    }
+    if (historyDateFrom) {
+      const from = new Date(`${historyDateFrom}T00:00:00`)
+      list = list.filter((b) => {
+        const d = new Date(b.settledAt || b.distributedAt || b.createdAt)
+        return !Number.isNaN(d.getTime()) && d >= from
+      })
+    }
+    if (historyDateTo) {
+      const to = new Date(`${historyDateTo}T23:59:59.999`)
+      list = list.filter((b) => {
+        const d = new Date(b.settledAt || b.distributedAt || b.createdAt)
+        return !Number.isNaN(d.getTime()) && d <= to
+      })
+    }
+    list.sort((a, b) => {
+      if (historySort === 'amount-high') {
+        return Number(b.expectedAmount || 0) - Number(a.expectedAmount || 0)
+      }
+      if (historySort === 'amount-low') {
+        return Number(a.expectedAmount || 0) - Number(b.expectedAmount || 0)
+      }
+      const da = new Date(a.settledAt || a.distributedAt || a.createdAt).getTime()
+      const db = new Date(b.settledAt || b.distributedAt || b.createdAt).getTime()
+      return historySort === 'oldest' ? da - db : db - da
+    })
+    return list
+  }, [visibleBatches.settled, historySearch, historyDateFrom, historyDateTo, historySort])
 
-  const allEntries = ledger?.entries || []
-  const openEntries = allEntries.filter((e) => e.status === 'open')
-  const historyEntries = allEntries.filter((e) => e.status !== 'open')
-  const pendingPayouts = payoutRequests.filter((r) => r.status === 'pending')
-  const processedPayouts = payoutRequests.filter((r) => r.status !== 'pending').slice(0, 10)
+  const historyStats = useMemo(() => {
+    const cash = historyRows.reduce((s, b) => s + Number(b.expectedAmount || 0), 0)
+    const commission = historyRows.reduce((s, b) => s + Number(b.commissionTotal || 0), 0)
+    const cases = historyRows.reduce(
+      (s, b) => s + Number(b.entryCount ?? b.entries?.length ?? 0),
+      0,
+    )
+    return { cash, commission, cases, count: historyRows.length }
+  }, [historyRows])
+
+  const selectedManager = managers.find((m) => String(m._id) === String(selectedManagerId))
+
+  const tabCounts = {
+    settle: openEntries.length,
+    batches: visibleBatches.open.length,
+    history: visibleBatches.settled.length,
+  }
 
   return (
-    <div className="space-y-6">
-      <div className="rounded-xl border border-teal-200 bg-teal-50 px-4 py-3 text-sm text-teal-950">
-        <p className="font-semibold">Looking for manager PhonePe QR screenshots?</p>
-        <p className="mt-1 text-teal-900/90">
-          Those are verified under{' '}
-          <Link to="/admin/finance?tab=queue" className="font-semibold underline underline-offset-2">
-            Payment history
-          </Link>
-          {pendingPhonePeCount > 0 ? (
-            <>
-              {' '}
-              — <span className="font-semibold">{pendingPhonePeCount} awaiting verification</span>.
-            </>
-          ) : (
-            <> (filter Offline + Collected / Needs verification).</>
-          )}{' '}
-          This page is only for cash hand-off settlement batches and manager withdrawal approvals.
-        </p>
-      </div>
-      <Card hover={false} className="p-5">
-        <h2 className="font-semibold text-slate-900">Manager batch settlement</h2>
-        <p className="mt-1 text-sm text-slate-600">
-          Each row shows which patient and case a collection came from before you batch-settle with the care manager.
-        </p>
-        <select
-          className="mt-3 w-full max-w-md rounded-xl border border-slate-200 p-3 text-sm"
-          value={selectedManagerId}
-          onChange={(e) => setSelectedManagerId(e.target.value)}
-        >
-          <option value="">Select care manager…</option>
-          {managers.map((m) => (
-            <option key={m._id} value={m._id}>
-              {m.name || m.phone}
-            </option>
-          ))}
-        </select>
-        {ledger ? (
-          <div className="mt-2 space-y-0.5 text-sm text-slate-600">
-            <p>Open balance: ₹{Number(ledger.openTotal || 0).toFixed(2)}</p>
-            <p>
-              Commission — pending: ₹{Number(ledger.pendingCommission || 0).toFixed(2)} · credited: ₹
-              {Number(ledger.settledCommission || 0).toFixed(2)}
-            </p>
+    <div className="min-w-0 max-w-full space-y-4 overflow-x-hidden sm:space-y-5">
+      <AdminPageHeader
+        title="Manager settlements"
+        subtitle="Hand off cash with a care manager, then mark the batch settled."
+        breadcrumbs={[{ label: 'Admin', to: '/admin' }, { label: 'Manager settlements' }]}
+        actions={
+          <div className="flex flex-wrap gap-x-4 gap-y-1">
+            <AdminLink to="/admin/finance?tab=queue">
+              Payments{pendingPhonePeCount > 0 ? ` (${pendingPhonePeCount})` : ''} →
+            </AdminLink>
+            <AdminLink to="/admin/finance?tab=withdrawals">
+              Withdrawals{pendingManagerPayouts > 0 ? ` (${pendingManagerPayouts})` : ''} →
+            </AdminLink>
           </div>
-        ) : null}
+        }
+      />
+
+      {/* Manager picker + stats */}
+      <Card hover={false} className="p-3 sm:p-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div className="min-w-0 flex-1">
+            <label className="text-xs font-medium text-slate-500">Care manager</label>
+            <select
+              className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm"
+              value={selectedManagerId}
+              onChange={(e) => setSelectedManagerId(e.target.value)}
+            >
+              <option value="">All managers (batches only)</option>
+              {managers.map((m) => (
+                <option key={m._id} value={m._id}>
+                  {m.name || m.phone}
+                </option>
+              ))}
+            </select>
+          </div>
+          {selectedManagerId && ledger ? (
+            <div className="grid grid-cols-2 gap-2 sm:w-72">
+              <div className="rounded-xl bg-slate-50 px-3 py-2 ring-1 ring-slate-100">
+                <p className="text-[10px] font-medium uppercase tracking-wide text-slate-500">Open cash</p>
+                <p className="mt-0.5 text-sm font-semibold tabular-nums text-slate-900">
+                  {formatInr(ledger.openTotal)}
+                </p>
+              </div>
+              <div className="rounded-xl bg-amber-50 px-3 py-2 ring-1 ring-amber-100">
+                <p className="text-[10px] font-medium uppercase tracking-wide text-amber-800/80">Commission</p>
+                <p className="mt-0.5 text-sm font-semibold tabular-nums text-amber-950">
+                  {formatInr(ledger.pendingCommission)}
+                </p>
+              </div>
+            </div>
+          ) : null}
+        </div>
       </Card>
 
-      {openEntries.length > 0 ? (
-        <Card hover={false} className="p-5">
-          <h3 className="font-medium text-slate-900">Open ledger entries</h3>
-          <p className="mt-1 text-xs text-slate-500">Select entries to include in a settlement batch.</p>
-          <ul className="mt-3 space-y-2">
-            {openEntries.map((e) => (
-              <LedgerEntryCard
-                key={e._id}
-                entry={e}
-                selectable
-                checked={selectedEntryIds.includes(e._id)}
-                onToggle={() => toggleEntry(e._id)}
-              />
-            ))}
-          </ul>
-          <Button type="button" className="mt-4" disabled={busy || !selectedEntryIds.length} onClick={createBatch}>
-            Create settlement batch
-          </Button>
-        </Card>
-      ) : selectedManagerId ? (
-        <Card hover={false} className="p-5 text-sm text-slate-600">
-          No open ledger entries for this manager.
-        </Card>
-      ) : null}
-
-      {selectedManagerId && historyEntries.length > 0 ? (
-        <Card hover={false} className="p-5">
-          <h3 className="font-medium text-slate-900">All entries</h3>
-          <p className="mt-1 text-xs text-slate-500">Batched and settled collections for audit.</p>
-          <ul className="mt-3 space-y-2">
-            {historyEntries.map((e) => (
-              <LedgerEntryCard key={e._id} entry={e} />
-            ))}
-          </ul>
-        </Card>
-      ) : null}
-
-      <div className="space-y-2">
-        <h3 className="text-sm font-semibold text-slate-900">Settlement batches</h3>
-        {batches.length === 0 ? (
-          <Card hover={false} className="p-4 text-sm text-slate-600">
-            No settlement batches yet.
-          </Card>
-        ) : (
-          batches.map((batch) => (
-            <BatchCard key={batch._id} batch={batch} busy={busy} onSettle={settleBatch} />
-          ))
-        )}
-      </div>
-
-      <div className="space-y-2">
-        <h3 className="text-sm font-semibold text-slate-900">Manager payout requests</h3>
-        {pendingPayouts.length === 0 && processedPayouts.length === 0 ? (
-          <Card hover={false} className="p-4 text-sm text-slate-600">
-            No manager withdrawal requests yet. Managers request payouts of settled commission from their
-            Earnings page.
-          </Card>
-        ) : (
-          <>
-            {pendingPayouts.map((r) => {
-              const rowBusy = payoutBusyId === String(r._id)
-              return (
-                <Card key={r._id} hover={false} className="p-4">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <p className="font-medium text-slate-900">
-                        {r.managerId?.name || 'Manager'} · ₹{Number(r.amount).toFixed(2)}
-                      </p>
-                      <p className="text-xs text-slate-500">
-                        Requested {formatDate(r.requestedAt)}
-                        {r.managerId?.phone ? ` · ${r.managerId.phone}` : ''}
-                      </p>
-                      {r.payoutUpiId ? (
-                        <p className="mt-1 text-xs font-medium text-teal-800">
-                          Pay to UPI: {r.payoutUpiId}
-                          {r.payoutDisplayName ? ` · ${r.payoutDisplayName}` : ''}
-                        </p>
-                      ) : (
-                        <p className="mt-1 text-xs text-rose-700">No UPI on this request</p>
-                      )}
-                    </div>
-                    <div className="flex shrink-0 gap-2">
-                      <Button type="button" disabled={rowBusy} onClick={() => openPayoutModal(r, 'approved')}>
-                        {rowBusy ? '…' : 'Approve'}
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        disabled={rowBusy}
-                        onClick={() => openPayoutModal(r, 'rejected')}
-                      >
-                        Reject
-                      </Button>
-                    </div>
-                  </div>
-                </Card>
-              )
-            })}
-            {processedPayouts.map((r) => (
-              <Card key={r._id} hover={false} className="p-4">
-                <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-slate-700">
-                      <span className="font-medium text-slate-900">
-                        {r.managerId?.name || 'Manager'} · ₹{Number(r.amount).toFixed(2)}
-                      </span>
-                      <span className="mx-1 text-slate-400">·</span>
-                      <span className={r.status === 'approved' ? 'text-emerald-700' : 'text-rose-700'}>
-                        {r.status}
-                      </span>
-                    </p>
-                    <p className="text-xs text-slate-500">
-                      {formatDate(r.processedAt || r.requestedAt)}
-                      {r.payoutUpiId ? ` · UPI: ${r.payoutUpiId}` : ''}
-                      {r.payoutReference ? ` · Ref: ${r.payoutReference}` : ''}
-                      {r.rejectReason ? ` · ${r.rejectReason}` : ''}
-                    </p>
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </>
-        )}
-      </div>
-
-      {payoutModal ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog">
-          <Card hover={false} className="w-full max-w-md shadow-xl">
-            <h3 className="font-semibold text-slate-900">
-              {payoutModal.action === 'approved' ? 'Approve manager payout' : 'Reject payout'}
-            </h3>
-            <div className="mt-3 space-y-1 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2 text-sm">
-              <p className="font-medium text-slate-900">
-                {payoutModal.request.managerId?.name || 'Manager'} · ₹
-                {Number(payoutModal.request.amount).toFixed(2)}
-              </p>
-              {payoutModal.request.managerId?.phone ? (
-                <p className="text-xs text-slate-500">{payoutModal.request.managerId.phone}</p>
-              ) : null}
-              {payoutModal.request.payoutUpiId ? (
-                <p className="text-sm font-semibold text-teal-800">
-                  Pay to: {payoutModal.request.payoutUpiId}
-                  {payoutModal.request.payoutDisplayName
-                    ? ` (${payoutModal.request.payoutDisplayName})`
-                    : ''}
-                </p>
-              ) : (
-                <p className="text-xs text-rose-700">This request has no UPI ID saved.</p>
-              )}
-            </div>
-            {payoutModal.action === 'approved' ? (
-              <label className="mt-4 block text-xs font-medium text-slate-600">
-                Payout reference / UTR (optional)
-                <input
-                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
-                  value={payoutRef}
-                  onChange={(e) => setPayoutRef(e.target.value)}
-                  placeholder="Bank / UPI transaction id after you pay"
-                />
-              </label>
-            ) : (
-              <label className="mt-4 block text-xs font-medium text-slate-600">
-                Reason (optional)
-                <input
-                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
-                  value={payoutNote}
-                  onChange={(e) => setPayoutNote(e.target.value)}
-                  placeholder="Why rejected"
-                />
-              </label>
-            )}
-            <div className="mt-6 flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={() => setPayoutModal(null)}>
-                Cancel
-              </Button>
-              <Button
+      {/* Tabs */}
+      <div className="rounded-xl border border-slate-100 bg-white shadow-sm">
+        <nav className="flex gap-1 overflow-x-auto px-2 scrollbar-none sm:px-3" aria-label="Settlement tabs">
+          {TABS.map((tab) => {
+            const active = activeTab === tab.id
+            const count = tabCounts[tab.id]
+            const disabled = tab.id === 'settle' && !selectedManagerId
+            return (
+              <button
+                key={tab.id}
                 type="button"
-                disabled={Boolean(payoutBusyId)}
-                onClick={submitPayoutModal}
+                disabled={disabled}
+                onClick={() => setActiveTab(tab.id)}
+                className={`shrink-0 border-b-2 px-3 py-3 text-sm font-semibold transition sm:px-4 ${
+                  active
+                    ? 'border-teal-600 text-teal-700'
+                    : disabled
+                      ? 'cursor-not-allowed border-transparent text-slate-300'
+                      : 'border-transparent text-slate-500 hover:text-slate-800'
+                }`}
               >
-                {payoutBusyId
-                  ? '…'
-                  : payoutModal.action === 'approved'
-                    ? 'Confirm approve'
-                    : 'Confirm reject'}
-              </Button>
+                {tab.label}
+                {count > 0 ? (
+                  <span
+                    className={`ml-1.5 inline-flex min-w-5 items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums ${
+                      active ? 'bg-teal-100 text-teal-800' : 'bg-slate-100 text-slate-600'
+                    }`}
+                  >
+                    {count}
+                  </span>
+                ) : null}
+              </button>
+            )
+          })}
+        </nav>
+
+        <div className="border-t border-slate-100 p-3 sm:p-4">
+          {activeTab === 'settle' ? (
+            !selectedManagerId ? (
+              <EmptyHint>Select a care manager above to settle open collections.</EmptyHint>
+            ) : openEntries.length === 0 ? (
+              <EmptyHint>
+                No open collections for {selectedManager?.name || 'this manager'}.
+                {visibleBatches.open.length > 0 ? (
+                  <>
+                    {' '}
+                    <button
+                      type="button"
+                      className="font-semibold text-teal-700 underline underline-offset-2"
+                      onClick={() => setActiveTab('batches')}
+                    >
+                      View {visibleBatches.open.length} open batch
+                      {visibleBatches.open.length === 1 ? '' : 'es'}
+                    </button>
+                  </>
+                ) : null}
+              </EmptyHint>
+            ) : (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm text-slate-600">
+                    Select collections to include in a batch.
+                  </p>
+                  <button
+                    type="button"
+                    className="text-xs font-semibold text-teal-700 hover:underline"
+                    onClick={selectAllOpen}
+                  >
+                    Select all
+                  </button>
+                </div>
+                <ul className="divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200">
+                  {openEntries.map((e) => {
+                    const ctx = resolveAdminCaseContext(e)
+                    const checked = selectedEntryIds.includes(e._id)
+                    return (
+                      <li key={e._id}>
+                        <label className="flex cursor-pointer items-start gap-3 px-3 py-3 hover:bg-slate-50">
+                          <input
+                            type="checkbox"
+                            className="mt-1"
+                            checked={checked}
+                            onChange={() => toggleEntry(e._id)}
+                          />
+                          <span className="min-w-0 flex-1">
+                            <span className="flex items-baseline justify-between gap-2">
+                              <span className="font-semibold tabular-nums text-slate-900">
+                                {formatInr(e.amount)}
+                              </span>
+                              {ctx?.id ? (
+                                <Link
+                                  to={`/admin/bookings/${ctx.id}`}
+                                  className="shrink-0 text-xs font-semibold text-teal-700 hover:underline"
+                                  onClick={(ev) => ev.stopPropagation()}
+                                >
+                                  Case →
+                                </Link>
+                              ) : null}
+                            </span>
+                            <span className="mt-0.5 block truncate text-sm text-slate-600">{caseLabel(e)}</span>
+                            {Number(e.managerCommissionAmount) > 0 ? (
+                              <span className="mt-0.5 block text-xs text-emerald-700">
+                                Manager share {formatInr(e.managerCommissionAmount)}
+                              </span>
+                            ) : null}
+                          </span>
+                        </label>
+                      </li>
+                    )
+                  })}
+                </ul>
+                <Button
+                  type="button"
+                  className="w-full sm:w-auto"
+                  disabled={busy || !selectedEntryIds.length}
+                  onClick={createBatch}
+                >
+                  Create batch ({selectedEntryIds.length})
+                </Button>
+              </div>
+            )
+          ) : null}
+
+          {activeTab === 'batches' ? (
+            visibleBatches.open.length === 0 ? (
+              <EmptyHint>
+                {selectedManagerId
+                  ? 'No open batches for this manager.'
+                  : 'No open settlement batches.'}
+              </EmptyHint>
+            ) : (
+              <ul className="space-y-2">
+                {visibleBatches.open.map((batch) => (
+                  <BatchRow
+                    key={batch._id}
+                    batch={batch}
+                    busy={busy}
+                    onOpen={() => setSelectedBatch(batch)}
+                    onSettle={() => settleBatch(batch._id)}
+                    showSettle
+                  />
+                ))}
+              </ul>
+            )
+          ) : null}
+
+          {activeTab === 'history' ? (
+            visibleBatches.settled.length === 0 ? (
+              <EmptyHint>
+                {selectedManagerId ? 'No settled batches for this manager yet.' : 'No settled batches yet.'}
+              </EmptyHint>
+            ) : (
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  <HistoryStat label="Batches" value={String(historyStats.count)} />
+                  <HistoryStat label="Cash settled" value={formatInr(historyStats.cash)} />
+                  <HistoryStat label="Manager share" value={formatInr(historyStats.commission)} />
+                  <HistoryStat label="Cases" value={String(historyStats.cases)} />
+                </div>
+
+                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                  <input
+                    type="search"
+                    placeholder="Search manager…"
+                    value={historySearch}
+                    onChange={(e) => setHistorySearch(e.target.value)}
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 shadow-sm placeholder:text-slate-400"
+                  />
+                  <input
+                    type="date"
+                    aria-label="From date"
+                    value={historyDateFrom}
+                    onChange={(e) => setHistoryDateFrom(e.target.value)}
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 shadow-sm"
+                  />
+                  <input
+                    type="date"
+                    aria-label="To date"
+                    value={historyDateTo}
+                    onChange={(e) => setHistoryDateTo(e.target.value)}
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 shadow-sm"
+                  />
+                  <select
+                    aria-label="Sort history"
+                    value={historySort}
+                    onChange={(e) => setHistorySort(e.target.value)}
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm"
+                  >
+                    <option value="newest">Newest first</option>
+                    <option value="oldest">Oldest first</option>
+                    <option value="amount-high">Amount: high → low</option>
+                    <option value="amount-low">Amount: low → high</option>
+                  </select>
+                </div>
+
+                {(historySearch || historyDateFrom || historyDateTo || historySort !== 'newest') && (
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-xs text-slate-500">
+                      Showing {historyRows.length} of {visibleBatches.settled.length}
+                    </p>
+                    <button
+                      type="button"
+                      className="text-xs font-semibold text-slate-600 hover:text-slate-900"
+                      onClick={() => {
+                        setHistorySearch('')
+                        setHistoryDateFrom('')
+                        setHistoryDateTo('')
+                        setHistorySort('newest')
+                      }}
+                    >
+                      Clear filters
+                    </button>
+                  </div>
+                )}
+
+                {historyRows.length === 0 ? (
+                  <EmptyHint>No settled batches match these filters.</EmptyHint>
+                ) : (
+                  <ul className="overflow-hidden rounded-xl border border-slate-200 divide-y divide-slate-100">
+                    {historyRows.map((batch) => (
+                      <HistoryRow
+                        key={batch._id}
+                        batch={batch}
+                        onOpen={() => setSelectedBatch(batch)}
+                      />
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )
+          ) : null}
+        </div>
+      </div>
+
+      {selectedBatch ? (
+        <BatchDetailDrawer
+          batch={selectedBatch}
+          busy={busy}
+          onClose={() => setSelectedBatch(null)}
+          onSettle={
+            selectedBatch.status === 'open' ? () => settleBatch(selectedBatch._id) : null
+          }
+        />
+      ) : null}
+    </div>
+  )
+}
+
+function EmptyHint({ children }) {
+  return (
+    <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/80 px-4 py-8 text-center text-sm text-slate-500">
+      {children}
+    </div>
+  )
+}
+
+function HistoryStat({ label, value }) {
+  return (
+    <div className="rounded-xl bg-slate-50 px-3 py-2 ring-1 ring-slate-100">
+      <p className="text-[10px] font-medium uppercase tracking-wide text-slate-500">{label}</p>
+      <p className="mt-0.5 text-sm font-semibold tabular-nums text-slate-900">{value}</p>
+    </div>
+  )
+}
+
+function HistoryRow({ batch, onOpen }) {
+  const cases = batch.entryCount ?? batch.entries?.length ?? 0
+  const settledAt = batch.settledAt || batch.distributedAt || batch.createdAt
+  return (
+    <li>
+      <button
+        type="button"
+        onClick={onOpen}
+        className="flex w-full items-center gap-3 px-3 py-3 text-left transition hover:bg-teal-50/60 sm:px-4"
+      >
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="truncate font-semibold text-slate-900">{batch.managerId?.name || 'Manager'}</p>
+            <span className="inline-flex rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-800 ring-1 ring-emerald-200">
+              Settled
+            </span>
+          </div>
+          <p className="mt-0.5 text-xs text-slate-500">
+            {formatDate(settledAt)}
+            {cases ? ` · ${cases} case${cases === 1 ? '' : 's'}` : ''}
+          </p>
+          <div className="mt-2 grid grid-cols-3 gap-2 sm:max-w-md">
+            <div>
+              <p className="text-[10px] uppercase tracking-wide text-slate-400">Cash</p>
+              <p className="text-sm font-semibold tabular-nums text-slate-900">
+                {formatInr(batch.expectedAmount)}
+              </p>
             </div>
-          </Card>
+            <div>
+              <p className="text-[10px] uppercase tracking-wide text-slate-400">Manager</p>
+              <p className="text-sm font-semibold tabular-nums text-emerald-800">
+                {formatInr(batch.commissionTotal)}
+              </p>
+            </div>
+            <div>
+              <p className="text-[10px] uppercase tracking-wide text-slate-400">Physio</p>
+              <p className="text-sm font-semibold tabular-nums text-slate-700">
+                {formatInr(batch.physioPayoutTotal)}
+              </p>
+            </div>
+          </div>
+        </div>
+        <span className="shrink-0 text-xs font-semibold text-teal-700">Details →</span>
+      </button>
+    </li>
+  )
+}
+
+function BatchRow({ batch, busy, onOpen, onSettle, showSettle, settled }) {
+  const cases = batch.entryCount ?? batch.entries?.length ?? 0
+  return (
+    <li className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+      <button
+        type="button"
+        onClick={onOpen}
+        className="flex w-full items-start justify-between gap-3 px-3 py-3 text-left transition hover:bg-slate-50 sm:px-4"
+      >
+        <div className="min-w-0">
+          <p className="font-semibold text-slate-900">
+            {batch.managerId?.name || 'Manager'}
+            <span className="mx-1.5 font-normal text-slate-300">·</span>
+            <span className="tabular-nums">{formatInr(batch.expectedAmount)}</span>
+          </p>
+          <p className="mt-0.5 text-xs text-slate-500">
+            {settled
+              ? `Settled ${formatDate(batch.settledAt || batch.distributedAt || batch.createdAt)}`
+              : `Created ${formatDate(batch.createdAt)}`}
+            {cases ? ` · ${cases} case${cases === 1 ? '' : 's'}` : ''}
+            {settled && batch.commissionTotal != null
+              ? ` · manager ${formatInr(batch.commissionTotal)}`
+              : ''}
+          </p>
+        </div>
+        <span className="shrink-0 text-xs font-semibold text-teal-700">Details →</span>
+      </button>
+      {showSettle ? (
+        <div className="border-t border-slate-100 px-3 py-2.5 sm:px-4">
+          <Button
+            type="button"
+            className="w-full sm:w-auto"
+            disabled={busy}
+            onClick={(e) => {
+              e.stopPropagation()
+              onSettle?.()
+            }}
+          >
+            Mark settled
+          </Button>
         </div>
       ) : null}
+    </li>
+  )
+}
+
+function BatchDetailDrawer({ batch, busy, onClose, onSettle }) {
+  const entries = batch.entries || []
+  const isOpen = batch.status === 'open'
+  const preview = batch.distributionPreview
+
+  return (
+    <div className="fixed inset-0 z-40 flex justify-end bg-black/30" role="presentation" onClick={onClose}>
+      <div
+        className="flex h-full w-full max-w-lg flex-col border-l border-slate-200 bg-white shadow-xl"
+        role="dialog"
+        aria-modal
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-4 py-4 sm:px-5">
+          <div className="min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Settlement batch</p>
+            <h2 className="mt-0.5 text-lg font-semibold text-slate-900">
+              {batch.managerId?.name || 'Manager'}
+            </h2>
+            <p className="text-sm tabular-nums text-slate-600">{formatInr(batch.expectedAmount)}</p>
+          </div>
+          <button
+            type="button"
+            className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100"
+            onClick={onClose}
+            aria-label="Close"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4 sm:px-5">
+          <div className="flex flex-wrap gap-2">
+            <span
+              className={`rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ring-1 ${
+                isOpen
+                  ? 'bg-amber-50 text-amber-900 ring-amber-200'
+                  : 'bg-emerald-50 text-emerald-900 ring-emerald-200'
+              }`}
+            >
+              {isOpen ? 'Open' : 'Settled'}
+            </span>
+            <span className="rounded-full bg-slate-50 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-600 ring-1 ring-slate-200">
+              {entries.length || batch.entryCount || 0} cases
+            </span>
+          </div>
+
+          <dl className="grid grid-cols-2 gap-2 text-sm">
+            <div className="rounded-xl border border-slate-100 px-3 py-2">
+              <dt className="text-xs text-slate-500">Created</dt>
+              <dd className="mt-0.5 font-medium text-slate-900">{formatDate(batch.createdAt)}</dd>
+            </div>
+            <div className="rounded-xl border border-slate-100 px-3 py-2">
+              <dt className="text-xs text-slate-500">{isOpen ? 'Status' : 'Settled'}</dt>
+              <dd className="mt-0.5 font-medium text-slate-900">
+                {isOpen ? 'Awaiting hand-off' : formatDate(batch.settledAt || batch.distributedAt)}
+              </dd>
+            </div>
+          </dl>
+
+          {isOpen && preview ? (
+            <div className="rounded-xl bg-slate-50 px-3 py-2.5 text-xs text-slate-700 ring-1 ring-slate-200">
+              On settle: physio {formatInr(preview.physioTotal)} · manager {formatInr(preview.managerTotal)} ·
+              platform {formatInr(preview.platformTotal)}
+            </div>
+          ) : null}
+
+          {!isOpen ? (
+            <div className="rounded-xl bg-emerald-50 px-3 py-2.5 text-xs text-emerald-900 ring-1 ring-emerald-100">
+              Distributed: physio {formatInr(batch.physioPayoutTotal)} · manager{' '}
+              {formatInr(batch.commissionTotal)}
+            </div>
+          ) : null}
+
+          <div>
+            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Cases</h3>
+            {entries.length === 0 ? (
+              <p className="text-sm text-slate-500">No case details on this batch.</p>
+            ) : (
+              <ul className="divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200">
+                {entries.map((e) => {
+                  const ctx = resolveAdminCaseContext(e)
+                  return (
+                    <li key={e._id} className="flex items-start justify-between gap-2 px-3 py-2.5">
+                      <div className="min-w-0">
+                        <p className="font-semibold tabular-nums text-slate-900">{formatInr(e.amount)}</p>
+                        <p className="truncate text-sm text-slate-600">{caseLabel(e)}</p>
+                      </div>
+                      {ctx?.id ? (
+                        <Link
+                          to={`/admin/bookings/${ctx.id}`}
+                          className="shrink-0 text-xs font-semibold text-teal-700 hover:underline"
+                        >
+                          Open →
+                        </Link>
+                      ) : null}
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
+          </div>
+        </div>
+
+        {onSettle ? (
+          <div className="border-t border-slate-100 px-4 py-3 sm:px-5">
+            <Button type="button" className="w-full" disabled={busy} onClick={onSettle}>
+              Mark settled
+            </Button>
+          </div>
+        ) : null}
+      </div>
     </div>
   )
 }

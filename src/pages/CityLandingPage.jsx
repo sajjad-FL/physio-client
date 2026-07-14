@@ -18,23 +18,23 @@ function buildFaq(city) {
   return [
     {
       q: `How do I book a physiotherapist near me in ${city.name}?`,
-      a: `Open PhysiOkhom, pick your slot and share your address in ${city.name}. We match you with a verified physiotherapist who does home visits in your locality and confirm the appointment after payment.`,
+      a: `Open PhysiOkhom, pick a date and slot, and share your address in ${city.name}. A Care Manager is assigned for a complimentary home assessment and care plan. After you consent, a verified physiotherapist is assigned for your treatment visits.`,
     },
     {
       q: `Do you cover all areas of ${city.name}?`,
-      a: `We actively serve most major neighborhoods including ${city.neighborhoods.slice(0, 5).join(', ')}${city.neighborhoods.length > 5 ? ' and more' : ''}. If you are searching for a physiotherapist in ${city.name}, ${city.state}, share your exact address and we assign the nearest available clinician.`,
+      a: `We actively serve most major neighborhoods including ${city.neighborhoods.slice(0, 5).join(', ')}${city.neighborhoods.length > 5 ? ' and more' : ''}. If you are searching for a physiotherapist in ${city.name}, ${city.state}, share your exact address when you book so we can schedule Care Manager and therapy visits in your locality.`,
     },
     {
       q: `How much does a home visit physiotherapist cost in ${city.name}?`,
-      a: `Fees vary by physiotherapist, experience level, and session length. You see the per-session price before you confirm the booking — no hidden charges and secure online payment.`,
+      a: `Fees vary by care plan and session type. You see pricing on your plan before treatment starts. Pay session fees to your Care Manager in cash or via PhonePe — no online payment required at booking.`,
     },
     {
       q: `Are the physiotherapists in ${city.name} verified?`,
-      a: `Yes. Every clinician marked as verified has completed our platform checks, including qualification and ID verification. You can read reviews on each physiotherapist's public profile before you book.`,
+      a: `Yes. Every clinician marked as verified has completed our platform checks, including qualification and ID verification. Your Care Manager assigns a suitable physiotherapist after your care plan is live.`,
     },
     {
       q: `Can I get a physiotherapist at home the same day in ${city.name}?`,
-      a: `Same-day or next-day home visits are often available depending on slot availability in your area. Check open slots in your preferred ${city.name} neighborhood after logging in.`,
+      a: `Same-day or next-day Care Manager assessment slots are often available depending on availability in your area. Check open slots in your preferred ${city.name} neighborhood after logging in. Treatment visits follow once your plan is consented.`,
     },
   ]
 }
@@ -174,7 +174,7 @@ export default function CityLandingPage() {
                 Physiotherapist in {city.name} — home visit physiotherapist near you
               </h1>
               <p className="mt-6 max-w-2xl text-lg leading-relaxed text-slate-500">
-                {city.tagline} PhysiOkhom matches you with a licensed, verified physiotherapist who does home visits in {city.name}, {city.state}, for back pain, knee pain, post-surgery rehab, stroke recovery and more.
+                {city.tagline} PhysiOkhom provides Care Manager–led home care in {city.name}, {city.state} — complimentary assessment, a clear care plan, then verified physiotherapists for treatment visits for back pain, knee pain, post-surgery rehab, stroke recovery and more.
               </p>
               <p className="mt-3 max-w-2xl text-base leading-relaxed text-slate-600">{cityIntro}</p>
               <div className="mt-10 flex flex-wrap gap-3">
@@ -329,8 +329,7 @@ export default function CityLandingPage() {
               Book a physiotherapist at home in {city.name}
             </h2>
             <p className="mx-auto mt-4 max-w-lg text-lg leading-relaxed text-slate-500">
-              Pick a slot, share your {city.name} address, and pay online to confirm. Your verified physiotherapist will arrive
-              at your door.
+              Pick a slot and share your {city.name} address. A Care Manager visits for a complimentary assessment, you consent to the care plan, then a verified physiotherapist treats you at home. Pay sessions in cash or PhonePe.
             </p>
             <div className="mt-10">
               <Link

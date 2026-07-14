@@ -5,6 +5,7 @@ import ProfileDropdown from './ProfileDropdown'
 
 /**
  * Sticky marketing / public header: logo, primary nav, account menu.
+ * Mobile guests always see Log in + Register in the top bar (not only inside the menu).
  */
 export default function SiteHeader() {
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -17,7 +18,7 @@ export default function SiteHeader() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/85 shadow-sm backdrop-blur-md">
-      <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3.5 sm:px-6 lg:px-8">
+      <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3.5 sm:gap-4 sm:px-6 lg:px-8">
         <Link
           to="/"
           className="flex min-w-0 items-center gap-2.5 text-[15px] font-semibold tracking-tight text-slate-900 transition-opacity duration-200 hover:opacity-85"
@@ -31,7 +32,29 @@ export default function SiteHeader() {
           <span className="truncate">PhysiOkhom</span>
         </Link>
 
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
+          {/* Guest CTAs — always visible on mobile (first-time visitors) */}
+          {!token ? (
+            <div className="flex items-center gap-1.5 md:hidden">
+              <Link
+                to="/login"
+                className="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-800 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+              >
+                Log in
+              </Link>
+              <Link
+                to="/register"
+                className="inline-flex h-9 items-center justify-center rounded-xl bg-teal-600 px-3 text-sm font-semibold text-white shadow-sm shadow-teal-600/20 transition hover:bg-teal-700"
+              >
+                Register
+              </Link>
+            </div>
+          ) : (
+            <div className="md:hidden">
+              <ProfileDropdown variant="compact" />
+            </div>
+          )}
+
           <button
             type="button"
             onClick={() => setMobileOpen((v) => !v)}
@@ -82,10 +105,27 @@ export default function SiteHeader() {
           </nav>
 
           <div className="hidden items-center gap-2 md:flex">
-            <ProfileDropdown />
+            {!token ? (
+              <>
+                <Link
+                  to="/login"
+                  className="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-800 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+                >
+                  Log in
+                </Link>
+                <Link
+                  to="/register"
+                  className="inline-flex h-9 items-center justify-center rounded-xl bg-teal-600 px-4 text-sm font-semibold text-white shadow-sm shadow-teal-600/20 transition hover:bg-teal-700"
+                >
+                  Register
+                </Link>
+              </>
+            ) : (
+              <ProfileDropdown />
+            )}
             <Link
               to="/book"
-              className="interactive-press inline-flex h-9 items-center rounded-xl bg-teal-600 px-4 text-sm font-semibold text-white shadow-sm shadow-teal-600/20 transition-colors hover:bg-teal-700"
+              className="interactive-press inline-flex h-9 items-center rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-slate-800"
             >
               Book appointment
             </Link>
@@ -112,26 +152,35 @@ export default function SiteHeader() {
               Near me
             </Link>
             <Link to="/book" className={linkClass} onClick={() => setMobileOpen(false)}>
-              Book
+              Book appointment
             </Link>
-            {!token && (
-              <Link to="/register" className={linkClass} onClick={() => setMobileOpen(false)}>
-                Register
-              </Link>
-            )}
-            {token && (
+            {token ? (
               <Link to={getDefaultDashboardPath()} className={linkClass} onClick={() => setMobileOpen(false)}>
                 Dashboard
               </Link>
+            ) : (
+              <div className="mt-2 grid grid-cols-2 gap-2 border-t border-slate-100 pt-3">
+                <Link
+                  to="/login"
+                  onClick={() => setMobileOpen(false)}
+                  className="inline-flex h-11 items-center justify-center rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-800 shadow-sm"
+                >
+                  Log in
+                </Link>
+                <Link
+                  to="/register"
+                  onClick={() => setMobileOpen(false)}
+                  className="inline-flex h-11 items-center justify-center rounded-xl bg-teal-600 text-sm font-semibold text-white shadow-sm"
+                >
+                  Register
+                </Link>
+              </div>
             )}
             {isAdmin && (
               <Link to="/admin" className={linkClass} onClick={() => setMobileOpen(false)}>
                 Admin
               </Link>
             )}
-            <div className="pt-2">
-              <ProfileDropdown variant="compact" className="w-full [&>button]:w-full [&>button]:justify-between" />
-            </div>
           </div>
         </div>
       )}

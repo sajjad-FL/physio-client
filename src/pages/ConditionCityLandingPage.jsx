@@ -11,16 +11,16 @@ function buildFaq(city, condition) {
   return [
     {
       q: `Where can I get ${lc} physiotherapy at home in ${city.name}?`,
-      a: `PhysiOkhom matches you with a verified physiotherapist who does home visits across ${city.name}, ${city.state}, including ${city.neighborhoods.slice(0, 4).join(', ')} and nearby areas. Pick a slot, share your address, and a clinician comes to your door.`,
+      a: `Book a home visit on PhysiOkhom across ${city.name}, ${city.state}, including ${city.neighborhoods.slice(0, 4).join(', ')} and nearby areas. A Care Manager does a complimentary assessment and care plan; after you consent, a verified physiotherapist is assigned for ${lc} treatment at home.`,
     },
     ...condition.faq,
     {
       q: `Are the physiotherapists treating ${lc} in ${city.name} verified?`,
-      a: `Yes. Every clinician marked as verified has completed our platform checks, including qualification and ID verification. You can read reviews on each physiotherapist's public profile before you book.`,
+      a: `Yes. Every clinician marked as verified has completed our platform checks, including qualification and ID verification. Your Care Manager assigns a suitable physiotherapist after your care plan is live.`,
     },
     {
       q: `How much does ${lc} home physiotherapy cost in ${city.name}?`,
-      a: `Fees vary by physiotherapist, experience level and session length. You see the per-session price before you confirm the booking — no hidden charges and secure online payment.`,
+      a: `Fees vary by care plan and session type. You see pricing on your plan before treatment starts. Pay session fees to your Care Manager in cash or via PhonePe — no online payment required at booking.`,
     },
   ]
 }
@@ -170,8 +170,8 @@ export default function ConditionCityLandingPage() {
               </h1>
               <p className="mt-6 max-w-2xl text-lg leading-relaxed text-slate-500">{condition.intro}</p>
               <p className="mt-3 max-w-2xl text-base leading-relaxed text-slate-600">
-                PhysiOkhom matches you with a licensed, verified physiotherapist who treats {lc} at
-                home across {city.name}, {city.state}.
+                PhysiOkhom provides Care Manager–led home care for {lc} across {city.name},{' '}
+                {city.state} — assessment and plan first, then a verified physiotherapist for treatment visits.
               </p>
               <div className="mt-10 flex flex-wrap gap-3">
                 <Link
@@ -259,8 +259,8 @@ export default function ConditionCityLandingPage() {
           <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
             <h2 className="type-page-title">{condition.name} physiotherapy across {city.name}</h2>
             <p className="mt-4 max-w-2xl text-lg leading-relaxed text-slate-500">
-              Our physiotherapists visit homes throughout {city.name}. Share your address when you
-              book and we assign the closest available clinician.
+              Care Managers and physiotherapists visit homes throughout {city.name}. Share your
+              address when you book so we can schedule assessment and treatment visits in your locality.
             </p>
             <ul className="mt-8 flex flex-wrap gap-2.5">
               {city.neighborhoods.map((n) => (
@@ -341,8 +341,7 @@ export default function ConditionCityLandingPage() {
           <div className="mx-auto max-w-6xl px-4 text-center sm:px-6 lg:px-8">
             <h2 className="type-page-title">Book {lc} physiotherapy at home in {city.name}</h2>
             <p className="mx-auto mt-4 max-w-lg text-lg leading-relaxed text-slate-500">
-              Pick a slot, share your {city.name} address, and pay online to confirm. Your verified
-              physiotherapist will arrive at your door.
+              Pick a slot and share your {city.name} address. A Care Manager visits for a complimentary assessment, you consent to the care plan, then a verified physiotherapist treats you at home. Pay sessions in cash or PhonePe.
             </p>
             <div className="mt-10">
               <Link
