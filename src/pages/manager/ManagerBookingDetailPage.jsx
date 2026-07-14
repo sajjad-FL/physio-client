@@ -9,6 +9,7 @@ import InstallmentsCard from '../../components/payments/InstallmentsCard'
 import RecordCollectionModal from '../../components/payments/RecordCollectionModal'
 import BookingSessionTimeline from '../../components/bookings/BookingSessionTimeline'
 import RescheduleModal from '../../components/physio/RescheduleModal'
+import { hasComplimentaryAssessmentVisit } from '../../components/physio/physioBookingHelpers'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import { resolveFileUrl } from '../../utils/serverOrigin'
@@ -431,6 +432,51 @@ export default function ManagerBookingDetailPage() {
   } = pageCtx
 
   const activeStepMeta = steps.find((s) => s.id === openStep)
+  const canRescheduleBooking =
+    Boolean(b) && b.sessionStatus !== 'completed' && Boolean(b.date) && Boolean(b.timeSlot)
+  const assessmentStillOpen =
+    hasComplimentaryAssessmentVisit(b) && !b.assessmentCompletedAt
+
+  function openPrimaryReschedule() {
+    const hasSchedule = Array.isArray(b.schedule) && b.schedule.length > 0
+    if (assessmentStillOpen) {
+      setRescheduleRow({
+        key: `${b._id}-assessment-reschedule`,
+        sessionId: null,
+        date: b.date,
+        time: b.timeSlot,
+        n: null,
+        label: 'Assessment visit',
+        complimentary: true,
+      })
+      return
+    }
+    if (hasSchedule) {
+      const idx = b.schedule.findIndex(
+        (s) => s.status !== 'completed' && s.status !== 'no_show',
+      )
+      const i = idx >= 0 ? idx : 0
+      const next = b.schedule[i]
+      setRescheduleRow({
+        key: `${b._id}-s-${i}-reschedule`,
+        sessionId: next?._id != null ? String(next._id) : null,
+        date: next?.date || b.date,
+        time: next?.time || b.timeSlot,
+        n: i + 1,
+        complimentary: false,
+      })
+      return
+    }
+    setRescheduleRow({
+      key: `${b._id}-primary-reschedule`,
+      sessionId: null,
+      date: b.date,
+      time: b.timeSlot,
+      n: 1,
+      label: 'Visit',
+      complimentary: false,
+    })
+  }
 
   return (
     <div className="min-w-0 max-w-full space-y-3 overflow-x-hidden sm:space-y-4">
@@ -446,10 +492,21 @@ export default function ManagerBookingDetailPage() {
               <p className="mt-1 font-mono text-xs font-semibold text-slate-500">{bookingCodeBadge(b)}</p>
             ) : null}
             <p className="mt-0.5 text-sm text-slate-600">{b.issue}</p>
-            <p className="mt-2 text-sm text-slate-500">
-              {formatBookingDateAndSlot(b.date, b.timeSlot)}
-              {b.userId?.location ? ` · ${b.userId.location}` : ''}
-            </p>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <p className="text-sm text-slate-500">
+                {formatBookingDateAndSlot(b.date, b.timeSlot)}
+                {b.userId?.location ? ` · ${b.userId.location}` : ''}
+              </p>
+              {canRescheduleBooking ? (
+                <button
+                  type="button"
+                  onClick={openPrimaryReschedule}
+                  className="rounded-lg border border-blue-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-blue-800 hover:bg-blue-50"
+                >
+                  Reschedule
+                </button>
+              ) : null}
+            </div>
           </div>
           <span
             className={`inline-flex shrink-0 rounded-full px-3 py-1 text-xs font-semibold ring-1 ${badgeToneClass(
@@ -492,6 +549,21 @@ export default function ManagerBookingDetailPage() {
               Visit on <span className="font-medium">{formatBookingDateAndSlot(b.date, b.timeSlot)}</span> is
               complimentary. Capture baseline scores, then move to step 2.
             </p>
+            <div className="rounded-xl border border-slate-200 bg-slate-50/40 p-4">
+              <h3 className="text-sm font-semibold text-slate-900">Assessment visit</h3>
+              <p className="mt-0.5 text-xs text-slate-500">Change the date or time if the patient needs another slot.</p>
+              <div className="mt-3">
+                <BookingSessionTimeline
+                  booking={b}
+                  notesViewer={{ enabled: true }}
+                  reschedule={{
+                    enabled: true,
+                    includeComplimentary: true,
+                    onReschedule: (row) => setRescheduleRow(row),
+                  }}
+                />
+              </div>
+            </div>
             <StructuredAssessmentForm value={assessmentData} onChange={setAssessmentData} />
             <Button type="button" disabled={busy || Boolean(validateAssessmentData(assessmentData))} onClick={saveAssessment}>
               {pageCtx.assessmentDone ? 'Save changes' : 'Save & continue'}
@@ -614,7 +686,7 @@ export default function ManagerBookingDetailPage() {
               <div className="rounded-xl border border-slate-200 bg-slate-50/40 p-4">
                 <h3 className="text-sm font-semibold text-slate-900">Visit schedule</h3>
                 <p className="mt-0.5 text-xs text-slate-500">
-                  Sessions and notes from the physiotherapist — tap View details on a row.
+                  Sessions and notes from the physiotherapist — tap Reschedule to change a visit time.
                 </p>
                 <div className="mt-3">
                   <BookingSessionTimeline
@@ -623,6 +695,7 @@ export default function ManagerBookingDetailPage() {
                     notesViewer={{ enabled: true }}
                     reschedule={{
                       enabled: true,
+                      includeComplimentary: true,
                       onReschedule: (row) => setRescheduleRow(row),
                     }}
                     adminSessions={{

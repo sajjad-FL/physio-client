@@ -6,6 +6,7 @@ import DragSelectCalendar from './DragSelectCalendar'
 import { formatPhysioSessionFeeLabel } from '../../utils/physioSessionFee.js'
 import { paymentAmountLabel } from '../../utils/bookingDisplay.js'
 import { usePricingSettings } from '../../hooks/usePricingSettings'
+import FieldLabel, { RequiredMark } from '../ui/FieldLabel'
 
 function round2(n) {
   return Math.round((Number(n) + Number.EPSILON) * 100) / 100
@@ -102,7 +103,7 @@ const fieldInput =
  * @param {object} props
  * @param {object} props.booking — booking row with timeSlot, physioId
  * @param {boolean} props.busy
- * @param {boolean} [props.allowCustomFee] — manager flow: patient price is editable (≥ physio rate + manager commission) instead of locked to the physio rate
+ * @param {boolean} [props.allowCustomFee] — manager flow: patient price locked to admin Defaults (not editable)
  * @param {string} [props.submitLabel] — override submit button label
  * @param {boolean} [props.embedded] — nested inside another panel (manager case detail); lighter padding, no double card chrome
  * @param {(payload: { sessions: number, amountPerSession: number, discountPercent: number, billingType: 'full'|'installment', paymentMode: 'online'|'offline', schedule: { date: string, time: string }[] }) => void} props.onSubmit
@@ -145,14 +146,37 @@ export default function HomePlanForm({
   const physio = booking?.physioId
   const feeLo = Number(physio?.pricePerSession)
   const hasPhysioRate = Number.isFinite(feeLo) && feeLo > 0
-  /** Physio flow: fee locked to own rate. Manager flow (allowCustomFee): editable with a floor. */
-  const fixedFee = hasPhysioRate && !allowCustomFee
+  /** Admin Defaults → patient total per session (manager cannot edit). */
+  const adminSessionTotal = (() => {
+    const fromSplit = Number(pricingSettings.defaultSessionPricing?.totalAmount)
+    if (Number.isFinite(fromSplit) && fromSplit > 0) return round2(fromSplit)
+    const fallback = Number(pricingSettings.defaultBookingAmountRupees)
+    return Number.isFinite(fallback) && fallback > 0 ? round2(fallback) : 0
+  })()
+  /** Physio flow: fee locked to own rate. Manager flow: fee locked to admin Defaults. */
+  const fixedFee = allowCustomFee
+    ? adminSessionTotal > 0
+    : hasPhysioRate
   const managerCommission = allowCustomFee
-    ? Number(pricingSettings.managerCommissionPerSessionRupees) || 0
+    ? Number(
+        pricingSettings.defaultSessionPricing?.withManager?.manager ??
+          pricingSettings.managerCommissionPerSessionRupees,
+      ) || 0
     : 0
-  const minFee = allowCustomFee && hasPhysioRate ? round2(feeLo + managerCommission) : null
-  const defaultAmount =
-    minFee != null ? String(minFee) : hasPhysioRate ? String(feeLo) : ''
+  const adminPhysioShare = allowCustomFee
+    ? Number(
+        pricingSettings.defaultSessionPricing?.withManager?.physio ??
+          pricingSettings.defaultPhysioPricePerSession,
+      ) || 0
+    : 0
+  const minFee = null
+  const defaultAmount = allowCustomFee
+    ? adminSessionTotal > 0
+      ? String(adminSessionTotal)
+      : ''
+    : hasPhysioRate
+      ? String(feeLo)
+      : ''
   const assessmentDateForBlock = useMemo(() => {
     if (!allowCustomFee || !booking?.date) return null
     return parseYmdLocalDate(booking.date)
@@ -268,7 +292,11 @@ export default function HomePlanForm({
 
   const dateMismatch = selectedDates.length !== Number(sessions)
   const amt = Number(amountPerSession)
-  const feeOk = fixedFee ? amt === feeLo : minFee == null || amt >= minFee
+  const feeOk = allowCustomFee
+    ? Number.isFinite(amt) && adminSessionTotal > 0 && amt === adminSessionTotal
+    : fixedFee
+      ? amt === feeLo
+      : true
   const canSubmit =
     allowedSessionCounts.includes(Number(sessions)) &&
     Number(amountPerSession) > 0 &&
@@ -277,6 +305,11 @@ export default function HomePlanForm({
     totals.patientPays > 0 &&
     !busy
 
+  useEffect(() => {
+    if (!allowCustomFee || !(adminSessionTotal > 0)) return
+    setAmountPerSession(String(adminSessionTotal))
+  }, [allowCustomFee, adminSessionTotal])
+
   function handleSubmit(e) {
     e.preventDefault()
     if (!canSubmit) return
@@ -284,7 +317,7 @@ export default function HomePlanForm({
     const schedule = sorted.map((d) => ({ date: toYMD(d), time: sessionTime }))
     onSubmit({
       sessions: Number(sessions),
-      amountPerSession: Number(amountPerSession),
+      amountPerSession: allowCustomFee ? adminSessionTotal : Number(amountPerSession),
       discountPercent: totals.discountPct,
       billingType,
       paymentMode,
@@ -314,7 +347,9 @@ export default function HomePlanForm({
           {!embedded ? <h3 className="text-sm font-semibold text-gray-900">Plan details</h3> : null}
           <div className={`grid min-w-0 ${embedded ? 'gap-4' : 'gap-5'}`}>
             <div>
-              <label className={fieldLabel}>Number of sessions</label>
+              <FieldLabel required className={fieldLabel}>
+                Number of sessions
+              </FieldLabel>
               <select
                 value={sessions}
                 onChange={(e) => handleSessionsChange(e.target.value)}
@@ -333,7 +368,9 @@ export default function HomePlanForm({
             </div>
 
             <div>
-              <p className={`${fieldLabel} mb-3`}>Payment type</p>
+              <FieldLabel required className={`${fieldLabel} mb-3`}>
+                Payment type
+              </FieldLabel>
               <div className="flex flex-col gap-2.5 sm:flex-row sm:gap-3">
                 <label className="flex min-w-0 flex-1 cursor-pointer items-start gap-2.5 rounded-xl border border-gray-200 bg-white px-3 py-2.5 shadow-sm transition-all duration-200 hover:border-blue-200 sm:items-center sm:gap-3 sm:px-4 sm:py-3 has-[:checked]:border-blue-500 has-[:checked]:ring-2 has-[:checked]:ring-blue-500/20">
                   <input
@@ -365,7 +402,9 @@ export default function HomePlanForm({
             </div>
 
             <div>
-              <p className={`${fieldLabel} mb-3`}>Payment mode</p>
+              <FieldLabel required className={`${fieldLabel} mb-3`}>
+                Payment mode
+              </FieldLabel>
               <div className="flex flex-col gap-2.5 sm:flex-row sm:gap-3">
                 <label className="flex min-w-0 flex-1 cursor-pointer items-start gap-2.5 rounded-xl border border-gray-200 bg-white px-3 py-2.5 shadow-sm transition-all duration-200 hover:border-blue-200 sm:items-center sm:gap-3 sm:px-4 sm:py-3 has-[:checked]:border-blue-500 has-[:checked]:ring-2 has-[:checked]:ring-blue-500/20">
                   <input
@@ -398,8 +437,21 @@ export default function HomePlanForm({
 
             <div className={embedded ? 'space-y-4' : 'grid gap-5 sm:grid-cols-2'}>
               <div>
-                <label className={fieldLabel}>Amount per session (₹)</label>
-                {physio && fixedFee ? (
+                <FieldLabel required className={fieldLabel}>
+                  Amount per session (₹)
+                </FieldLabel>
+                {allowCustomFee && fixedFee ? (
+                  <p className="mb-2 text-xs text-gray-600">
+                    Set by admin (Pricing → Defaults) — ₹{adminSessionTotal}/session
+                    {adminPhysioShare > 0 || managerCommission > 0
+                      ? ` (physio ₹${adminPhysioShare}` +
+                        (managerCommission > 0 ? ` · manager ₹${managerCommission}` : '') +
+                        ')'
+                      : ''}
+                    . Managers cannot change the patient price.
+                  </p>
+                ) : null}
+                {physio && fixedFee && !allowCustomFee ? (
                   <p className="mb-2 text-xs text-gray-600">
                     Fixed session rate: {formatPhysioSessionFeeLabel(physio)}
                     {perVisitTravel > 0 ? (
@@ -412,17 +464,6 @@ export default function HomePlanForm({
                     )}
                   </p>
                 ) : null}
-                {!fixedFee && allowCustomFee ? (
-                  <p className="mb-2 text-xs text-gray-600">
-                    {minFee != null
-                      ? `Patient price per session — at least ₹${minFee} (physiotherapist rate ₹${feeLo}` +
-                        (managerCommission > 0 ? ` + manager commission ₹${managerCommission}` : '') +
-                        ').'
-                      : 'Patient price per session. When you assign a physiotherapist later, this must cover their rate' +
-                        (managerCommission > 0 ? ` plus the ₹${managerCommission} manager commission` : '') +
-                        '.'}
-                  </p>
-                ) : null}
                 {!fixedFee && perVisitTravel > 0 ? (
                   <p className="mb-2 text-xs text-gray-600">
                     Assignment distance surcharge ₹{perVisitTravel.toFixed(2)} per home visit is added to each
@@ -431,27 +472,39 @@ export default function HomePlanForm({
                 ) : null}
                 <input
                   type="number"
-                  min={fixedFee ? feeLo : minFee ?? 1}
-                  max={fixedFee ? round2(feeLo + perVisitTravel) : undefined}
+                  min={fixedFee ? (allowCustomFee ? adminSessionTotal : feeLo) : 1}
+                  max={
+                    fixedFee
+                      ? allowCustomFee
+                        ? adminSessionTotal
+                        : round2(feeLo + perVisitTravel)
+                      : undefined
+                  }
                   step={1}
-                  value={fixedFee ? String(round2(feeLo + perVisitTravel)) : amountPerSession}
+                  value={
+                    fixedFee
+                      ? String(allowCustomFee ? adminSessionTotal : round2(feeLo + perVisitTravel))
+                      : amountPerSession
+                  }
                   onChange={(e) => setAmountPerSession(e.target.value)}
-                  placeholder={fixedFee ? String(feeLo) : minFee != null ? String(minFee) : 'e.g. 800'}
+                  placeholder={
+                    fixedFee
+                      ? String(allowCustomFee ? adminSessionTotal : feeLo)
+                      : 'e.g. 800'
+                  }
                   readOnly={fixedFee}
                   className={`${fieldInput}${fixedFee ? ' cursor-not-allowed bg-gray-50 text-gray-700' : ''}`}
                 />
                 {fixedFee && Number.isFinite(amt) && !feeOk ? (
-                  <p className="mt-1 text-xs text-red-600">Per-session amount must match your fixed rate of ₹{feeLo}.</p>
-                ) : null}
-                {!fixedFee && minFee != null && Number.isFinite(amt) && amt > 0 && !feeOk ? (
                   <p className="mt-1 text-xs text-red-600">
-                    Must be at least ₹{minFee} to cover the physiotherapist rate
-                    {managerCommission > 0 ? ' and manager commission' : ''}.
+                    {allowCustomFee
+                      ? `Per-session amount must be the admin price of ₹${adminSessionTotal}.`
+                      : `Per-session amount must match your fixed rate of ₹${feeLo}.`}
                   </p>
                 ) : null}
               </div>
               <div>
-                <label className={fieldLabel}>Discount (max {maxDiscountPercent}%)</label>
+                <FieldLabel className={fieldLabel}>Discount (max {maxDiscountPercent}%)</FieldLabel>
                 <input
                   type="number"
                   min={0}
@@ -470,7 +523,9 @@ export default function HomePlanForm({
             </div>
 
             <div>
-              <label className={fieldLabel}>Session time (each visit)</label>
+              <FieldLabel required className={fieldLabel}>
+                Session time (each visit)
+              </FieldLabel>
               <select
                 value={sessionTime}
                 onChange={(e) => setSessionTime(e.target.value)}
@@ -488,7 +543,10 @@ export default function HomePlanForm({
 
         <div className={`min-w-0 space-y-4 ${embedded ? 'border-t border-slate-200/80 pt-5' : ''}`}>
           <div>
-            <h3 className="text-sm font-semibold text-gray-900">Treatment session dates</h3>
+            <h3 className="text-sm font-semibold text-gray-900">
+              Treatment session dates
+              <RequiredMark />
+            </h3>
             <p className="mt-1 text-xs text-gray-500">
               Pick {sessions} treatment date{sessions === 1 ? '' : 's'} — click or drag on the calendar.
             </p>

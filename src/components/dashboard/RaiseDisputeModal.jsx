@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { api } from '../../config/api'
 import toast from 'react-hot-toast'
 import { formatBookingDateAndSlot } from '../../utils/date'
+import FieldLabel from '../ui/FieldLabel'
 
 const REASONS = ['Service quality', 'Late / no-show', 'Billing or payment', 'Safety concern', 'Other']
 
@@ -60,7 +61,9 @@ export default function RaiseDisputeModal({ booking, onClose, onCreated }) {
         </p>
         <form onSubmit={submit} className="mt-6 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-ink">Reason</label>
+            <FieldLabel required={true} className="block text-sm font-medium text-ink">
+              Reason
+            </FieldLabel>
             <select
               value={reason}
               onChange={(e) => setReason(e.target.value)}
@@ -82,7 +85,9 @@ export default function RaiseDisputeModal({ booking, onClose, onCreated }) {
             )}
           </div>
           <div>
-            <label className="block text-sm font-medium text-ink">Description</label>
+            <FieldLabel required={true} className="block text-sm font-medium text-ink">
+              Description
+            </FieldLabel>
             <textarea
               required
               rows={4}

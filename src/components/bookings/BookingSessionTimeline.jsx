@@ -22,7 +22,7 @@ function statusLabel(status) {
 /**
  * @param {{
  *   booking: object,
- *   reschedule?: { enabled: boolean, onReschedule: (row) => void },
+ *   reschedule?: { enabled: boolean, onReschedule: (row) => void, includeComplimentary?: boolean },
  *   adminSessions?: {
  *     enabled: boolean,
  *     onAdd?: () => void,
@@ -105,7 +105,11 @@ export default function BookingSessionTimeline({
           const rowDone = r.status === 'completed'
           const rowNoShow = r.status === 'no_show'
           const showReschedule = Boolean(
-            reschedule?.enabled && reschedule?.onReschedule && !rowDone && !rowNoShow && !isComplimentary,
+            reschedule?.enabled &&
+              reschedule?.onReschedule &&
+              !rowDone &&
+              !rowNoShow &&
+              (!isComplimentary || reschedule?.includeComplimentary),
           )
 
           let rowCls =

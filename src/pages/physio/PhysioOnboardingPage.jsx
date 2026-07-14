@@ -23,6 +23,7 @@ import { ID_PROOF_TYPE_OPTIONS } from '../../constants/idProofTypes.js'
 import { MAX_UPLOAD_SIZE_LABEL } from '../../constants/uploadLimits.js'
 import { formatPhysioDisplayName, stripPhysioNameAffixes } from '../../utils/physioDisplayName.js'
 import { prepareUploadFile } from '../../utils/compressImage.js'
+import FieldLabel from '../../components/ui/FieldLabel'
 import toast from 'react-hot-toast'
 
 const baseInputClass =
@@ -593,9 +594,9 @@ export default function PhysioOnboardingPage() {
           <h2 className="type-page-title text-ink">Basic info</h2>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <div className="sm:col-span-2">
-              <label className="mb-1 block text-xs font-medium text-ink-muted" htmlFor="ob-name">
+              <FieldLabel htmlFor="ob-name" required className="mb-1 block text-xs font-medium text-ink-muted">
                 Full name
-              </label>
+              </FieldLabel>
               <AffixInput
                 id="ob-name"
                 error={Boolean(fieldErrors.name)}
@@ -612,9 +613,9 @@ export default function PhysioOnboardingPage() {
               {fieldErrors.name ? <p className="mt-1 text-xs text-red-600">{fieldErrors.name}</p> : null}
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-ink-muted" htmlFor="ob-email">
+              <FieldLabel htmlFor="ob-email" required className="mb-1 block text-xs font-medium text-ink-muted">
                 Email
-              </label>
+              </FieldLabel>
               <input
                 id="ob-email"
                 className={inputClass('email')}
@@ -631,9 +632,9 @@ export default function PhysioOnboardingPage() {
               {fieldErrors.email ? <p className="mt-1 text-xs text-red-600">{fieldErrors.email}</p> : null}
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-ink-muted" htmlFor="ob-dob">
+              <FieldLabel htmlFor="ob-dob" required className="mb-1 block text-xs font-medium text-ink-muted">
                 Date of birth
-              </label>
+              </FieldLabel>
               <input
                 id="ob-dob"
                 className={inputClass('dob')}
@@ -649,9 +650,9 @@ export default function PhysioOnboardingPage() {
               {fieldErrors.dob ? <p className="mt-1 text-xs text-red-600">{fieldErrors.dob}</p> : null}
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-ink-muted" htmlFor="ob-gender">
+              <FieldLabel htmlFor="ob-gender" required className="mb-1 block text-xs font-medium text-ink-muted">
                 Gender
-              </label>
+              </FieldLabel>
               <select
                 id="ob-gender"
                 className={inputClass('gender')}
@@ -672,9 +673,9 @@ export default function PhysioOnboardingPage() {
               {fieldErrors.gender ? <p className="mt-1 text-xs text-red-600">{fieldErrors.gender}</p> : null}
             </div>
             <div className="sm:col-span-2">
-              <label className="mb-1 block text-xs font-medium text-ink-muted" htmlFor="ob-address">
+              <FieldLabel htmlFor="ob-address" className="mb-1 block text-xs font-medium text-ink-muted">
                 Address
-              </label>
+              </FieldLabel>
               <textarea
                 id="ob-address"
                 className={`${inputClass('address')} min-h-[88px] py-2`}
@@ -690,9 +691,9 @@ export default function PhysioOnboardingPage() {
               {fieldErrors.address ? <p className="mt-1 text-xs text-red-600">{fieldErrors.address}</p> : null}
             </div>
             <div className="sm:col-span-2">
-              <label className="mb-1 block text-xs font-medium text-ink-muted" htmlFor="ob-loc">
+              <FieldLabel htmlFor="ob-loc" required className="mb-1 block text-xs font-medium text-ink-muted">
                 Coverage / location (required for bookings)
-              </label>
+              </FieldLabel>
               <input
                 id="ob-loc"
                 className={inputClass('location')}
@@ -707,14 +708,9 @@ export default function PhysioOnboardingPage() {
               {fieldErrors.location ? <p className="mt-1 text-xs text-red-600">{fieldErrors.location}</p> : null}
             </div>
             <div className="sm:col-span-2">
-              <div className="mb-1 flex flex-wrap items-center gap-2">
-                <label className="text-xs font-medium text-ink-muted" htmlFor="ob-avatar">
-                  Profile photo
-                </label>
-                <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-600">
-                  Required
-                </span>
-              </div>
+              <FieldLabel htmlFor="ob-avatar" required className="mb-1 block text-xs font-medium text-ink-muted">
+                Profile photo
+              </FieldLabel>
               {avatarUrl ? (
                 <img
                   src={resolveFileUrl(avatarUrl)}
@@ -763,9 +759,9 @@ export default function PhysioOnboardingPage() {
           <h2 className="type-page-title text-ink">Qualification</h2>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <div className="sm:col-span-2">
-              <label className="mb-1 block text-xs font-medium text-ink-muted" htmlFor="ob-degree">
+              <FieldLabel htmlFor="ob-degree" required className="mb-1 block text-xs font-medium text-ink-muted">
                 Degree
-              </label>
+              </FieldLabel>
               <select
                 id="ob-degree"
                 className={inputClass('degree')}
@@ -790,8 +786,11 @@ export default function PhysioOnboardingPage() {
               {fieldErrors.degree ? <p className="mt-1 text-xs text-red-600">{fieldErrors.degree}</p> : null}
             </div>
             <div className="sm:col-span-2">
-              <label className="mb-1 block text-xs font-medium text-ink-muted">University</label>
+              <FieldLabel htmlFor="ob-university" required className="mb-1 block text-xs font-medium text-ink-muted">
+                University
+              </FieldLabel>
               <input
+                id="ob-university"
                 className={inputClass('university')}
                 value={university}
                 onChange={(e) => {
@@ -806,9 +805,9 @@ export default function PhysioOnboardingPage() {
               ) : null}
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-ink-muted" htmlFor="ob-passing-year">
+              <FieldLabel htmlFor="ob-passing-year" required className="mb-1 block text-xs font-medium text-ink-muted">
                 Passing Year
-              </label>
+              </FieldLabel>
               <input
                 id="ob-passing-year"
                 className={inputClass('year')}
@@ -824,9 +823,9 @@ export default function PhysioOnboardingPage() {
               {fieldErrors.year ? <p className="mt-1 text-xs text-red-600">{fieldErrors.year}</p> : null}
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-ink-muted" htmlFor="ob-council-reg">
+              <FieldLabel htmlFor="ob-council-reg" className="mb-1 block text-xs font-medium text-ink-muted">
                 Council Registration No (if applicable)
-              </label>
+              </FieldLabel>
               <input
                 id="ob-council-reg"
                 className={inputClass('registrationNumber')}
@@ -851,8 +850,11 @@ export default function PhysioOnboardingPage() {
           <h2 className="type-page-title text-ink">Practice details</h2>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="mb-1 block text-xs font-medium text-ink-muted">Experience (years)</label>
+              <FieldLabel htmlFor="ob-experience" required className="mb-1 block text-xs font-medium text-ink-muted">
+                Experience (years)
+              </FieldLabel>
               <input
+                id="ob-experience"
                 className={inputClass('experience')}
                 type="number"
                 min="0"
@@ -869,8 +871,11 @@ export default function PhysioOnboardingPage() {
               ) : null}
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-ink-muted">Specialization</label>
+              <FieldLabel htmlFor="ob-specialization" required className="mb-1 block text-xs font-medium text-ink-muted">
+                Specialization
+              </FieldLabel>
               <input
+                id="ob-specialization"
                 className={inputClass('specialization')}
                 value={specialization}
                 onChange={(e) => {
@@ -885,8 +890,11 @@ export default function PhysioOnboardingPage() {
               ) : null}
             </div>
             <div className="sm:col-span-2">
-              <label className="mb-1 block text-xs font-medium text-ink-muted">Service type</label>
+              <FieldLabel htmlFor="ob-service-type" required className="mb-1 block text-xs font-medium text-ink-muted">
+                Service type
+              </FieldLabel>
               <select
+                id="ob-service-type"
                 className={inputClass('serviceType')}
                 value={serviceType}
                 onChange={(e) => {
@@ -905,8 +913,11 @@ export default function PhysioOnboardingPage() {
               ) : null}
             </div>
             <div className="sm:col-span-2">
-              <label className="mb-1 block text-xs font-medium text-ink-muted">Areas (comma-separated)</label>
+              <FieldLabel htmlFor="ob-areas" required className="mb-1 block text-xs font-medium text-ink-muted">
+                Areas (comma-separated)
+              </FieldLabel>
               <input
+                id="ob-areas"
                 className={inputClass('areas')}
                 value={areas}
                 onChange={(e) => {
@@ -920,9 +931,9 @@ export default function PhysioOnboardingPage() {
               {fieldErrors.areas ? <p className="mt-1 text-xs text-red-600">{fieldErrors.areas}</p> : null}
             </div>
             <div className="sm:col-span-2">
-              <label className="mb-1 block text-xs font-medium text-ink-muted" htmlFor="ob-fee-min">
+              <FieldLabel htmlFor="ob-fee-min" className="mb-1 block text-xs font-medium text-ink-muted">
                 Fee per session (₹)
-              </label>
+              </FieldLabel>
               <p className="mb-2 text-xs text-ink-muted">One fixed amount you charge per session.</p>
               <input
                 id="ob-fee-min"
@@ -992,9 +1003,9 @@ export default function PhysioOnboardingPage() {
               }}
             >
               <div>
-                <label className="mb-1 block text-xs font-medium text-ink-muted" htmlFor="ob-id-proof-type">
+                <FieldLabel htmlFor="ob-id-proof-type" required className="mb-1 block text-xs font-medium text-ink-muted">
                   ID type
-                </label>
+                </FieldLabel>
                 <select
                   id="ob-id-proof-type"
                   className={inputClass('idProofType')}

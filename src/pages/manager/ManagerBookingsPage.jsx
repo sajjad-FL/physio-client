@@ -65,7 +65,7 @@ export default function ManagerBookingsPage() {
   const [filters, setFilters] = useState(() => ({ ...DEFAULT_MANAGER_FILTERS }))
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [search, setSearch] = useState('')
-  const [sort, setSort] = useState('priority')
+  const [sort, setSort] = useState('latest')
 
   const deferredSearch = useDeferredValue(search)
 

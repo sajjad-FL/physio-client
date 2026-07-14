@@ -46,9 +46,9 @@ export default function PhysioBookingsToolbar({
               onChange={(e) => onSortChange(e.target.value)}
               className="w-full min-w-0 cursor-pointer rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-800 shadow-sm ring-1 ring-gray-100/80 transition-colors focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/25 sm:w-auto sm:min-w-40"
             >
-              <option value="priority">Priority first</option>
               <option value="latest">Latest first</option>
               <option value="oldest">Oldest first</option>
+              <option value="priority">Priority first</option>
             </select>
           </label>
           <button

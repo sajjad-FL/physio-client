@@ -8,21 +8,15 @@ import ConsentModal from '../components/ConsentModal'
 import { formatBookingTimeSlot } from '../utils/date'
 import { getCurrentCoords } from '../utils/geolocation'
 import SeoNoIndex from '../components/seo/SeoNoIndex'
+import FieldLabel from '../components/ui/FieldLabel'
 import { useReferralMyCode } from '../hooks/useReferral'
-
-function todayISO() {
-  const d = new Date()
-  const yyyy = d.getFullYear()
-  const mm = String(d.getMonth() + 1).padStart(2, '0')
-  const dd = String(d.getDate()).padStart(2, '0')
-  return yyyy + '-' + mm + '-' + dd
-}
+import { todayISO, defaultBookableDate, filterSelectableSlots } from '../constants/slots'
 
 export default function BookingPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
 
-  const [date, setDate] = useState(todayISO())
+  const [date, setDate] = useState(defaultBookableDate)
   const [slotsLoading, setSlotsLoading] = useState(false)
   const [slots, setSlots] = useState([])
   const [timeSlot, setTimeSlot] = useState('')
@@ -206,9 +200,9 @@ export default function BookingPage() {
 
               <div className="mt-8 grid gap-5 sm:grid-cols-2">
                 <div>
-                  <label htmlFor="date" className="mb-2 block text-sm font-medium text-ink">
+                  <FieldLabel htmlFor="date" required={true} className="mb-2 block text-sm font-medium text-ink">
                     Date
-                  </label>
+                  </FieldLabel>
                   <input
                     id="date"
                     type="date"
@@ -218,14 +212,16 @@ export default function BookingPage() {
                   />
                 </div>
                 <div>
-                  <label htmlFor="time-slot" className="mb-2 block text-sm font-medium text-ink">
+                  <FieldLabel htmlFor="time-slot" required={true} className="mb-2 block text-sm font-medium text-ink">
                     Time slot
-                  </label>
+                  </FieldLabel>
                   {slotsLoading ? (
                     <div className="h-11 animate-pulse rounded-lg bg-canvas" aria-hidden />
-                  ) : slots.filter((s) => s.available).length === 0 ? (
+                  ) : filterSelectableSlots(slots, date).length === 0 ? (
                     <p className="flex min-h-11 items-center rounded-lg border border-dashed border-border-subtle bg-canvas/80 px-4 text-sm text-ink-muted">
-                      No slots available for this date
+                      {date === todayISO()
+                        ? 'No slots left today — pick tomorrow or a later date'
+                        : 'No slots available for this date'}
                     </p>
                   ) : (
                     <select
@@ -236,9 +232,7 @@ export default function BookingPage() {
                       disabled={bookingLoading}
                     >
                       <option value="">Select a time</option>
-                      {slots
-                        .filter((s) => s.available)
-                        .map((s) => (
+                      {filterSelectableSlots(slots, date).map((s) => (
                           <option key={s.timeSlot} value={s.timeSlot}>
                             {formatBookingTimeSlot(s.timeSlot)}
                           </option>
@@ -274,9 +268,9 @@ export default function BookingPage() {
 
               <form onSubmit={handleBook} className="mt-8 flex flex-col gap-6">
                 <div>
-                  <label htmlFor="name" className="mb-2 block text-sm font-medium text-ink">
+                  <FieldLabel htmlFor="name" required={true} className="mb-2 block text-sm font-medium text-ink">
                     Full name
-                  </label>
+                  </FieldLabel>
                   <input
                     id="name"
                     value={name}
@@ -289,9 +283,9 @@ export default function BookingPage() {
                 </div>
 
                 <div>
-                  <label htmlFor="location" className="mb-2 block text-sm font-medium text-ink">
+                  <FieldLabel htmlFor="location" required={true} className="mb-2 block text-sm font-medium text-ink">
                     Location / area
-                  </label>
+                  </FieldLabel>
                   <input
                     id="location"
                     value={location}
@@ -304,9 +298,9 @@ export default function BookingPage() {
                 </div>
 
                 <div>
-                  <label htmlFor="issue" className="mb-2 block text-sm font-medium text-ink">
+                  <FieldLabel htmlFor="issue" required={true} className="mb-2 block text-sm font-medium text-ink">
                     Focus area
-                  </label>
+                  </FieldLabel>
                   <select
                     id="issue"
                     value={issue}

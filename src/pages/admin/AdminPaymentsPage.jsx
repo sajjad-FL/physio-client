@@ -7,6 +7,7 @@ import AdminPaymentQueueTable, { PaymentQueueVerifySummary, isManagerPhonePe } f
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import Input from '../../components/ui/Input'
+import FieldLabel from '../../components/ui/FieldLabel'
 
 function formatInr(n) {
   const v = Number(n)
@@ -296,7 +297,9 @@ export default function AdminPaymentsPage() {
                 : 'The physiotherapist can record a fresh collection after this.'}
             </p>
             <PaymentQueueVerifySummary row={rejectTarget} />
-            <label className="mt-4 block text-xs font-medium text-gray-500">Reason</label>
+            <FieldLabel required className="mt-4 block text-xs font-medium text-gray-500">
+              Reason
+            </FieldLabel>
             <textarea
               className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 shadow-sm"
               rows={3}

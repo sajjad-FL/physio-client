@@ -62,7 +62,7 @@ export default function PhysioBookingsPage() {
   const [filters, setFilters] = useState(() => ({ ...DEFAULT_PHYSIO_FILTERS }))
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [search, setSearch] = useState('')
-  const [sort, setSort] = useState('priority')
+  const [sort, setSort] = useState('latest')
   const [view, setView] = useState('list')
 
   const filtersActive = useMemo(

@@ -5,6 +5,7 @@ import { formatBookingTimeSlot } from '../../utils/date'
 import toast from 'react-hot-toast'
 import AdminPageHeader, { AdminLink } from '../../components/admin/AdminPageHeader'
 import Pagination from '../../components/Pagination'
+import FieldLabel from '../../components/ui/FieldLabel'
 import { bookingCodeBadge } from '../../utils/bookingDisplay'
 
 export default function DisputesAdmin() {
@@ -242,7 +243,9 @@ export default function DisputesAdmin() {
             <p className="mt-1 text-sm text-ink-muted">
               Choose how payment should be handled. Reject closes the case without changing payment.
             </p>
-            <label className="mt-4 block text-sm font-medium text-ink">Resolution message</label>
+            <FieldLabel required className="mt-4 block text-sm font-medium text-ink">
+              Resolution message
+            </FieldLabel>
             <textarea
               required
               rows={4}
@@ -251,7 +254,9 @@ export default function DisputesAdmin() {
               onChange={(e) => setResolution(e.target.value)}
               placeholder="Visible to internal records / future audit."
             />
-            <label className="mt-4 block text-sm font-medium text-ink">Action</label>
+            <FieldLabel required className="mt-4 block text-sm font-medium text-ink">
+              Action
+            </FieldLabel>
             <select
               value={action}
               onChange={(e) => setAction(e.target.value)}

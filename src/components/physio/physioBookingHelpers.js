@@ -9,6 +9,7 @@ export function todayYmd() {
 
 /** Manager-led home bookings include a complimentary assessment on booking.date. */
 export function hasComplimentaryAssessmentVisit(b) {
+  if (b?.carePath === 'technique_managed' || b?.carePath === 'technique_direct') return false
   return (
     b?.serviceType === 'home' &&
     Boolean(b?.managerId || b?.assessmentCompletedAt) &&

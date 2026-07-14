@@ -6,6 +6,7 @@ import { toastApiError } from '../../utils/formToast'
 import { resolveFileUrl } from '../../utils/serverOrigin'
 import { formatInr, shopOrderStatusClass, shopOrderStatusLabel } from '../../utils/shopDisplay'
 import ShopOrderStatusTimeline from '../../components/shop/ShopOrderStatusTimeline'
+import FieldLabel from '../../components/ui/FieldLabel'
 
 const NEXT_ACTIONS = {
   placed: [{ status: 'confirmed', label: 'Confirm order' }],
@@ -113,7 +114,9 @@ export default function AdminShopOrderDetailPage() {
 
       {showCancel ? (
         <div className="rounded-2xl border border-red-100 bg-red-50 p-4">
-          <label className="block text-sm font-semibold text-red-800">Cancellation reason</label>
+          <FieldLabel required className="block text-sm font-semibold text-red-800">
+            Cancellation reason
+          </FieldLabel>
           <textarea
             value={cancelReason}
             onChange={(e) => setCancelReason(e.target.value)}

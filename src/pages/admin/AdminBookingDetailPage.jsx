@@ -18,6 +18,7 @@ import SessionProgressTracker from '../../components/bookings/SessionProgressTra
 import InstallmentsCard from '../../components/payments/InstallmentsCard'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
+import FieldLabel from '../../components/ui/FieldLabel'
 import AdminAssignPhysioModal from '../../components/admin/AdminAssignPhysioModal'
 import AdminAssignManagerModal from '../../components/admin/AdminAssignManagerModal'
 import RescheduleModal from '../../components/physio/RescheduleModal'
@@ -1005,7 +1006,9 @@ export default function AdminBookingDetailPage() {
           >
             <h3 className="type-page-title text-slate-900">Resolve dispute</h3>
             <p className="mt-1 text-xs text-slate-500">{resolveOpen.reason}</p>
-            <label className="mt-4 block text-sm font-medium text-slate-800">Resolution</label>
+            <FieldLabel required className="mt-4 block text-sm font-medium text-slate-800">
+              Resolution
+            </FieldLabel>
             <textarea
               value={resolution}
               onChange={(e) => setResolution(e.target.value)}
@@ -1013,7 +1016,9 @@ export default function AdminBookingDetailPage() {
               rows={3}
               required
             />
-            <label className="mt-3 block text-sm font-medium text-slate-800">Action</label>
+            <FieldLabel required className="mt-3 block text-sm font-medium text-slate-800">
+              Action
+            </FieldLabel>
             <select
               value={resolveAction}
               onChange={(e) => setResolveAction(e.target.value)}
@@ -1053,7 +1058,9 @@ export default function AdminBookingDetailPage() {
             <p className="mt-1 text-xs text-slate-500">
               Choose a new date and time slot for this booking schedule.
             </p>
-            <label className="mt-4 block text-sm font-medium text-slate-800">Date</label>
+            <FieldLabel required className="mt-4 block text-sm font-medium text-slate-800">
+              Date
+            </FieldLabel>
             <input
               type="date"
               value={addSessionDate}
@@ -1061,7 +1068,9 @@ export default function AdminBookingDetailPage() {
               className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
               required
             />
-            <label className="mt-3 block text-sm font-medium text-slate-800">Time slot</label>
+            <FieldLabel required className="mt-3 block text-sm font-medium text-slate-800">
+              Time slot
+            </FieldLabel>
             <select
               value={addSessionTime}
               onChange={(e) => setAddSessionTime(e.target.value)}

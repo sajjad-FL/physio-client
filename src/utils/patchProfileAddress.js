@@ -20,7 +20,6 @@ export async function patchProfileAddress({ text, lat, lng }) {
   if ((data.role === 'physio' || data.roles?.includes('physio')) && data.physio) {
     body.specialization = data.physio.specialization || ''
     body.experience = data.physio.experience ?? 0
-    body.fees = data.physio.fees ?? 0
   }
   await api.patch('/profile', body)
 }

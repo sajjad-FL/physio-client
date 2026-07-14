@@ -1,4 +1,4 @@
-import { Link, NavLink } from 'react-router-dom'
+import { Link, NavLink, useLocation } from 'react-router-dom'
 import { useState } from 'react'
 import ProfileDropdown from './ProfileDropdown'
 
@@ -56,6 +56,12 @@ export default function AppShell({
   contentClassName = '',
 }) {
   const [mobileOpen, setMobileOpen] = useState(false)
+  const location = useLocation()
+
+  function resolveActive(item, navDefaultActive) {
+    if (typeof item?.activeWhen === 'function') return Boolean(item.activeWhen(location))
+    return Boolean(navDefaultActive)
+  }
 
   const sidebar = (
     <>
@@ -75,7 +81,8 @@ export default function AppShell({
         )}
       </div>
       <nav className="flex flex-1 flex-col gap-1 overflow-y-auto p-4">
-        {navItems.map(({ to, label, end, icon, disabled, badgeCount, section }, index) => {
+        {navItems.map((item, index) => {
+          const { to, label, end, icon, disabled, badgeCount, section } = item
           const prevSection = index > 0 ? navItems[index - 1]?.section : null
           const showSection = section && section !== prevSection
           const itemKey = to || `section-${section}-${index}`
@@ -99,16 +106,26 @@ export default function AppShell({
                   <NavItemBadge count={badgeCount} active={false} />
                 </span>
               ) : (
-                <NavLink to={to} end={end} className={navLinkClass} onClick={() => setMobileOpen(false)}>
-                  {({ isActive }) => (
-                    <>
-                      <span className="flex min-w-0 flex-1 items-center gap-3">
-                        {icon}
-                        <span className="truncate">{label}</span>
-                      </span>
-                      <NavItemBadge count={badgeCount} active={isActive} />
-                    </>
-                  )}
+                <NavLink
+                  to={to}
+                  end={end}
+                  className={({ isActive: pathActive }) =>
+                    navLinkClass({ isActive: resolveActive(item, pathActive) })
+                  }
+                  onClick={() => setMobileOpen(false)}
+                >
+                  {({ isActive: pathActive }) => {
+                    const isActive = resolveActive(item, pathActive)
+                    return (
+                      <>
+                        <span className="flex min-w-0 flex-1 items-center gap-3">
+                          {icon}
+                          <span className="truncate">{label}</span>
+                        </span>
+                        <NavItemBadge count={badgeCount} active={isActive} />
+                      </>
+                    )
+                  }}
                 </NavLink>
               )}
             </span>
@@ -183,7 +200,9 @@ export default function AppShell({
               className="mx-auto flex max-w-7xl items-stretch justify-around gap-0 px-1 pt-1"
               style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}
             >
-              {bottomNavItems.map(({ to, label, end, icon }) => (
+              {bottomNavItems.map((item) => {
+                const { to, label, end, icon } = item
+                return (
                 <NavLink
                   key={to}
                   to={to}
@@ -191,7 +210,9 @@ export default function AppShell({
                   onClick={() => setMobileOpen(false)}
                   className="tap-feedback flex min-h-12 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1.5 text-[10px] font-semibold leading-tight transition-colors duration-200"
                 >
-                  {({ isActive }) => (
+                  {({ isActive: pathActive }) => {
+                    const isActive = resolveActive(item, pathActive)
+                    return (
                     <>
                       <span
                         className={[
@@ -210,9 +231,11 @@ export default function AppShell({
                         {label}
                       </span>
                     </>
-                  )}
+                    )
+                  }}
                 </NavLink>
-              ))}
+                )
+              })}
             </div>
           </nav>
         )}

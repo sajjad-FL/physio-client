@@ -16,15 +16,9 @@ import { mapboxReverseGeocode } from '../utils/mapboxGeocode'
 import { getCurrentCoords } from '../utils/geolocation'
 import SeoNoIndex from '../components/seo/SeoNoIndex'
 import WhatsAppSupportFab from '../components/support/WhatsAppSupportFab'
+import FieldLabel, { RequiredMark } from '../components/ui/FieldLabel'
 import { useReferralMyCode } from '../hooks/useReferral'
-
-function todayISO() {
-  const d = new Date()
-  const yyyy = d.getFullYear()
-  const mm = String(d.getMonth() + 1).padStart(2, '0')
-  const dd = String(d.getDate()).padStart(2, '0')
-  return `${yyyy}-${mm}-${dd}`
-}
+import { todayISO, defaultBookableDate, filterSelectableSlots } from '../constants/slots'
 
 const label = 'mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-500'
 
@@ -70,7 +64,7 @@ export default function PhysioListPage() {
   const [geoBusy, setGeoBusy] = useState(false)
   const [locationModalOpen, setLocationModalOpen] = useState(false)
 
-  const [date, setDate] = useState(todayISO())
+  const [date, setDate] = useState(defaultBookableDate)
   const [timeSlot, setTimeSlot] = useState('')
   const [serviceType, setServiceType] = useState('home')
 
@@ -399,7 +393,8 @@ export default function PhysioListPage() {
       <div className="mx-auto max-w-3xl space-y-5 px-4 py-8 sm:px-6">
         {!profileLoading && !profileName && (
           <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
-            Add your name in{' '}
+            Add your name
+            <RequiredMark /> in{' '}
             <Link to="/dashboard/profile" className="font-semibold text-amber-900 underline">
               Profile
             </Link>{' '}
@@ -434,7 +429,9 @@ export default function PhysioListPage() {
           ) : (
             <div className="space-y-3">
               <div>
-                <span className={label}>Search</span>
+                <FieldLabel required={true} className={label}>
+                  Location
+                </FieldLabel>
                 <LocationAutocomplete
                   value={location}
                   onChange={(v) => setLocation(v)}
@@ -466,9 +463,9 @@ export default function PhysioListPage() {
         >
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label htmlFor="bk-date" className={label}>
+              <FieldLabel htmlFor="bk-date" required={true} className={label}>
                 Date
-              </label>
+              </FieldLabel>
               <Input
                 id="bk-date"
                 type="date"
@@ -478,9 +475,9 @@ export default function PhysioListPage() {
               />
             </div>
             <div>
-              <label htmlFor="bk-slot" className={label}>
+              <FieldLabel htmlFor="bk-slot" required={true} className={label}>
                 Slot
-              </label>
+              </FieldLabel>
               <select
                 id="bk-slot"
                 value={timeSlot}
@@ -488,9 +485,7 @@ export default function PhysioListPage() {
                 className="h-11 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
               >
                 <option value="">Select a time</option>
-                {slots
-                  .filter((s) => s.available)
-                  .map((s) => (
+                {filterSelectableSlots(slots, date).map((s) => (
                     <option key={s.timeSlot} value={s.timeSlot}>
                       {formatBookingTimeSlot(s.timeSlot)}
                     </option>
@@ -525,9 +520,9 @@ export default function PhysioListPage() {
 
         <StepShell step={3} title="What do you need help with?" locked={!dateSlotOk}>
           <div>
-            <label htmlFor="bk-issue" className={label}>
+            <FieldLabel htmlFor="bk-issue" required={true} className={label}>
               Issue
-            </label>
+            </FieldLabel>
             <select
               id="bk-issue"
               value={issue}
@@ -548,9 +543,9 @@ export default function PhysioListPage() {
             </select>
             {issue === ISSUE_OTHER_VALUE && (
               <div className="mt-3">
-                <label htmlFor="bk-issue-other" className={label}>
+                <FieldLabel htmlFor="bk-issue-other" required={true} className={label}>
                   Describe your condition
-                </label>
+                </FieldLabel>
                 <Input
                   id="bk-issue-other"
                   value={issueOther}

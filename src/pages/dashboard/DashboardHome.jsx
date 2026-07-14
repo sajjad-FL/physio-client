@@ -75,12 +75,15 @@ function careAssigneeLabel(b) {
   return 'Awaiting care team'
 }
 
+const focusRing =
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 focus-visible:ring-offset-2'
+
 function CareList({ bookings, emptyTitle, emptyHint }) {
   if (!bookings.length) {
     return (
       <div className="flex flex-col items-center gap-2 rounded-2xl border border-slate-100 bg-white px-4 py-10 shadow-sm">
-        <p className="text-sm font-semibold text-slate-400">{emptyTitle}</p>
-        <p className="text-xs text-slate-400">{emptyHint}</p>
+        <p className="text-sm font-semibold text-slate-600">{emptyTitle}</p>
+        <p className="text-xs text-slate-500">{emptyHint}</p>
       </div>
     )
   }
@@ -95,7 +98,7 @@ function CareList({ bookings, emptyTitle, emptyHint }) {
           <li key={b._id} className={idx < bookings.length - 1 ? 'border-b border-slate-100' : ''}>
             <Link
               to={`/dashboard/bookings/${b._id}`}
-              className="flex items-center gap-3 px-4 py-3.5 transition hover:bg-slate-50 active:bg-slate-100"
+              className={`flex min-h-[44px] items-center gap-3 px-4 py-3.5 transition hover:bg-slate-50 active:bg-slate-100 ${focusRing}`}
             >
               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px] bg-teal-50">
                 <svg
@@ -116,7 +119,7 @@ function CareList({ bookings, emptyTitle, emptyHint }) {
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-1.5">
                   <span
-                    className={`rounded-md px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide ring-1 ${
+                    className={`rounded-md px-1.5 py-0.5 text-[11px] font-bold uppercase tracking-wide ring-1 ${
                       technique
                         ? 'bg-orange-50 text-orange-900 ring-orange-200/80'
                         : 'bg-teal-50 text-teal-900 ring-teal-200/80'
@@ -132,7 +135,7 @@ function CareList({ bookings, emptyTitle, emptyHint }) {
                 <p className="mt-0.5 truncate text-xs text-slate-500">{careAssigneeLabel(b)}</p>
               </div>
               <div className="flex shrink-0 items-center gap-2">
-                <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ${st.cls}`}>
+                <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ${st.cls}`}>
                   {st.label}
                 </span>
                 <svg
@@ -311,7 +314,7 @@ export default function DashboardHome() {
           {nextSession ? (
             <Link
               to={`/dashboard/bookings/${nextSession.booking._id}`}
-              className="relative block overflow-hidden rounded-2xl bg-teal-600 p-5 shadow-[0_8px_32px_rgba(13,148,136,0.22)] transition active:opacity-95"
+              className={`relative block overflow-hidden rounded-2xl bg-teal-600 p-5 shadow-[0_8px_32px_rgba(13,148,136,0.22)] transition active:opacity-95 ${focusRing}`}
               aria-label="View upcoming session details"
             >
               <div className="pointer-events-none absolute -right-12 -top-12 h-36 w-36 rounded-full bg-white/10" aria-hidden />
@@ -319,7 +322,7 @@ export default function DashboardHome() {
 
               <div className="relative z-10 flex items-start justify-between gap-2">
                 <div>
-                  <span className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/15 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">
+                  <span className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/15 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-white">
                     Upcoming session
                   </span>
                   <p className="mt-2 text-sm font-bold leading-snug text-white">
@@ -333,8 +336,8 @@ export default function DashboardHome() {
                   </p>
                 </div>
                 <span className="flex shrink-0 items-center gap-1 rounded-md bg-emerald-500/20 px-2 py-1">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                  <span className="text-[9px] font-bold uppercase tracking-wide text-emerald-300">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" aria-hidden />
+                  <span className="text-[11px] font-bold uppercase tracking-wide text-emerald-200">
                     {isToday ? 'Today' : 'Scheduled'}
                   </span>
                 </span>
@@ -358,12 +361,12 @@ export default function DashboardHome() {
                   </svg>
                 </div>
                 <div className="min-w-0">
-                  <p className="truncate text-[11px] font-bold text-white">{heroAssignee?.name}</p>
-                  <p className="text-[9px] text-white/70">{heroAssignee?.detail}</p>
+                  <p className="truncate text-xs font-bold text-white">{heroAssignee?.name}</p>
+                  <p className="text-[11px] text-white/85">{heroAssignee?.detail}</p>
                 </div>
               </div>
 
-              <p className="relative z-10 mt-3 text-[10px] font-medium text-white/75">
+              <p className="relative z-10 mt-3 text-[11px] font-medium text-white/90">
                 Tap for details, notes, and payment
                 {sameDaySiblings.length > 0
                   ? ` · +${sameDaySiblings.length} more visit${sameDaySiblings.length === 1 ? '' : 's'} this day`
@@ -374,7 +377,7 @@ export default function DashboardHome() {
 
           {sameDaySiblings.length > 0 ? (
             <div className="space-y-2">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
                 Also {isToday ? 'today' : 'that day'}
               </p>
               {sameDaySiblings.map((item) => {
@@ -384,12 +387,12 @@ export default function DashboardHome() {
                   <Link
                     key={`${item.booking._id}-${item.row.sessionId || item.row.key || item.row.n}`}
                     to={`/dashboard/bookings/${item.booking._id}`}
-                    className="flex items-center gap-3 rounded-2xl border border-teal-100 bg-teal-50/50 px-4 py-3 shadow-sm transition hover:bg-teal-50"
+                    className={`flex min-h-[44px] items-center gap-3 rounded-2xl border border-teal-100 bg-teal-50/50 px-4 py-3 shadow-sm transition hover:bg-teal-50 ${focusRing}`}
                   >
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-1.5">
                         <span
-                          className={`rounded-md px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide ring-1 ${
+                          className={`rounded-md px-1.5 py-0.5 text-[11px] font-bold uppercase tracking-wide ring-1 ${
                             technique
                               ? 'bg-orange-50 text-orange-900 ring-orange-200/80'
                               : 'bg-teal-50 text-teal-900 ring-teal-200/80'
@@ -428,7 +431,7 @@ export default function DashboardHome() {
           {!nextSession ? (
             <Link
               to="/book"
-              className="flex items-center gap-3 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm transition hover:shadow-md active:opacity-90"
+              className={`flex min-h-[44px] items-center gap-3 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm transition hover:shadow-md active:opacity-90 ${focusRing}`}
             >
               <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-teal-50">
                 <svg
@@ -466,22 +469,22 @@ export default function DashboardHome() {
           {inCare ? (
             <div className="grid grid-cols-2 gap-3">
               <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
-                <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Sessions left</p>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Sessions left</p>
                 <p className="type-stat mt-2 text-slate-900">{sessionsLeft}</p>
-                <p className="mt-1 text-[11px] text-slate-400">{sessionsLeftLabel}</p>
+                <p className="mt-1 text-[11px] text-slate-500">{sessionsLeftLabel}</p>
               </div>
               <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
                 {amountDue > 0.009 ? (
                   <>
-                    <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Amount due</p>
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Amount due</p>
                     <p className="type-stat mt-2 text-slate-900">{formatInr(amountDue)}</p>
-                    <p className="mt-1 text-[11px] text-slate-400">Across open cases</p>
+                    <p className="mt-1 text-[11px] text-slate-500">Across open cases</p>
                   </>
                 ) : (
                   <>
-                    <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Payment</p>
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Payment</p>
                     <p className="type-stat mt-2 text-emerald-700">On track</p>
-                    <p className="mt-1 text-[11px] text-slate-400">Nothing due right now</p>
+                    <p className="mt-1 text-[11px] text-slate-500">Nothing due right now</p>
                   </>
                 )}
               </div>
@@ -495,7 +498,10 @@ export default function DashboardHome() {
                   <h2 id="my-care-heading" className="text-sm font-bold text-slate-900">
                     My care
                   </h2>
-                  <Link to="/dashboard/bookings" className="text-xs font-bold text-teal-700 hover:text-teal-800">
+                  <Link
+                    to="/dashboard/bookings"
+                    className={`text-xs font-bold text-teal-700 hover:text-teal-800 ${focusRing} rounded-sm`}
+                  >
                     See all
                   </Link>
                 </div>
@@ -521,7 +527,10 @@ export default function DashboardHome() {
                   <h2 id="my-care-heading" className="text-sm font-bold text-slate-900">
                     My care
                   </h2>
-                  <Link to="/dashboard/bookings" className="text-xs font-bold text-teal-700 hover:text-teal-800">
+                  <Link
+                    to="/dashboard/bookings"
+                    className={`text-xs font-bold text-teal-700 hover:text-teal-800 ${focusRing} rounded-sm`}
+                  >
                     See all
                   </Link>
                 </div>

@@ -4,6 +4,7 @@ import toast from 'react-hot-toast'
 import { api } from '../../config/api'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
+import FieldLabel from '../../components/ui/FieldLabel'
 
 const CASH_STATUS = {
   open: { label: 'Waiting for admin', cls: 'bg-amber-50 text-amber-900 ring-amber-200' },
@@ -25,53 +26,27 @@ function cashStatusMeta(status) {
   return CASH_STATUS[status] || { label: status || '—', cls: 'bg-slate-50 text-slate-700 ring-slate-200' }
 }
 
-function StepStrip({ cashHold, available }) {
-  const steps = [
-    {
-      num: 1,
-      label: 'Collect on case',
-      hint: 'Record cash/UPI',
-      done: true,
-    },
-    {
-      num: 2,
-      label: 'Cash waiting',
-      hint: cashHold > 0.009 ? inr(cashHold) : 'Nothing pending',
-      current: cashHold > 0.009,
-      done: cashHold <= 0.009,
-    },
-    {
-      num: 3,
-      label: 'Withdraw',
-      hint: available > 0.009 ? `${inr(available)} ready` : 'After admin settles',
-      current: cashHold <= 0.009 && available > 0.009,
-    },
-  ]
-
-  return (
-    <ol className="grid grid-cols-3 gap-1 sm:gap-2">
-      {steps.map((step) => {
-        let circle =
-          'flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-bold '
-        if (step.done && !step.current) circle += 'bg-emerald-600 text-white'
-        else if (step.current) circle += 'bg-teal-600 text-white ring-2 ring-teal-300'
-        else circle += 'bg-slate-100 text-slate-500'
-
-        return (
-          <li key={step.num} className="min-w-0">
-            <div className="flex flex-col items-center gap-1 rounded-xl px-1 py-2 text-center">
-              <span className={circle}>{step.done && !step.current ? '✓' : step.num}</span>
-              <span className="w-full truncate text-[11px] font-semibold text-slate-800 sm:text-xs">
-                {step.label}
-              </span>
-              <span className="hidden w-full truncate text-[10px] text-slate-500 sm:block">{step.hint}</span>
-            </div>
-          </li>
-        )
-      })}
-    </ol>
-  )
+function ymdLocal(d) {
+  if (!(d instanceof Date) || Number.isNaN(d.getTime())) return ''
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
 }
+
+function inDateRange(iso, fromYmd, toYmd) {
+  if (!iso) return !fromYmd && !toYmd
+  const day = ymdLocal(new Date(iso))
+  if (!day) return false
+  if (fromYmd && day < fromYmd) return false
+  if (toYmd && day > toYmd) return false
+  return true
+}
+
+const selectCls =
+  'rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20'
+const inputCls =
+  'w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20'
 
 export default function ManagerFinancePage() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -90,13 +65,20 @@ export default function ManagerFinancePage() {
   const [upiName, setUpiName] = useState('')
   const [savingUpi, setSavingUpi] = useState(false)
 
+  const [cashStatus, setCashStatus] = useState('all')
+  const [cashFrom, setCashFrom] = useState('')
+  const [cashTo, setCashTo] = useState('')
+  const [txType, setTxType] = useState('all')
+  const [txFrom, setTxFrom] = useState('')
+  const [txTo, setTxTo] = useState('')
+
   const load = useCallback(async () => {
     setLoading(true)
     try {
       const [lRes, wRes, tRes] = await Promise.all([
         api.get('/manager/ledger'),
         api.get('/manager/wallet'),
-        api.get('/manager/wallet/transactions', { params: { page: 1, limit: 30 } }),
+        api.get('/manager/wallet/transactions', { params: { page: 1, limit: 100 } }),
       ])
       setEntries(lRes.data?.entries || [])
       setOpenTotal(Number(lRes.data?.openTotal || 0))
@@ -125,8 +107,38 @@ export default function ManagerFinancePage() {
   }, [wallet, openTotal])
 
   const available = Number(wallet?.availableBalance || 0)
+  const pendingCommission = Number(wallet?.pendingCommission || 0) + Number(wallet?.pendingPhonePeCut || 0)
+  const totalEarnings = Number(wallet?.settledCommission || 0)
   const pendingWithdraw = wallet?.pendingWithdraw
   const hasUpi = Boolean(String(wallet?.payoutUpiId || '').trim())
+
+  const filteredCashEntries = useMemo(() => {
+    return entries.filter((e) => {
+      if (cashStatus !== 'all' && e.status !== cashStatus) return false
+      return inDateRange(e.collectedAt, cashFrom, cashTo)
+    })
+  }, [entries, cashStatus, cashFrom, cashTo])
+
+  const filteredPhonePe = useMemo(() => {
+    const rows = wallet?.pendingPhonePe || []
+    if (cashStatus !== 'all' && cashStatus !== 'open') return []
+    return rows.filter((p) => inDateRange(p.createdAt, cashFrom, cashTo))
+  }, [wallet, cashStatus, cashFrom, cashTo])
+
+  const filteredTx = useMemo(() => {
+    return transactions.filter((t) => {
+      if (txType !== 'all' && t.type !== txType) return false
+      return inDateRange(t.createdAt, txFrom, txTo)
+    })
+  }, [transactions, txType, txFrom, txTo])
+
+  const filteredEarningsTotal = useMemo(() => {
+    return filteredTx.reduce((sum, t) => {
+      const amt = Number(t.totalAmount || 0)
+      if (t.direction === 'credit') return sum + amt
+      return sum - amt
+    }, 0)
+  }, [filteredTx])
 
   function setTab(next) {
     const params =
@@ -168,8 +180,12 @@ export default function ManagerFinancePage() {
       return
     }
     const amt = Number(withdrawAmount)
-    if (!Number.isFinite(amt) || amt <= 0) {
-      toast.error('Enter a valid amount')
+    if (!Number.isFinite(amt) || amt < 1) {
+      toast.error('Enter an amount of at least ₹1')
+      return
+    }
+    if (amt > available + 0.009) {
+      toast.error(`Amount cannot exceed your withdrawable balance of ${inr(available)}`)
       return
     }
     setSubmitting(true)
@@ -190,86 +206,115 @@ export default function ManagerFinancePage() {
 
   return (
     <div className="space-y-4">
-      {/* How money moves */}
-      <div className="rounded-2xl border border-slate-200/80 bg-white p-3 shadow-sm sm:p-4">
-        <p className="mb-2 px-0.5 text-xs font-semibold uppercase tracking-wide text-slate-500">
-          How your money moves
-        </p>
-        <StepStrip cashHold={cashHold} available={available} />
-      </div>
-
-      {/* Two key amounts */}
-      <div className="grid gap-3 sm:grid-cols-2">
+      {/* Summary — always visible */}
+      <div className="grid gap-3 sm:grid-cols-3">
         <button
           type="button"
-          onClick={() => setTab('cash')}
+          onClick={() => setTab('earnings')}
           className={`rounded-2xl border p-4 text-left shadow-sm transition ${
-            tab === 'cash'
-              ? 'border-teal-300 bg-teal-50/60 ring-1 ring-teal-200'
+            tab === 'earnings'
+              ? 'border-teal-300 bg-teal-50/70 ring-1 ring-teal-200'
               : 'border-slate-200/80 bg-white hover:border-slate-300'
           }`}
         >
-          <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Cash you still hold</p>
-          <p className="mt-1 text-2xl font-bold tabular-nums text-amber-700">{inr(cashHold)}</p>
-          <p className="mt-1 text-xs text-slate-500">Hand over to admin — your cut unlocks after they settle</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Total earnings</p>
+          <p className="mt-1 text-2xl font-bold tabular-nums text-slate-900">{inr(totalEarnings)}</p>
+          <p className="mt-1 text-xs text-slate-500">Commission credited after admin settles</p>
         </button>
         <button
           type="button"
           onClick={() => setTab('earnings')}
           className={`rounded-2xl border p-4 text-left shadow-sm transition ${
             tab === 'earnings'
-              ? 'border-teal-300 bg-teal-50/60 ring-1 ring-teal-200'
+              ? 'border-teal-300 bg-teal-50/70 ring-1 ring-teal-200'
               : 'border-slate-200/80 bg-white hover:border-slate-300'
           }`}
         >
-          <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Withdrawable commission</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Withdrawable</p>
           <p className="mt-1 text-2xl font-bold tabular-nums text-emerald-700">{inr(available)}</p>
           <p className="mt-1 text-xs text-slate-500">
-            Pending cut: {inr((wallet?.pendingCommission || 0) + (wallet?.pendingPhonePeCut || 0))}
-            {Number(wallet?.pendingPhonePeCut) > 0 ? ' (incl. PhonePe awaiting confirm)' : ''}
+            Pending cut {inr(pendingCommission)}
           </p>
         </button>
-      </div>
-
-      {/* Tabs */}
-      <div className="flex gap-1 rounded-xl border border-slate-200 bg-slate-50 p-1">
         <button
           type="button"
           onClick={() => setTab('cash')}
-          className={`flex-1 rounded-lg px-2 py-2 text-sm font-semibold transition sm:px-3 ${
-            tab === 'cash' ? 'bg-white text-teal-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+          className={`rounded-2xl border p-4 text-left shadow-sm transition ${
+            tab === 'cash'
+              ? 'border-teal-300 bg-teal-50/70 ring-1 ring-teal-200'
+              : 'border-slate-200/80 bg-white hover:border-slate-300'
           }`}
         >
-          Cash collected
-        </button>
-        <button
-          type="button"
-          onClick={() => setTab('earnings')}
-          className={`flex-1 rounded-lg px-2 py-2 text-sm font-semibold transition sm:px-3 ${
-            tab === 'earnings' ? 'bg-white text-teal-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
-          }`}
-        >
-          My earnings
-        </button>
-        <button
-          type="button"
-          onClick={() => setTab('payout')}
-          className={`flex-1 rounded-lg px-2 py-2 text-sm font-semibold transition sm:px-3 ${
-            tab === 'payout' ? 'bg-white text-teal-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
-          }`}
-        >
-          Payout UPI
+          <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Cash you hold</p>
+          <p className="mt-1 text-2xl font-bold tabular-nums text-amber-700">{inr(cashHold)}</p>
+          <p className="mt-1 text-xs text-slate-500">Hand over to admin to unlock your cut</p>
         </button>
       </div>
 
       {tab === 'cash' ? (
-        <div className="space-y-2">
-          {(wallet?.pendingPhonePe || []).length > 0 ? (
+        <div className="space-y-3">
+          <Card hover={false} className="p-4">
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="min-w-[9rem] flex-1">
+                <FieldLabel className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Status
+                </FieldLabel>
+                <select
+                  value={cashStatus}
+                  onChange={(e) => setCashStatus(e.target.value)}
+                  className={`mt-1 w-full ${selectCls}`}
+                >
+                  <option value="all">All</option>
+                  <option value="open">Waiting for admin</option>
+                  <option value="batched">Admin processing</option>
+                  <option value="settled">Settled</option>
+                  <option value="disputed">Disputed</option>
+                </select>
+              </div>
+              <div className="min-w-[9rem] flex-1">
+                <FieldLabel className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  From
+                </FieldLabel>
+                <input
+                  type="date"
+                  value={cashFrom}
+                  onChange={(e) => setCashFrom(e.target.value)}
+                  className={`mt-1 ${inputCls}`}
+                />
+              </div>
+              <div className="min-w-[9rem] flex-1">
+                <FieldLabel className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  To
+                </FieldLabel>
+                <input
+                  type="date"
+                  value={cashTo}
+                  onChange={(e) => setCashTo(e.target.value)}
+                  className={`mt-1 ${inputCls}`}
+                />
+              </div>
+              {(cashStatus !== 'all' || cashFrom || cashTo) && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setCashStatus('all')
+                    setCashFrom('')
+                    setCashTo('')
+                  }}
+                >
+                  Clear
+                </Button>
+              )}
+            </div>
+          </Card>
+
+          {filteredPhonePe.length > 0 ? (
             <div className="space-y-2">
               <p className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
                 PhonePe — pending admin confirm
               </p>
-              {wallet.pendingPhonePe.map((p) => {
+              {filteredPhonePe.map((p) => {
                 const ref = p.bookingRef
                 const patientName = ref?.patientName || 'Patient'
                 const issue = ref?.issue || 'Home visit'
@@ -281,12 +326,9 @@ export default function ManagerFinancePage() {
                         <p className="font-medium text-slate-900">{inr(p.amount)}</p>
                         <p className="mt-0.5 text-sm text-slate-700">{patientName}</p>
                         <p className="text-xs text-slate-500">{issue}</p>
-                        <span className="mt-2 inline-flex rounded-full bg-sky-50 px-2.5 py-0.5 text-[11px] font-semibold text-sky-900 ring-1 ring-sky-200">
-                          Pending admin confirm
-                        </span>
                         {Number(p.managerCommissionAmount) > 0 ? (
                           <p className="mt-2 text-xs font-medium text-emerald-700">
-                            Your cut: {inr(p.managerCommissionAmount)} — credited after admin confirms
+                            Your cut: {inr(p.managerCommissionAmount)}
                           </p>
                         ) : null}
                       </div>
@@ -310,118 +352,91 @@ export default function ManagerFinancePage() {
             </div>
           ) : null}
 
-          {entries.length === 0 && !(wallet?.pendingPhonePe || []).length ? (
+          {filteredCashEntries.length === 0 && filteredPhonePe.length === 0 ? (
             <Card hover={false} className="p-6 text-center">
-              <p className="text-sm font-medium text-slate-800">No cash recorded yet</p>
+              <p className="text-sm font-medium text-slate-800">No collections match these filters</p>
               <p className="mt-1 text-sm text-slate-600">
-                Open a case, go to Payment, and tap Record collection.
+                Record cash on a case, or clear filters to see everything.
               </p>
               <Link
                 to="/manager/bookings"
                 className="mt-4 inline-flex rounded-xl bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-teal-700"
               >
-                Go to cases needing collection
+                Go to cases
               </Link>
             </Card>
-          ) : entries.length === 0 ? null : (
-            <>
-              {(wallet?.pendingPhonePe || []).length > 0 ? (
-                <p className="mt-3 px-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  Cash handoff
-                </p>
+          ) : (
+            <div className="space-y-2">
+              {filteredPhonePe.length > 0 && filteredCashEntries.length > 0 ? (
+                <p className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-500">Cash handoff</p>
               ) : null}
-              {entries.map((e) => {
-              const ref = e.bookingRef
-              const booking = e.bookingId
-              const patientName =
-                ref?.patientName ||
-                (booking?.userId && typeof booking.userId === 'object' ? booking.userId.name : null) ||
-                'Patient'
-              const issue = ref?.issue || booking?.issue || 'Home visit'
-              const bookingId = ref?.id || booking?._id
-              const status = cashStatusMeta(e.status)
+              {filteredCashEntries.map((e) => {
+                const ref = e.bookingRef
+                const booking = e.bookingId
+                const patientName =
+                  ref?.patientName ||
+                  (booking?.userId && typeof booking.userId === 'object' ? booking.userId.name : null) ||
+                  'Patient'
+                const issue = ref?.issue || booking?.issue || 'Home visit'
+                const bookingId = ref?.id || booking?._id
+                const status = cashStatusMeta(e.status)
 
-              return (
-                <Card key={e._id} hover={false} className="p-4">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <p className="font-medium text-slate-900">{inr(e.amount)}</p>
-                      <p className="mt-0.5 text-sm text-slate-700">{patientName}</p>
-                      <p className="text-xs text-slate-500">{issue}</p>
-                      <span
-                        className={`mt-2 inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-semibold ring-1 ${status.cls}`}
-                      >
-                        {status.label}
-                      </span>
-                      {Number(e.managerCommissionAmount) > 0 ? (
-                        <p className="mt-2 text-xs font-medium text-emerald-700">
-                          Your cut: {inr(e.managerCommissionAmount)}
-                          {e.status === 'settled' ? ' — already credited' : ' — credited after admin settles'}
-                        </p>
-                      ) : null}
-                      {e.note ? <p className="mt-1 text-xs text-slate-500">{e.note}</p> : null}
-                    </div>
-                    <div className="flex shrink-0 flex-col items-end gap-2">
-                      <span className="text-xs text-slate-500">
-                        {e.collectedAt ? new Date(e.collectedAt).toLocaleDateString('en-IN') : ''}
-                      </span>
-                      {bookingId ? (
-                        <Link
-                          to={`/manager/bookings/${bookingId}`}
-                          className="text-xs font-semibold text-teal-700 hover:text-teal-900"
+                return (
+                  <Card key={e._id} hover={false} className="p-4">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-slate-900">{inr(e.amount)}</p>
+                        <p className="mt-0.5 text-sm text-slate-700">{patientName}</p>
+                        <p className="text-xs text-slate-500">{issue}</p>
+                        <span
+                          className={`mt-2 inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-semibold ring-1 ${status.cls}`}
                         >
-                          View case →
-                        </Link>
-                      ) : null}
+                          {status.label}
+                        </span>
+                        {Number(e.managerCommissionAmount) > 0 ? (
+                          <p className="mt-2 text-xs font-medium text-emerald-700">
+                            Your cut: {inr(e.managerCommissionAmount)}
+                            {e.status === 'settled' ? ' — credited' : ' — after settle'}
+                          </p>
+                        ) : null}
+                      </div>
+                      <div className="flex shrink-0 flex-col items-end gap-2">
+                        <span className="text-xs text-slate-500">
+                          {e.collectedAt ? new Date(e.collectedAt).toLocaleDateString('en-IN') : ''}
+                        </span>
+                        {bookingId ? (
+                          <Link
+                            to={`/manager/bookings/${bookingId}`}
+                            className="text-xs font-semibold text-teal-700 hover:text-teal-900"
+                          >
+                            View case →
+                          </Link>
+                        ) : null}
+                      </div>
                     </div>
-                  </div>
-                </Card>
-              )
-            })}
-            </>
+                  </Card>
+                )
+              })}
+            </div>
           )}
         </div>
-      ) : tab === 'earnings' ? (
-        <div className="space-y-4">
+      ) : null}
+
+      {tab === 'earnings' ? (
+        <div className="space-y-3">
           {!wallet ? (
             <Card hover={false} className="p-6 text-center text-sm text-slate-600">
               Could not load earnings. Try again later.
             </Card>
           ) : (
             <>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <Card hover={false} className="p-5">
-                  <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Withdrawable</p>
-                  <p className="mt-1 text-2xl font-bold text-emerald-700">{inr(available)}</p>
-                  <p className="mt-1 text-xs text-slate-500">
-                    Settled {inr(wallet.settledCommission)} − withdrawn {inr(wallet.withdrawn)}
-                  </p>
-                </Card>
-                <Card hover={false} className="p-5">
-                  <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Pending commission</p>
-                  <p className="mt-1 text-2xl font-bold text-slate-900">
-                    {inr((wallet.pendingCommission || 0) + (wallet.pendingPhonePeCut || 0))}
-                  </p>
-                  <p className="mt-1 text-xs text-slate-500">
-                    Cash handoff + PhonePe awaiting confirm —{' '}
-                    <button
-                      type="button"
-                      onClick={() => setTab('cash')}
-                      className="font-semibold text-teal-700 hover:underline"
-                    >
-                      see cash list
-                    </button>
-                  </p>
-                </Card>
-              </div>
-
               <Card hover={false} className="p-5">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <h3 className="font-semibold text-slate-900">Withdraw commission</h3>
                     <p className="mt-1 text-xs text-slate-500">
-                      Lifetime collected: {inr(wallet.totalCollected)} · Commission earned:{' '}
-                      {inr(wallet.settledCommission)}
+                      Total earned {inr(totalEarnings)} · Withdrawn {inr(wallet.withdrawn)} · Ready{' '}
+                      {inr(available)}
                     </p>
                   </div>
                   <Button
@@ -437,7 +452,7 @@ export default function ManagerFinancePage() {
                 </div>
                 {!hasUpi ? (
                   <p className="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-900 ring-1 ring-amber-100">
-                    Save your UPI ID in the{' '}
+                    Save your UPI ID under{' '}
                     <button
                       type="button"
                       onClick={() => setTab('payout')}
@@ -445,28 +460,86 @@ export default function ManagerFinancePage() {
                     >
                       Payout UPI
                     </button>{' '}
-                    tab before requesting a withdrawal.
+                    before withdrawing.
                   </p>
                 ) : null}
                 {pendingWithdraw ? (
                   <p className="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-900 ring-1 ring-amber-100">
                     Withdrawal of {inr(pendingWithdraw.amount)} requested on{' '}
-                    {new Date(pendingWithdraw.requestedAt).toLocaleDateString('en-IN')} — waiting for admin
-                    approval.
-                    {pendingWithdraw.payoutUpiId ? ` · UPI: ${pendingWithdraw.payoutUpiId}` : ''}
+                    {new Date(pendingWithdraw.requestedAt).toLocaleDateString('en-IN')} — waiting for admin.
                   </p>
                 ) : null}
               </Card>
 
+              <Card hover={false} className="p-4">
+                <div className="flex flex-wrap items-end gap-3">
+                  <div className="min-w-[9rem] flex-1">
+                    <FieldLabel className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Type
+                    </FieldLabel>
+                    <select
+                      value={txType}
+                      onChange={(e) => setTxType(e.target.value)}
+                      className={`mt-1 w-full ${selectCls}`}
+                    >
+                      <option value="all">All</option>
+                      <option value="manager_commission">Commission earned</option>
+                      <option value="manager_withdrawal">Withdrawals</option>
+                    </select>
+                  </div>
+                  <div className="min-w-[9rem] flex-1">
+                    <FieldLabel className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      From
+                    </FieldLabel>
+                    <input
+                      type="date"
+                      value={txFrom}
+                      onChange={(e) => setTxFrom(e.target.value)}
+                      className={`mt-1 ${inputCls}`}
+                    />
+                  </div>
+                  <div className="min-w-[9rem] flex-1">
+                    <FieldLabel className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      To
+                    </FieldLabel>
+                    <input
+                      type="date"
+                      value={txTo}
+                      onChange={(e) => setTxTo(e.target.value)}
+                      className={`mt-1 ${inputCls}`}
+                    />
+                  </div>
+                  {(txType !== 'all' || txFrom || txTo) && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        setTxType('all')
+                        setTxFrom('')
+                        setTxTo('')
+                      }}
+                    >
+                      Clear
+                    </Button>
+                  )}
+                </div>
+                {(txFrom || txTo || txType !== 'all') && (
+                  <p className="mt-3 text-xs text-slate-600">
+                    Filtered net:{' '}
+                    <strong className="tabular-nums text-slate-900">{inr(filteredEarningsTotal)}</strong>
+                  </p>
+                )}
+              </Card>
+
               <Card hover={false} className="p-5">
                 <h3 className="font-semibold text-slate-900">History</h3>
-                {transactions.length === 0 ? (
+                {filteredTx.length === 0 ? (
                   <p className="mt-3 text-sm text-slate-600">
-                    No commission yet. Your cut is credited after admin settles the cash you handed over.
+                    No transactions match these filters.
                   </p>
                 ) : (
                   <div className="mt-3 divide-y divide-slate-100">
-                    {transactions.map((t) => {
+                    {filteredTx.map((t) => {
                       const isCredit = t.direction === 'credit'
                       const booking = t.bookingId
                       const patientName =
@@ -498,11 +571,13 @@ export default function ManagerFinancePage() {
             </>
           )}
         </div>
-      ) : tab === 'payout' ? (
+      ) : null}
+
+      {tab === 'payout' ? (
         <Card hover={false} className="p-5">
           <h3 className="font-semibold text-slate-900">Payout UPI</h3>
           <p className="mt-1 text-xs text-slate-500">
-            Admin will transfer your commission to this UPI ID when they approve a withdrawal.
+            Admin transfers commission to this UPI when a withdrawal is approved.
           </p>
           {hasUpi ? (
             <p className="mt-3 rounded-xl bg-emerald-50 px-3 py-2 text-xs text-emerald-900 ring-1 ring-emerald-100">
@@ -511,27 +586,31 @@ export default function ManagerFinancePage() {
             </p>
           ) : null}
           <form onSubmit={saveUpi} className="mt-4 space-y-3">
-            <label className="block text-sm font-medium text-slate-700">
-              UPI ID
+            <div>
+              <FieldLabel required className="block text-sm font-medium text-slate-700">
+                UPI ID
+              </FieldLabel>
               <input
                 type="text"
                 value={upiId}
                 onChange={(e) => setUpiId(e.target.value)}
                 placeholder="yourname@oksbi"
-                className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+                className={`mt-1 ${inputCls}`}
                 required
               />
-            </label>
-            <label className="block text-sm font-medium text-slate-700">
-              Name on UPI (optional)
+            </div>
+            <div>
+              <FieldLabel className="block text-sm font-medium text-slate-700">
+                Name on UPI (optional)
+              </FieldLabel>
               <input
                 type="text"
                 value={upiName}
                 onChange={(e) => setUpiName(e.target.value)}
                 placeholder="Account holder name"
-                className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+                className={`mt-1 ${inputCls}`}
               />
-            </label>
+            </div>
             <Button type="submit" loading={savingUpi} disabled={savingUpi}>
               Save UPI
             </Button>
@@ -541,34 +620,76 @@ export default function ManagerFinancePage() {
 
       {withdrawOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal>
-          <form onSubmit={submitWithdraw} className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
+          <form
+            noValidate
+            onSubmit={submitWithdraw}
+            className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl"
+          >
             <h3 className="font-semibold text-slate-900">Withdraw commission</h3>
             <p className="mt-1 text-xs text-slate-500">Withdrawable balance: {inr(available)}</p>
             <p className="mt-2 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-700">
               Paying to <span className="font-semibold">{wallet?.payoutUpiId}</span>
               {wallet?.payoutDisplayName ? ` (${wallet.payoutDisplayName})` : ''}
             </p>
-            <label className="mt-4 block text-sm font-medium text-slate-700">
+            <FieldLabel required className="mt-4 block text-sm font-medium text-slate-700">
               Amount (₹)
-              <input
-                type="number"
-                min={1}
-                max={available}
-                step={1}
-                value={withdrawAmount}
-                onChange={(e) => setWithdrawAmount(e.target.value)}
-                className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
-                required
-              />
-            </label>
-            <div className="mt-5 flex gap-2">
-              <Button type="button" variant="outline" className="flex-1" onClick={() => setWithdrawOpen(false)}>
-                Cancel
-              </Button>
-              <Button type="submit" className="flex-1" disabled={submitting}>
-                {submitting ? '…' : 'Request'}
-              </Button>
-            </div>
+            </FieldLabel>
+            {(() => {
+              const amt = Number(withdrawAmount)
+              const empty = withdrawAmount === '' || withdrawAmount == null
+              const invalidNumber = !empty && (!Number.isFinite(amt) || amt < 1)
+              const overBalance = Number.isFinite(amt) && amt > available + 0.009
+              const inputInvalid = invalidNumber || overBalance
+              return (
+                <>
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    min={1}
+                    step={1}
+                    value={withdrawAmount}
+                    onChange={(e) => setWithdrawAmount(e.target.value)}
+                    aria-invalid={inputInvalid}
+                    className={[
+                      'mt-1 w-full rounded-xl border px-3 py-2 text-sm focus:outline-none focus:ring-2',
+                      inputInvalid
+                        ? 'border-rose-400 focus:border-rose-500 focus:ring-rose-500/20'
+                        : 'border-slate-200 focus:border-teal-500 focus:ring-teal-500/20',
+                    ].join(' ')}
+                    required
+                  />
+                  <p className="mt-1 text-[11px] text-slate-500">
+                    Maximum you can withdraw:{' '}
+                    <strong className="font-semibold text-slate-700">{inr(available)}</strong>
+                  </p>
+                  {overBalance ? (
+                    <p className="mt-1.5 text-xs font-medium text-rose-700">
+                      Amount exceeds your withdrawable balance of {inr(available)}.
+                    </p>
+                  ) : null}
+                  {invalidNumber ? (
+                    <p className="mt-1.5 text-xs font-medium text-rose-700">Enter an amount of at least ₹1.</p>
+                  ) : null}
+                  <div className="mt-5 flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => setWithdrawOpen(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="submit"
+                      className="flex-1"
+                      disabled={submitting || empty || inputInvalid || available < 1}
+                    >
+                      {submitting ? '…' : 'Request'}
+                    </Button>
+                  </div>
+                </>
+              )
+            })()}
           </form>
         </div>
       ) : null}

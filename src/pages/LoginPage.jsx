@@ -5,6 +5,7 @@ import toast from 'react-hot-toast'
 import { api } from '../config/api'
 import AuthSpinner from '../components/AuthSpinner'
 import Button from '../components/ui/Button'
+import FieldLabel from '../components/ui/FieldLabel'
 import PasswordInput from '../components/ui/PasswordInput'
 import { setSession, getToken, getDefaultDashboardPath } from '../auth/session'
 import { getProfileCached } from '../utils/profileCache'
@@ -197,9 +198,9 @@ export default function LoginPage() {
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-6">
             <div>
-              <label htmlFor="login-phone" className="type-label mb-2 block text-slate-700">
+              <FieldLabel htmlFor="login-phone" required className="type-label mb-2 block text-slate-700">
                 Phone number
-              </label>
+              </FieldLabel>
               <input
                 id="login-phone"
                 name="phone"
@@ -222,9 +223,9 @@ export default function LoginPage() {
               {fieldErrors.phone ? <p className="mt-1 text-xs text-red-600">{fieldErrors.phone}</p> : null}
             </div>
             <div>
-              <label htmlFor="login-password" className="type-label mb-2 block text-slate-700">
+              <FieldLabel htmlFor="login-password" required className="type-label mb-2 block text-slate-700">
                 Password
-              </label>
+              </FieldLabel>
               <PasswordInput
                 id="login-password"
                 name="password"

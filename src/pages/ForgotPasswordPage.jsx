@@ -5,6 +5,7 @@ import toast from 'react-hot-toast'
 import { api } from '../config/api'
 import OtpInput from '../components/OtpInput'
 import Button from '../components/ui/Button'
+import FieldLabel from '../components/ui/FieldLabel'
 import PasswordInput from '../components/ui/PasswordInput'
 import { validateIndianMobile } from '../utils/phoneIndia'
 import { validateLiveField } from '../utils/liveFieldValidation'
@@ -215,9 +216,9 @@ export default function ForgotPasswordPage() {
           {step === 'phone' && (
             <form onSubmit={sendCode} className="space-y-5">
               <div>
-                <label htmlFor="fp-phone" className="mb-2 block text-sm font-medium text-slate-700">
+                <FieldLabel htmlFor="fp-phone" required className="mb-2 block text-sm font-medium text-slate-700">
                   Mobile number
-                </label>
+                </FieldLabel>
                 <input
                   id="fp-phone"
                   value={phone}
@@ -244,7 +245,9 @@ export default function ForgotPasswordPage() {
           {step === 'otp' && (
             <form onSubmit={verifyCode} className="space-y-5">
               <div>
-                <span className="mb-2 block text-sm font-medium text-slate-700">Verification code</span>
+                <FieldLabel required className="mb-2 block text-sm font-medium text-slate-700">
+                  Verification code
+                </FieldLabel>
                 <OtpInput
                   value={otp}
                   length={OTP_LENGTH}
@@ -285,9 +288,9 @@ export default function ForgotPasswordPage() {
           {step === 'password' && (
             <form onSubmit={savePassword} className="space-y-5">
               <div>
-                <label htmlFor="fp-pass" className="mb-2 block text-sm font-medium text-slate-700">
+                <FieldLabel htmlFor="fp-pass" required className="mb-2 block text-sm font-medium text-slate-700">
                   New password
-                </label>
+                </FieldLabel>
                 <PasswordInput
                   id="fp-pass"
                   value={newPassword}

@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import toast from 'react-hot-toast'
 import { DAILY_SLOTS } from '../../constants/slots'
 import { formatBookingDateAndSlot, formatBookingTimeSlot } from '../../utils/date'
+import FieldLabel from '../ui/FieldLabel'
 
 function todayInputValue() {
   const t = new Date()
@@ -18,19 +19,26 @@ function RescheduleModal({ booking, sessionRow, patchReschedule, onClose, onUpda
 
   if (!booking) return null
 
-  const sessionLabel =
-    sessionRow?.n != null ? `Session #${sessionRow.n}` : sessionRow?.sessionId ? 'This session' : 'Visit'
+  const sessionLabel = sessionRow?.complimentary
+    ? sessionRow?.label || 'Assessment visit'
+    : sessionRow?.n != null
+      ? `Session #${sessionRow.n}`
+      : sessionRow?.sessionId
+        ? 'This session'
+        : 'Visit'
 
   async function submit(e) {
     e.preventDefault()
     setBusy(true)
     try {
       const payload = { date, timeSlot }
-      if (sessionRow?.sessionId && String(sessionRow.sessionId) !== String(booking._id)) {
+      if (sessionRow?.complimentary) {
+        payload.assessmentVisit = true
+      } else if (sessionRow?.sessionId && String(sessionRow.sessionId) !== String(booking._id)) {
         payload.sessionId = sessionRow.sessionId
       }
       await patchReschedule(payload)
-      toast.success('Session rescheduled')
+      toast.success('Visit rescheduled')
       onUpdated?.()
       onClose()
     } catch (err) {
@@ -73,10 +81,15 @@ function RescheduleModal({ booking, sessionRow, patchReschedule, onClose, onUpda
         )}
         <form onSubmit={submit} className="mt-5 space-y-4">
           <div>
-            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">
+            <FieldLabel
+              htmlFor="reschedule-date"
+              required
+              className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500"
+            >
               New date
-            </label>
+            </FieldLabel>
             <input
+              id="reschedule-date"
               type="date"
               min={min}
               required
@@ -86,10 +99,15 @@ function RescheduleModal({ booking, sessionRow, patchReschedule, onClose, onUpda
             />
           </div>
           <div>
-            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">
+            <FieldLabel
+              htmlFor="reschedule-time"
+              required
+              className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500"
+            >
               New time slot
-            </label>
+            </FieldLabel>
             <select
+              id="reschedule-time"
               value={timeSlot}
               onChange={(e) => setTimeSlot(e.target.value)}
               className="w-full cursor-pointer rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30"

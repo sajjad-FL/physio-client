@@ -161,7 +161,8 @@
   }
 
   .type-micro {
-    @apply text-[9px] font-bold uppercase tracking-wider leading-[12px];
+    /* Floor 11px — ui-ux-pro-max: no patient-facing copy below 11px */
+    @apply text-[11px] font-bold uppercase tracking-wider leading-[14px];
   }
 
   /* Phone / small tablet — lock Tailwind text utilities to native-app scale (matches Expo) */

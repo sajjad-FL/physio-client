@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import Modal from '../ui/Modal'
 import Button from '../ui/Button'
+import FieldLabel from '../ui/FieldLabel'
 import { api } from '../../config/api'
 import { buildRazorpayPrefill } from '../../utils/razorpayPrefill'
 
@@ -161,8 +162,10 @@ export default function PayInstallmentModal({
           </label>
         ) : null}
 
-        <label className="block">
-          <span className="text-xs font-semibold uppercase tracking-wide text-ink-muted">Amount (₹)</span>
+        <div>
+          <FieldLabel required={true} className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
+            Amount (₹)
+          </FieldLabel>
           <input
             type="number"
             inputMode="decimal"
@@ -177,7 +180,7 @@ export default function PayInstallmentModal({
           {perSession > 0 ? (
             <p className="mt-1 text-[11px] text-ink-muted">Typical installment: ₹{perSession.toFixed(2)} per session.</p>
           ) : null}
-        </label>
+        </div>
 
         {error ? (
           <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-900">{error}</div>

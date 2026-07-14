@@ -3,6 +3,7 @@ import toast from 'react-hot-toast'
 import { api } from '../../config/api'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
+import FieldLabel from '../../components/ui/FieldLabel'
 
 export default function AdminZonesPage() {
   const [zones, setZones] = useState([])
@@ -65,19 +66,29 @@ export default function AdminZonesPage() {
       <Card hover={false} className="p-5">
         <h2 className="font-semibold text-slate-900">Create service zone</h2>
         <form onSubmit={createZone} className="mt-4 space-y-3">
-          <input
-            className="w-full rounded-xl border border-slate-200 p-3 text-sm"
-            placeholder="Zone name (e.g. Guwahati Central)"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
-          <textarea
-            className="w-full rounded-xl border border-slate-200 p-3 text-sm"
-            rows={2}
-            placeholder="Pincodes (comma or space separated, e.g. 781001 781002)"
-            value={pincodesRaw}
-            onChange={(e) => setPincodesRaw(e.target.value)}
-          />
+          <div>
+            <FieldLabel required className="mb-1 block text-sm font-medium text-slate-700">
+              Zone name
+            </FieldLabel>
+            <input
+              className="w-full rounded-xl border border-slate-200 p-3 text-sm"
+              placeholder="Zone name (e.g. Guwahati Central)"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+          </div>
+          <div>
+            <FieldLabel className="mb-1 block text-sm font-medium text-slate-700">
+              Pincodes
+            </FieldLabel>
+            <textarea
+              className="w-full rounded-xl border border-slate-200 p-3 text-sm"
+              rows={2}
+              placeholder="Pincodes (comma or space separated, e.g. 781001 781002)"
+              value={pincodesRaw}
+              onChange={(e) => setPincodesRaw(e.target.value)}
+            />
+          </div>
           <Button type="submit" disabled={busy}>
             Create zone
           </Button>

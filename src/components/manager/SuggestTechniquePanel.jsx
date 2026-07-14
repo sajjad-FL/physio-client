@@ -7,6 +7,7 @@ import { DAILY_SLOTS } from '../../constants/slots'
 import { formatBookingTimeSlot } from '../../utils/date'
 import { usePricingSettings } from '../../hooks/usePricingSettings'
 import Button from '../ui/Button'
+import FieldLabel from '../ui/FieldLabel'
 
 function todayISO() {
   const d = new Date()
@@ -199,9 +200,9 @@ export default function SuggestTechniquePanel({ sourceBookingId, disabled = fals
       {open ? (
         <div className="space-y-5 border-t border-slate-100 bg-slate-50/40 px-4 py-4 sm:px-5">
           <section>
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <FieldLabel required className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
               Technique
-            </p>
+            </FieldLabel>
             <div className="grid gap-2 sm:grid-cols-2">
               {options.map((o) => {
                 const selected = issue === o.issue
@@ -301,8 +302,10 @@ export default function SuggestTechniquePanel({ sourceBookingId, disabled = fals
                 >
                   <p className="mb-2.5 text-sm font-semibold text-slate-900">Session {i + 1}</p>
                   <div className="grid gap-3 sm:grid-cols-2">
-                    <label className="block">
-                      <span className="mb-1 block text-xs font-medium text-slate-500">Date</span>
+                    <div>
+                      <FieldLabel required className="mb-1 block text-xs font-medium text-slate-500">
+                        Date
+                      </FieldLabel>
                       <input
                         type="date"
                         min={minDate}
@@ -311,9 +314,11 @@ export default function SuggestTechniquePanel({ sourceBookingId, disabled = fals
                         onChange={(e) => setVisitDateAt(i, e.target.value)}
                         className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
                       />
-                    </label>
-                    <label className="block">
-                      <span className="mb-1 block text-xs font-medium text-slate-500">Time</span>
+                    </div>
+                    <div>
+                      <FieldLabel required className="mb-1 block text-xs font-medium text-slate-500">
+                        Time
+                      </FieldLabel>
                       <select
                         value={visitTimes[i] || ''}
                         disabled={busy}
@@ -327,7 +332,7 @@ export default function SuggestTechniquePanel({ sourceBookingId, disabled = fals
                           </option>
                         ))}
                       </select>
-                    </label>
+                    </div>
                   </div>
                 </div>
               ))}

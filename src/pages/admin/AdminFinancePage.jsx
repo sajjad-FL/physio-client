@@ -9,6 +9,7 @@ import AdminCaseContext from '../../components/admin/AdminCaseContext'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import Input from '../../components/ui/Input'
+import FieldLabel from '../../components/ui/FieldLabel'
 import Pagination from '../../components/Pagination'
 
 function formatInr(n) {
@@ -1142,7 +1143,9 @@ export default function AdminFinancePage() {
             </p>
             <form className="mt-6 space-y-4" onSubmit={submitSettle}>
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-600">Amount (INR)</label>
+                <FieldLabel required className="mb-1 block text-xs font-medium text-gray-600">
+                  Amount (INR)
+                </FieldLabel>
                 <Input
                   value={settleAmount}
                   onChange={(e) => setSettleAmount(e.target.value)}
@@ -1281,7 +1284,9 @@ export default function AdminFinancePage() {
                 : 'The physiotherapist can record a fresh collection after this.'}
             </p>
             <PaymentQueueVerifySummary row={queueRejectTarget} />
-            <label className="mt-4 block text-xs font-medium text-gray-500">Reason</label>
+            <FieldLabel required className="mt-4 block text-xs font-medium text-gray-500">
+              Reason
+            </FieldLabel>
             <textarea
               className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 shadow-sm"
               rows={3}

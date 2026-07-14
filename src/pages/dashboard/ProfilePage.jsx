@@ -9,6 +9,7 @@ import { validateLiveField } from '../../utils/liveFieldValidation'
 import toast from 'react-hot-toast'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
+import FieldLabel from '../../components/ui/FieldLabel'
 import MapPickerModal from '../../components/location/MapPickerModal'
 import LocationSelectorRow from '../../components/location/LocationSelectorRow'
 import SeoNoIndex from '../../components/seo/SeoNoIndex'
@@ -205,7 +206,6 @@ export default function ProfilePage() {
     if (physio) {
       nextErrors.specialization = validateLiveField('specialization', specialization, { isPhysio: true })
       nextErrors.profileExperience = validateLiveField('profileExperience', experience)
-      nextErrors.profileFees = validateLiveField('profileFees', fees)
     }
     setFieldErrors(nextErrors)
     if (Object.values(nextErrors).some(Boolean)) {
@@ -229,7 +229,6 @@ export default function ProfilePage() {
           ? {
               specialization: specialization.trim(),
               experience: experience === '' ? 0 : Number(experience),
-              fees: fees === '' ? 0 : Number(fees),
             }
           : {}),
       })
@@ -405,9 +404,9 @@ export default function ProfilePage() {
 
         <form onSubmit={saveProfile} className="mt-8 space-y-5">
           <div>
-            <label htmlFor="pf-name" className="block text-sm font-medium text-gray-800">
+            <FieldLabel htmlFor="pf-name" required className="block text-sm font-medium text-gray-800">
               Name
-            </label>
+            </FieldLabel>
             <input
               id="pf-name"
               value={name}
@@ -468,7 +467,9 @@ export default function ProfilePage() {
           </div>
 
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-gray-800">Address</label>
+            <FieldLabel required className="mb-1.5 block text-sm font-medium text-gray-800">
+              Address
+            </FieldLabel>
             {addressText.trim() || addressLat != null ? (
               <p className="mb-2 rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-600 ring-1 ring-gray-100">
                 <span className="font-medium text-gray-800">Current: </span>
@@ -500,9 +501,9 @@ export default function ProfilePage() {
           </div>
 
           <div>
-            <label htmlFor="pf-dob" className="block text-sm font-medium text-gray-800">
+            <FieldLabel htmlFor="pf-dob" required className="block text-sm font-medium text-gray-800">
               Date of birth
-            </label>
+            </FieldLabel>
             <input
               id="pf-dob"
               type="date"
@@ -523,9 +524,9 @@ export default function ProfilePage() {
           </div>
 
           <div>
-            <label htmlFor="pf-gender" className="block text-sm font-medium text-gray-800">
+            <FieldLabel htmlFor="pf-gender" required className="block text-sm font-medium text-gray-800">
               Gender
-            </label>
+            </FieldLabel>
             <select
               id="pf-gender"
               value={gender}
@@ -554,9 +555,9 @@ export default function ProfilePage() {
           {isPhysio && (
             <>
               <div>
-                <label htmlFor="pf-specialization" className="block text-sm font-medium text-gray-800">
+                <FieldLabel htmlFor="pf-specialization" required className="block text-sm font-medium text-gray-800">
                   Specialization
-                </label>
+                </FieldLabel>
                 <input
                   id="pf-specialization"
                   value={specialization}
@@ -579,9 +580,9 @@ export default function ProfilePage() {
               </div>
               <div className="grid gap-5 sm:grid-cols-2">
                 <div>
-                  <label htmlFor="pf-experience" className="block text-sm font-medium text-gray-800">
+                  <FieldLabel htmlFor="pf-experience" required className="block text-sm font-medium text-gray-800">
                     Experience (years)
-                  </label>
+                  </FieldLabel>
                   <input
                     id="pf-experience"
                     type="number"
@@ -605,31 +606,19 @@ export default function ProfilePage() {
                   ) : null}
                 </div>
                 <div>
-                  <label htmlFor="pf-fees" className="block text-sm font-medium text-gray-800">
+                  <FieldLabel htmlFor="pf-fees" className="block text-sm font-medium text-gray-800">
                     Fee per session (INR)
-                  </label>
-                  <p className="mt-0.5 text-xs text-gray-500">One fixed amount per session.</p>
+                  </FieldLabel>
+                  <p className="mt-0.5 text-xs text-gray-500">
+                    Set by admin only — contact support if this needs updating.
+                  </p>
                   <input
                     id="pf-fees"
                     type="number"
-                    min="0"
-                    step="0.01"
                     value={fees}
-                    onChange={(e) => {
-                      const v = e.target.value
-                      setFees(v)
-                      patchField('profileFees', v)
-                    }}
-                    aria-invalid={Boolean(fieldErrors.profileFees)}
-                    className={`mt-1.5 h-11 w-full rounded-xl border bg-white px-3 text-gray-900 shadow-sm outline-none focus:ring-2 ${
-                      fieldErrors.profileFees
-                        ? 'border-red-400 ring-1 ring-red-200 focus:border-red-500 focus:ring-red-500/20'
-                        : 'border-gray-200 focus:border-blue-500 focus:ring-blue-500/20'
-                    }`}
+                    readOnly
+                    className="mt-1.5 h-11 w-full cursor-not-allowed rounded-xl border border-gray-200 bg-gray-50 px-3 text-gray-700 shadow-sm"
                   />
-                  {fieldErrors.profileFees ? (
-                    <p className="mt-1 text-xs text-red-600">{fieldErrors.profileFees}</p>
-                  ) : null}
                 </div>
               </div>
             </>

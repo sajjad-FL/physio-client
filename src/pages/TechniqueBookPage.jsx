@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { api } from '../config/api'
@@ -9,17 +9,11 @@ import Input from '../components/ui/Input'
 import LocationAutocomplete from '../components/booking/LocationAutocomplete'
 import LocationPickerModal from '../components/location/LocationPickerModal'
 import SeoNoIndex from '../components/seo/SeoNoIndex'
+import FieldLabel, { RequiredMark } from '../components/ui/FieldLabel'
+import { todayISO, defaultBookableDate, filterSelectableSlots } from '../constants/slots'
 import { formatBookingTimeSlot } from '../utils/date'
 import { getCurrentCoords } from '../utils/geolocation'
 import { mapboxReverseGeocode } from '../utils/mapboxGeocode'
-
-function todayISO() {
-  const d = new Date()
-  const yyyy = d.getFullYear()
-  const mm = String(d.getMonth() + 1).padStart(2, '0')
-  const dd = String(d.getDate()).padStart(2, '0')
-  return `${yyyy}-${mm}-${dd}`
-}
 
 const labelCls = 'mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-500'
 
@@ -34,9 +28,10 @@ export default function TechniqueBookPage() {
   const [location, setLocation] = useState('')
   const [lat, setLat] = useState(null)
   const [lng, setLng] = useState(null)
+  const [editingLocation, setEditingLocation] = useState(false)
   const [geoBusy, setGeoBusy] = useState(false)
   const [locationModalOpen, setLocationModalOpen] = useState(false)
-  const [date, setDate] = useState(todayISO())
+  const [date, setDate] = useState(defaultBookableDate)
   const [timeSlot, setTimeSlot] = useState('')
   const [slots, setSlots] = useState([])
   const [consentAccepted, setConsentAccepted] = useState(false)
@@ -44,15 +39,32 @@ export default function TechniqueBookPage() {
 
   const price = Number(settings?.techniquePrices?.[tech?.bookingIssue])
   const priceLabel = Number.isFinite(price) && price > 0 ? `₹${price.toLocaleString('en-IN')}` : '—'
+  const hasLocation = Boolean(location.trim())
+  const showLocationEditor = editingLocation || !hasLocation
+
+  useLayoutEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+  }, [slug])
 
   useEffect(() => {
     let cancelled = false
     ;(async () => {
       try {
-        const res = await api.get('/auth/me')
+        const res = await api.get('/profile')
         if (cancelled) return
         setProfileName(res.data?.name || '')
-        if (res.data?.location) setLocation(res.data.location)
+        const addr = res.data?.address
+        const text = String(addr?.text || '').trim()
+        if (text) {
+          setLocation(text)
+          setEditingLocation(false)
+          if (Number.isFinite(addr?.lat) && Number.isFinite(addr?.lng)) {
+            setLat(addr.lat)
+            setLng(addr.lng)
+          }
+        } else {
+          setEditingLocation(true)
+        }
       } catch {
         /* ignore */
       } finally {
@@ -82,10 +94,12 @@ export default function TechniqueBookPage() {
     }
   }, [date])
 
+  const selectableSlots = useMemo(() => filterSelectableSlots(slots, date), [slots, date])
+
   const canSubmit = useMemo(
     () =>
-      Boolean(profileName?.trim() && location.trim() && date && timeSlot && consentAccepted && tech),
-    [profileName, location, date, timeSlot, consentAccepted, tech],
+      Boolean(profileName?.trim() && location.trim() && date && timeSlot && consentAccepted && tech && !profileLoading),
+    [profileName, location, date, timeSlot, consentAccepted, tech, profileLoading],
   )
 
   async function useMyLocation() {
@@ -95,7 +109,10 @@ export default function TechniqueBookPage() {
       setLat(coords.lat)
       setLng(coords.lng)
       const place = await mapboxReverseGeocode(coords.lat, coords.lng)
-      if (place) setLocation(place)
+      if (place) {
+        setLocation(place)
+        setEditingLocation(false)
+      }
     } catch (e) {
       toast.error(e.message || 'Could not get location')
     } finally {
@@ -106,6 +123,15 @@ export default function TechniqueBookPage() {
   async function onSubmit(e) {
     e.preventDefault()
     if (!canSubmit || !tech) return
+    if (!profileName.trim()) {
+      toast.error('Add your name in Profile before booking')
+      return
+    }
+    if (!location.trim()) {
+      toast.error('Add a home address to continue')
+      setEditingLocation(true)
+      return
+    }
     setSubmitting(true)
     try {
       const body = {
@@ -155,62 +181,104 @@ export default function TechniqueBookPage() {
       <form onSubmit={onSubmit} className="mx-auto max-w-lg space-y-4 px-4 py-6 pb-28">
         <Link
           to={`/techniques/${tech.slug}`}
-          className="text-sm font-medium text-teal-700 hover:text-teal-900"
+          className="mb-2 inline-block text-sm font-medium text-teal-700 hover:text-teal-900"
         >
           ← {tech.label}
         </Link>
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="mt-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <h1 className="text-lg font-semibold text-slate-900">Book {tech.label}</h1>
           <p className="mt-1 text-sm text-slate-600">
             Home visit · {priceLabel} · physio assigned after booking
           </p>
+          {profileLoading ? (
+            <p className="mt-3 text-sm text-slate-500">Loading profile…</p>
+          ) : profileName.trim() ? (
+            <p className="mt-3 text-sm text-slate-700">
+              Booking as <span className="font-semibold text-slate-900">{profileName.trim()}</span>
+            </p>
+          ) : (
+            <p className="mt-3 text-sm text-amber-800">
+              Name missing.{' '}
+              <Link to="/profile" className="font-semibold text-teal-700 underline underline-offset-2">
+                Complete your profile
+              </Link>
+            </p>
+          )}
         </div>
 
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <label className={labelCls}>Your name</label>
-          <Input
-            value={profileName}
-            onChange={(e) => setProfileName(e.target.value)}
-            disabled={profileLoading}
-            required
-          />
-        </div>
-
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <label className={labelCls}>Home address</label>
-          <LocationAutocomplete
-            value={location}
-            onChange={setLocation}
-            onPlaceResolved={(place) => {
-              if (place && Number.isFinite(place.lat) && Number.isFinite(place.lng)) {
-                setLat(place.lat)
-                setLng(place.lng)
-              } else {
-                setLat(null)
-                setLng(null)
-              }
-            }}
-            disabled={geoBusy}
-          />
-          <div className="mt-2 flex flex-wrap gap-2">
-            <Button type="button" variant="outline" disabled={geoBusy} onClick={useMyLocation}>
-              {geoBusy ? 'Locating…' : 'Use my location'}
-            </Button>
-            <Button type="button" variant="outline" onClick={() => setLocationModalOpen(true)}>
-              Pick on map
-            </Button>
+          <div className="flex items-start justify-between gap-3">
+            <FieldLabel required={true} className={labelCls}>
+              Home address
+            </FieldLabel>
+            {hasLocation && !editingLocation ? (
+              <button
+                type="button"
+                className="text-xs font-semibold text-teal-700 hover:text-teal-900"
+                onClick={() => setEditingLocation(true)}
+              >
+                Change
+              </button>
+            ) : null}
+            {hasLocation && editingLocation ? (
+              <button
+                type="button"
+                className="text-xs font-semibold text-slate-500 hover:text-slate-800"
+                onClick={() => setEditingLocation(false)}
+              >
+                Done
+              </button>
+            ) : null}
           </div>
+
+          {!showLocationEditor ? (
+            <p className="text-sm leading-relaxed text-slate-800">{location}</p>
+          ) : (
+            <>
+              {!hasLocation ? (
+                <p className="mb-2 text-xs text-amber-800">Add your home address to continue booking.</p>
+              ) : null}
+              <LocationAutocomplete
+                value={location}
+                onChange={setLocation}
+                onPlaceResolved={(place) => {
+                  if (place && Number.isFinite(place.lat) && Number.isFinite(place.lng)) {
+                    setLat(place.lat)
+                    setLng(place.lng)
+                    if (place.label || place.text) {
+                      setLocation(String(place.label || place.text))
+                    }
+                    setEditingLocation(false)
+                  } else {
+                    setLat(null)
+                    setLng(null)
+                  }
+                }}
+                disabled={geoBusy}
+              />
+              <div className="mt-2 flex flex-wrap gap-2">
+                <Button type="button" variant="outline" disabled={geoBusy} onClick={useMyLocation}>
+                  {geoBusy ? 'Locating…' : 'Use my location'}
+                </Button>
+                <Button type="button" variant="outline" onClick={() => setLocationModalOpen(true)}>
+                  Pick on map
+                </Button>
+              </div>
+            </>
+          )}
         </div>
 
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <label className={labelCls}>Date</label>
+          <FieldLabel required={true} className={labelCls}>
+            Date
+          </FieldLabel>
           <Input type="date" min={todayISO()} value={date} onChange={(e) => setDate(e.target.value)} required />
-          <label className={`${labelCls} mt-4`}>Time slot</label>
+          <FieldLabel required={true} className={`${labelCls} mt-4`}>
+            Time slot
+          </FieldLabel>
           <div className="flex flex-wrap gap-2">
-            {(slots || [])
-              .filter((s) => s.available !== false)
-              .map((s) => (
+            {selectableSlots.map((s) => (
                 <button
                   key={s.timeSlot}
                   type="button"
@@ -225,8 +293,12 @@ export default function TechniqueBookPage() {
                 </button>
               ))}
           </div>
-          {slots.length === 0 ? (
-            <p className="mt-2 text-xs text-slate-500">No slots for this date — try another day.</p>
+          {selectableSlots.length === 0 ? (
+            <p className="mt-2 text-xs text-slate-500">
+              {date === todayISO()
+                ? 'No slots left today — visits need at least 2 hours’ notice. Pick tomorrow or a later date.'
+                : 'No slots for this date — try another day.'}
+            </p>
           ) : null}
         </div>
 
@@ -237,7 +309,10 @@ export default function TechniqueBookPage() {
             checked={consentAccepted}
             onChange={(e) => setConsentAccepted(e.target.checked)}
           />
-          <span>I consent to a physiotherapist visiting my home for this treatment session.</span>
+          <span>
+            I consent to a physiotherapist visiting my home for this treatment session.
+            <RequiredMark />
+          </span>
         </label>
 
         <div className="fixed inset-x-0 bottom-0 border-t border-slate-200 bg-white/95 p-4 backdrop-blur">
@@ -257,6 +332,7 @@ export default function TechniqueBookPage() {
           setLocation(text)
           setLat(nextLat)
           setLng(nextLng)
+          setEditingLocation(false)
           setLocationModalOpen(false)
         }}
         showSaveDefault={false}

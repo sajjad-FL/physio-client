@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { api } from '../config/api'
 import { ISSUE_OPTIONS } from '../constants/issues'
 import { validateLiveField } from '../utils/liveFieldValidation'
+import FieldLabel from './ui/FieldLabel'
 
 export function BookingForm() {
   const [form, setForm] = useState({
@@ -119,9 +120,9 @@ export function BookingForm() {
 
       <div className="mt-6 flex flex-col gap-4">
         <div>
-          <label htmlFor="book-name" className="mb-1 block text-sm font-medium text-gray-700">
+          <FieldLabel htmlFor="book-name" required={true} className="mb-1 block text-sm font-medium text-gray-700">
             Full name
-          </label>
+          </FieldLabel>
           <input
             id="book-name"
             name="name"
@@ -136,9 +137,9 @@ export function BookingForm() {
           {errors.bookingName ? <p className="mt-1 text-xs text-red-600">{errors.bookingName}</p> : null}
         </div>
         <div>
-          <label htmlFor="book-phone" className="mb-1 block text-sm font-medium text-gray-700">
+          <FieldLabel htmlFor="book-phone" required={true} className="mb-1 block text-sm font-medium text-gray-700">
             Phone
-          </label>
+          </FieldLabel>
           <input
             id="book-phone"
             name="phone"
@@ -153,9 +154,9 @@ export function BookingForm() {
           {errors.bookingPhone ? <p className="mt-1 text-xs text-red-600">{errors.bookingPhone}</p> : null}
         </div>
         <div>
-          <label htmlFor="book-issue" className="mb-1 block text-sm font-medium text-gray-700">
+          <FieldLabel htmlFor="book-issue" required={true} className="mb-1 block text-sm font-medium text-gray-700">
             Problem
-          </label>
+          </FieldLabel>
           <select
             id="book-issue"
             name="issue"
@@ -173,9 +174,9 @@ export function BookingForm() {
           {errors.bookingIssue ? <p className="mt-1 text-xs text-red-600">{errors.bookingIssue}</p> : null}
         </div>
         <div>
-          <label htmlFor="book-location" className="mb-1 block text-sm font-medium text-gray-700">
+          <FieldLabel htmlFor="book-location" required={true} className="mb-1 block text-sm font-medium text-gray-700">
             Location
-          </label>
+          </FieldLabel>
           <input
             id="book-location"
             name="location"

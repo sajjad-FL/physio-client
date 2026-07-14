@@ -5,6 +5,7 @@ import { api } from '../../config/api'
 import { toastApiError } from '../../utils/formToast'
 import { formatInr } from '../../utils/shopDisplay'
 import { useShopCart } from '../../hooks/useShopCart'
+import FieldLabel from '../../components/ui/FieldLabel'
 
 export default function ShopCheckoutPage() {
   const navigate = useNavigate()
@@ -59,7 +60,9 @@ export default function ShopCheckoutPage() {
 
       <form onSubmit={placeOrder} className="space-y-4">
         <div className="rounded-2xl border border-border-subtle bg-white p-4">
-          <h2 className="text-sm font-semibold text-ink">Delivery address</h2>
+          <FieldLabel required={true} className="text-sm font-semibold text-ink">
+            Delivery address
+          </FieldLabel>
           <textarea
             value={address}
             onChange={(e) => setAddress(e.target.value)}

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { api } from '../../config/api'
 import toast from 'react-hot-toast'
 import Button from '../ui/Button'
+import FieldLabel from '../ui/FieldLabel'
 import { StarRatingInput } from './StarRating'
 
 /**
@@ -65,7 +66,9 @@ export default function ReviewSubmitModal({
         ) : (
           physioName && <p className="mt-1 text-sm text-gray-500">How was your visit with {physioName}?</p>
         )}
-        <label className="mt-5 block text-sm font-medium text-gray-800">Your rating</label>
+        <FieldLabel required={true} className="mt-5 block text-sm font-medium text-gray-800">
+          Your rating
+        </FieldLabel>
         <div className="mt-2">
           <StarRatingInput value={rating} onChange={setRating} disabled={submitting} />
         </div>

@@ -1,3 +1,4 @@
+import { useLayoutEffect } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { getTechniqueBySlug } from '../constants/techniques'
 import { usePricingSettings } from '../hooks/usePricingSettings'
@@ -19,6 +20,10 @@ export default function TechniqueDetailPage() {
   const { slug } = useParams()
   const tech = getTechniqueBySlug(slug)
   const { settings, loading } = usePricingSettings()
+
+  useLayoutEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+  }, [slug])
 
   if (!tech) {
     return (
@@ -77,13 +82,13 @@ export default function TechniqueDetailPage() {
           />
           <div className="relative grid gap-6 p-6 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] sm:items-center sm:p-8">
             <div
-              className="flex aspect-square max-h-52 items-center justify-center rounded-2xl sm:max-h-none sm:aspect-auto sm:min-h-[200px]"
+              className="flex w-full items-center justify-center rounded-2xl px-2 py-4 sm:min-h-[200px] sm:px-0 sm:py-0"
               style={{ background: `linear-gradient(145deg, ${tech.bg} 0%, #ffffff 100%)` }}
             >
               <img
                 src={tech.image}
                 alt=""
-                className="h-40 w-40 object-contain drop-shadow-md sm:h-44 sm:w-44"
+                className="h-56 w-full max-h-64 object-contain drop-shadow-md sm:h-44 sm:w-44 sm:max-h-none"
               />
             </div>
             <div className="min-w-0">

@@ -28,6 +28,7 @@ import { absoluteUrl } from '../utils/siteMeta'
 import { MAX_UPLOAD_SIZE_LABEL } from '../constants/uploadLimits.js'
 import { formatPhysioDisplayName } from '../utils/physioDisplayName.js'
 import { prepareUploadFile } from '../utils/compressImage.js'
+import FieldLabel from '../components/ui/FieldLabel'
 
 const baseInputClass =
   'h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm text-slate-900 shadow-sm outline-none transition-all duration-200 placeholder:text-slate-400 focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20'
@@ -47,20 +48,6 @@ const STEP_HERO = {
   3: { title: 'Your practice', sub: 'Services you offer and your fees.' },
   4: { title: 'Upload documents', sub: 'Attach your certificates and ID proof.' },
   5: { title: 'Review & submit', sub: 'Check everything before you submit.' },
-}
-
-function FieldLabel({ htmlFor, children, required = false }) {
-  return (
-    <label className="mb-1 block text-xs font-medium text-ink-muted" htmlFor={htmlFor}>
-      {children}
-      {required ? (
-        <span className="text-red-500" aria-hidden="true">
-          {' '}
-          *
-        </span>
-      ) : null}
-    </label>
-  )
 }
 
 function ErrorBanner({ formError, fieldErrors }) {

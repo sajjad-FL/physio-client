@@ -12,6 +12,7 @@ import {
 } from '../../utils/sessionPaymentMap'
 import { prepareUploadFile } from '../../utils/compressImage.js'
 import { MAX_UPLOAD_BYTES } from '../../constants/uploadLimits.js'
+import FieldLabel from '../ui/FieldLabel'
 
 function roundMoney2(n) {
   return Math.round((Number(n) + Number.EPSILON) * 100) / 100
@@ -70,6 +71,7 @@ export default function RecordCollectionModal({
   const [note, setNote] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const [confirmOpen, setConfirmOpen] = useState(false)
 
   const parsedAmount = roundMoney2(Number(amount))
   const amountOverLimit =
@@ -115,6 +117,7 @@ export default function RecordCollectionModal({
       setNote('')
       setError('')
       setSubmitting(false)
+      setConfirmOpen(false)
       setSelectedSessionId(defaultSessionId || '')
       setMethod('cash')
       setQrExpanded(false)
@@ -173,28 +176,42 @@ export default function RecordCollectionModal({
     }
   }
 
-  async function handleSubmit(e) {
-    e?.preventDefault?.()
+  function validateBeforeConfirm() {
     setError('')
     const amt = roundMoney2(Number(amount))
     if (!Number.isFinite(amt) || amt <= 0) {
       setError('Enter an amount greater than zero')
-      return
+      return false
     }
     if (amt > outstanding + 0.009) {
       setError(`Cannot record more than the pending payment of ₹${outstanding.toFixed(2)}`)
-      return
+      return false
     }
     if (isManager && method === 'phonepe_qr') {
       if (!qrConfigured) {
         setError('PhonePe QR is not set up. Ask admin to upload it under Platform settings.')
-        return
+        return false
       }
       if (!proofFile) {
         setError('Upload a screenshot of the PhonePe payment')
-        return
+        return false
       }
     }
+    return true
+  }
+
+  function handleFormSubmit(e) {
+    e?.preventDefault?.()
+    if (!validateBeforeConfirm()) return
+    setConfirmOpen(true)
+  }
+
+  async function confirmAndRecord() {
+    if (!validateBeforeConfirm()) {
+      setConfirmOpen(false)
+      return
+    }
+    const amt = roundMoney2(Number(amount))
     setSubmitting(true)
     try {
       const path = apiPath || `/physio/bookings/${booking?._id}/collections`
@@ -221,10 +238,12 @@ export default function RecordCollectionModal({
               : 'Collection recorded. Awaiting admin verification.'),
         )
       }
+      setConfirmOpen(false)
       onRecorded?.()
       onClose?.()
     } catch (err) {
       const msg = err.response?.data?.message || err.message || 'Could not record collection'
+      setConfirmOpen(false)
       setError(msg)
       toast.error(msg)
     } finally {
@@ -233,7 +252,9 @@ export default function RecordCollectionModal({
   }
 
   const outstandingLabel = `₹${outstanding.toFixed(2)}`
+  const amountLabel = `₹${parsedAmount.toFixed(2)}`
   const qrSrc = assetUrl(qrUrl)
+  const confirmMethodLabel = method === 'phonepe_qr' ? 'PhonePe QR' : 'Cash'
 
   const defaultDescription = apiPath?.includes('/manager/') ? (
     <>
@@ -253,16 +274,16 @@ export default function RecordCollectionModal({
     <>
       <Modal
         open={open}
-        onClose={submitting ? undefined : onClose}
+        onClose={submitting || confirmOpen ? undefined : onClose}
         title={title}
         description={description ?? defaultDescription}
       >
-        <form className="space-y-4" onSubmit={handleSubmit}>
+        <form className="space-y-4" onSubmit={handleFormSubmit}>
           {isManager ? (
             <div>
-              <span className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
+              <FieldLabel required className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
                 Payment method
-              </span>
+              </FieldLabel>
               <div className="mt-1.5 grid grid-cols-2 gap-2">
                 <button
                   type="button"
@@ -317,10 +338,10 @@ export default function RecordCollectionModal({
                 </div>
               )}
 
-              <label className="block">
-                <span className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
+              <div>
+                <FieldLabel required className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
                   Payment screenshot
-                </span>
+                </FieldLabel>
                 <input
                   type="file"
                   accept="image/jpeg,image/png,image/webp"
@@ -335,13 +356,16 @@ export default function RecordCollectionModal({
                     className="mt-2 max-h-32 rounded-lg border border-slate-200 object-contain"
                   />
                 ) : null}
-              </label>
+              </div>
             </div>
           ) : null}
 
-          <label className="block">
-            <span className="text-xs font-semibold uppercase tracking-wide text-ink-muted">Amount (₹)</span>
+          <div>
+            <FieldLabel htmlFor="collection-amount" required className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
+              Amount (₹)
+            </FieldLabel>
             <input
+              id="collection-amount"
               type="number"
               inputMode="decimal"
               min={0}
@@ -373,12 +397,15 @@ export default function RecordCollectionModal({
                 Amount cannot exceed pending payment of ₹{outstanding.toFixed(2)}.
               </p>
             ) : null}
-          </label>
+          </div>
 
           {isManager && hasMultiSession ? (
-            <label className="block">
-              <span className="text-xs font-semibold uppercase tracking-wide text-ink-muted">For session</span>
+            <div>
+              <FieldLabel htmlFor="collection-session" required className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
+                For session
+              </FieldLabel>
               <select
+                id="collection-session"
                 value={selectedSessionId}
                 onChange={(e) => setSelectedSessionId(e.target.value)}
                 className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20"
@@ -398,7 +425,7 @@ export default function RecordCollectionModal({
                     )
                   })}
               </select>
-            </label>
+            </div>
           ) : null}
 
           <label className="block">
@@ -425,19 +452,87 @@ export default function RecordCollectionModal({
               Cancel
             </Button>
             <Button type="submit" disabled={submitting || !canSubmit}>
-              {submitting
-                ? 'Saving…'
-                : method === 'phonepe_qr'
-                  ? 'Submit screenshot'
-                  : 'Record collection'}
+              {method === 'phonepe_qr' ? 'Submit screenshot' : 'Record collection'}
             </Button>
           </div>
         </form>
       </Modal>
 
+      {confirmOpen ? (
+        <div
+          className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-900/55 p-4 backdrop-blur-[3px]"
+          role="presentation"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget && !submitting) setConfirmOpen(false)
+          }}
+        >
+          <div
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="collection-confirm-title"
+            aria-describedby="collection-confirm-desc"
+            className="w-full max-w-sm rounded-2xl border border-slate-100 bg-white p-6 shadow-2xl shadow-slate-900/20 motion-safe:animate-enter-scale"
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-teal-50 ring-1 ring-teal-100">
+              <svg
+                className="h-6 w-6 text-teal-700"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={1.75}
+                aria-hidden
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-1.5v.75c0 .414-.336.75-.75.75h-.75m0-3.75h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 00-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 01-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 003 15h-.75M15 10.5a3 3 0 11-6 0 3 3 0 016 0zm3 0h.008v.008H18V10.5zm-12 0h.008v.008H6V10.5z"
+                />
+              </svg>
+            </div>
+
+            <h3 id="collection-confirm-title" className="mt-4 text-center text-lg font-semibold tracking-tight text-slate-900">
+              Confirm you received this amount
+            </h3>
+            <p id="collection-confirm-desc" className="mt-2 text-center text-sm leading-relaxed text-slate-600">
+              {method === 'phonepe_qr'
+                ? 'Make sure the patient paid this amount and your screenshot matches before you continue.'
+                : 'Make sure you have received this amount in hand before recording the collection.'}
+            </p>
+
+            <div className="mt-5 rounded-2xl border border-teal-100 bg-gradient-to-b from-teal-50/90 to-white px-4 py-5 text-center">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-teal-800/70">
+                Amount to record
+              </p>
+              <p className="mt-1 text-3xl font-semibold tabular-nums tracking-tight text-teal-950">
+                {amountLabel}
+              </p>
+              {isManager ? (
+                <p className="mt-2 text-xs font-medium text-slate-500">via {confirmMethodLabel}</p>
+              ) : null}
+            </div>
+
+            <div className="mt-6 grid grid-cols-2 gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                disabled={submitting}
+                onClick={() => setConfirmOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button type="button" className="w-full" disabled={submitting} onClick={confirmAndRecord}>
+                {submitting ? 'Saving…' : 'Confirm'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {qrExpanded && qrSrc ? (
         <div
-          className="fixed inset-0 z-[80] flex items-center justify-center bg-black/70 p-4"
+          className="fixed inset-0 z-[120] flex items-center justify-center bg-black/70 p-4"
           role="dialog"
           aria-modal="true"
           onClick={() => setQrExpanded(false)}

@@ -5,7 +5,7 @@ export function ScalePicker({ label, hint, value, onChange, required }) {
     <div>
       <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
         {label}
-        {required ? <span className="text-rose-500"> *</span> : null}
+        {required ? <span className="text-red-500"> *</span> : null}
       </p>
       {hint ? <p className="mt-0.5 text-xs text-slate-500">{hint}</p> : null}
       <div className="mt-2 flex flex-wrap gap-1.5">
@@ -77,7 +77,7 @@ export function ChipGroup({ label, hint, options, value, onChange, multi, requir
     <div>
       <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
         {label}
-        {required ? <span className="text-rose-500"> *</span> : null}
+        {required ? <span className="text-red-500"> *</span> : null}
       </p>
       {hint ? <p className="mt-0.5 text-xs text-slate-500">{hint}</p> : null}
       <div className="mt-2 flex flex-wrap gap-2">

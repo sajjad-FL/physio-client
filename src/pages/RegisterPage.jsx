@@ -5,6 +5,7 @@ import toast from 'react-hot-toast'
 import { api } from '../config/api'
 import AuthSpinner from '../components/AuthSpinner'
 import Button from '../components/ui/Button'
+import FieldLabel from '../components/ui/FieldLabel'
 import PasswordInput from '../components/ui/PasswordInput'
 import OtpInput from '../components/OtpInput'
 import { setSession, getToken, getDefaultDashboardPath } from '../auth/session'
@@ -258,9 +259,9 @@ export default function RegisterPage() {
           {step === STEP_PHONE ? (
             <div className="flex flex-col gap-5">
               <div>
-                <label htmlFor="reg-phone" className="mb-2 block text-sm font-medium text-slate-700">
+                <FieldLabel htmlFor="reg-phone" required className="mb-2 block text-sm font-medium text-slate-700">
                   Phone number
-                </label>
+                </FieldLabel>
                 <input
                   id="reg-phone"
                   inputMode="tel"
@@ -293,7 +294,9 @@ export default function RegisterPage() {
           {step === STEP_OTP ? (
             <div className="flex flex-col gap-5">
               <div>
-                <span className="mb-2 block text-sm font-medium text-slate-700">Verification code</span>
+                <FieldLabel required className="mb-2 block text-sm font-medium text-slate-700">
+                  Verification code
+                </FieldLabel>
                 <OtpInput value={otp} onChange={setOtp} length={OTP_LENGTH} disabled={loading || otpSendBusy} />
                 {fieldErrors.otp ? <p className="mt-2 text-xs text-red-600">{fieldErrors.otp}</p> : null}
                 {devOtpHint ? (
@@ -329,9 +332,9 @@ export default function RegisterPage() {
           {step === STEP_ACCOUNT ? (
             <form onSubmit={handleSubmit} className="flex flex-col gap-5">
               <div>
-                <label htmlFor="reg-name" className="mb-2 block text-sm font-medium text-slate-700">
+                <FieldLabel htmlFor="reg-name" required className="mb-2 block text-sm font-medium text-slate-700">
                   What&apos;s your name?
-                </label>
+                </FieldLabel>
                 <input
                   id="reg-name"
                   value={name}
@@ -349,9 +352,9 @@ export default function RegisterPage() {
               </div>
 
               <div>
-                <label htmlFor="reg-password" className="mb-2 block text-sm font-medium text-slate-700">
+                <FieldLabel htmlFor="reg-password" required className="mb-2 block text-sm font-medium text-slate-700">
                   Create password
-                </label>
+                </FieldLabel>
                 <PasswordInput
                   id="reg-password"
                   value={password}

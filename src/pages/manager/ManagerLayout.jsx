@@ -15,12 +15,32 @@ const iconCases = (
   </svg>
 )
 
-const iconLedger = (
+const iconCash = (
   <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24" aria-hidden>
     <path
       strokeLinecap="round"
       strokeLinejoin="round"
-      d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75a.75.75 0 01-.75.75h-.75m-1.5-3.75H3.75m0 0h-.375c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"
+      d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-1.5v.75c0 .414-.336.75-.75.75h-.75m0-3.75h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 00-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 01-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 003 15h-.75M15 10.5a3 3 0 11-6 0 3 3 0 016 0zm3 0h.008v.008H18V10.5zm-12 0h.008v.008H6V10.5z"
+    />
+  </svg>
+)
+
+const iconEarnings = (
+  <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24" aria-hidden>
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941"
+    />
+  </svg>
+)
+
+const iconUpi = (
+  <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24" aria-hidden>
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3"
     />
   </svg>
 )
@@ -35,21 +55,27 @@ const iconProfile = (
   </svg>
 )
 
-function titleForPath(pathname) {
+function financeTab(location) {
+  if (!String(location?.pathname || '').startsWith('/manager/finance')) return null
+  const tab = new URLSearchParams(location.search || '').get('tab')
+  if (tab === 'earnings' || tab === 'payout') return tab
+  return 'cash'
+}
+
+function titleForPath(pathname, search) {
   if (pathname.startsWith('/manager/profile')) return 'Profile'
   if (pathname.startsWith('/manager/bookings/') && pathname !== '/manager/bookings') return 'Case detail'
   if (pathname.startsWith('/manager/bookings')) return 'Your cases'
-  if (
-    pathname.startsWith('/manager/finance') ||
-    pathname.startsWith('/manager/ledger') ||
-    pathname.startsWith('/manager/wallet')
-  ) {
-    return 'Finance'
+  if (pathname.startsWith('/manager/finance') || pathname.startsWith('/manager/ledger') || pathname.startsWith('/manager/wallet')) {
+    const tab = financeTab({ pathname, search })
+    if (tab === 'earnings') return 'Earnings'
+    if (tab === 'payout') return 'Payout UPI'
+    return 'Cash collected'
   }
   return 'Care Manager'
 }
 
-function subtitleForPath(pathname) {
+function subtitleForPath(pathname, search) {
   if (pathname.startsWith('/manager/profile')) return 'Account details, photo, and location'
   if (pathname.startsWith('/manager/bookings/') && pathname !== '/manager/bookings') {
     return 'Assessment, plan, physio assignment & collections'
@@ -57,12 +83,11 @@ function subtitleForPath(pathname) {
   if (pathname.startsWith('/manager/bookings')) {
     return 'Assess patients, create plans, and coordinate care'
   }
-  if (
-    pathname.startsWith('/manager/finance') ||
-    pathname.startsWith('/manager/ledger') ||
-    pathname.startsWith('/manager/wallet')
-  ) {
-    return 'Cash you collected, what admin settles, and your commission'
+  if (pathname.startsWith('/manager/finance') || pathname.startsWith('/manager/ledger') || pathname.startsWith('/manager/wallet')) {
+    const tab = financeTab({ pathname, search })
+    if (tab === 'earnings') return 'Total earnings, withdrawable balance, and history'
+    if (tab === 'payout') return 'UPI ID for commission withdrawals'
+    return 'Cash and PhonePe collections waiting on admin'
   }
   return 'Home care operations'
 }
@@ -85,13 +110,45 @@ export default function ManagerLayout() {
     loadCounts()
   }, [loadCounts, location.pathname])
 
-  const topBarTitle = useMemo(() => titleForPath(location.pathname), [location.pathname])
-  const topBarSubtitle = useMemo(() => subtitleForPath(location.pathname), [location.pathname])
+  const topBarTitle = useMemo(
+    () => titleForPath(location.pathname, location.search),
+    [location.pathname, location.search],
+  )
+  const topBarSubtitle = useMemo(
+    () => subtitleForPath(location.pathname, location.search),
+    [location.pathname, location.search],
+  )
 
   const navItems = useMemo(
     () => [
-      { section: 'Operations', to: '/manager/bookings', label: 'Cases', icon: iconCases, badgeCount: actionCount },
-      { section: 'Finance', to: '/manager/finance', label: 'Finance', icon: iconLedger },
+      {
+        section: 'Operations',
+        to: '/manager/bookings',
+        label: 'Cases',
+        icon: iconCases,
+        badgeCount: actionCount,
+      },
+      {
+        section: 'Finance',
+        to: '/manager/finance?tab=cash',
+        label: 'Cash',
+        icon: iconCash,
+        activeWhen: (loc) => financeTab(loc) === 'cash',
+      },
+      {
+        section: 'Finance',
+        to: '/manager/finance?tab=earnings',
+        label: 'Earnings',
+        icon: iconEarnings,
+        activeWhen: (loc) => financeTab(loc) === 'earnings',
+      },
+      {
+        section: 'Finance',
+        to: '/manager/finance?tab=payout',
+        label: 'Payout UPI',
+        icon: iconUpi,
+        activeWhen: (loc) => financeTab(loc) === 'payout',
+      },
       { section: 'Account', to: '/manager/profile', label: 'Profile', icon: iconProfile, end: true },
     ],
     [actionCount],
@@ -100,7 +157,18 @@ export default function ManagerLayout() {
   const bottomNavItems = useMemo(
     () => [
       { to: '/manager/bookings', label: 'Cases', icon: iconCases },
-      { to: '/manager/finance', label: 'Finance', icon: iconLedger },
+      {
+        to: '/manager/finance?tab=earnings',
+        label: 'Earnings',
+        icon: iconEarnings,
+        activeWhen: (loc) => financeTab(loc) === 'earnings',
+      },
+      {
+        to: '/manager/finance?tab=cash',
+        label: 'Cash',
+        icon: iconCash,
+        activeWhen: (loc) => financeTab(loc) === 'cash',
+      },
       { to: '/manager/profile', label: 'Profile', icon: iconProfile, end: true },
     ],
     [],

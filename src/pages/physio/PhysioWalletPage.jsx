@@ -4,6 +4,7 @@ import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import toast from 'react-hot-toast'
 import Pagination from '../../components/Pagination'
+import FieldLabel from '../../components/ui/FieldLabel'
 
 function formatInr(n) {
   const v = Number(n)
@@ -249,9 +250,12 @@ export default function PhysioWalletPage() {
             Admin will transfer withdrawals to this UPI ID when they approve your request.
           </p>
           <form onSubmit={saveUpi} className="mt-4 grid gap-3 sm:grid-cols-2">
-            <label className="block text-sm font-medium text-gray-700">
-              UPI ID
+            <div>
+              <FieldLabel htmlFor="payout-upi-id" required className="block text-sm font-medium text-gray-700">
+                UPI ID
+              </FieldLabel>
               <input
+                id="payout-upi-id"
                 type="text"
                 value={upiId}
                 onChange={(e) => setUpiId(e.target.value)}
@@ -259,17 +263,20 @@ export default function PhysioWalletPage() {
                 className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                 required
               />
-            </label>
-            <label className="block text-sm font-medium text-gray-700">
-              Name on UPI (optional)
+            </div>
+            <div>
+              <FieldLabel htmlFor="payout-upi-name" className="block text-sm font-medium text-gray-700">
+                Name on UPI (optional)
+              </FieldLabel>
               <input
+                id="payout-upi-name"
                 type="text"
                 value={upiName}
                 onChange={(e) => setUpiName(e.target.value)}
                 placeholder="Account holder name"
                 className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
-            </label>
+            </div>
             <div className="sm:col-span-2">
               <Button type="submit" loading={savingUpi} disabled={savingUpi}>
                 Save UPI
@@ -437,9 +444,9 @@ export default function PhysioWalletPage() {
                 {dash.payoutDisplayName ? ` (${dash.payoutDisplayName})` : ''}
               </p>
             ) : null}
-            <label htmlFor="withdraw-amount" className="mt-4 block text-sm font-medium text-gray-700">
+            <FieldLabel htmlFor="withdraw-amount" required className="mt-4 block text-sm font-medium text-gray-700">
               Amount (INR)
-            </label>
+            </FieldLabel>
             <input
               id="withdraw-amount"
               type="number"

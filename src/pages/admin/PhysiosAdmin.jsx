@@ -6,6 +6,7 @@ import { toastApiError, toastValidationErrors } from '../../utils/formToast'
 import Pagination from '../../components/Pagination'
 import AdminPageHeader from '../../components/admin/AdminPageHeader'
 import VerificationsAdmin from './VerificationsAdmin'
+import FieldLabel from '../../components/ui/FieldLabel'
 import { formatPhysioSessionFeeLabel } from '../../utils/physioSessionFee.js'
 
 const TABS = [
@@ -331,9 +332,9 @@ export default function PhysiosAdmin() {
             <h3 className="type-page-title text-ink">Edit physiotherapist</h3>
             <form onSubmit={saveEdit} className="mt-4 space-y-4">
               <div>
-                <label htmlFor="edit-name" className="mb-2 block text-sm font-medium text-ink">
+                <FieldLabel htmlFor="edit-name" required className="mb-2 block text-sm font-medium text-ink">
                   Name
-                </label>
+                </FieldLabel>
                 <input
                   id="edit-name"
                   className={inputClass}
@@ -344,9 +345,9 @@ export default function PhysiosAdmin() {
                 />
               </div>
               <div>
-                <label htmlFor="edit-spec" className="mb-2 block text-sm font-medium text-ink">
+                <FieldLabel htmlFor="edit-spec" required className="mb-2 block text-sm font-medium text-ink">
                   Specialization
-                </label>
+                </FieldLabel>
                 <input
                   id="edit-spec"
                   className={inputClass}
@@ -468,9 +469,9 @@ export default function PhysiosAdmin() {
         </p>
         <div className="mt-8 grid gap-5 sm:grid-cols-2">
           <div className="sm:col-span-2">
-            <label htmlFor="fu-user" className="mb-2 block text-sm font-medium text-ink">
+            <FieldLabel htmlFor="fu-user" required className="mb-2 block text-sm font-medium text-ink">
               User
-            </label>
+            </FieldLabel>
             <select
               id="fu-user"
               value={selectedUserId}
@@ -491,9 +492,9 @@ export default function PhysiosAdmin() {
             )}
           </div>
           <div className="sm:col-span-2">
-            <label htmlFor="fu-spec" className="mb-2 block text-sm font-medium text-ink">
-              Specialization <span className="text-red-600">*</span>
-            </label>
+            <FieldLabel htmlFor="fu-spec" required className="mb-2 block text-sm font-medium text-ink">
+              Specialization
+            </FieldLabel>
             <input
               id="fu-spec"
               value={fuSpec}
@@ -518,9 +519,9 @@ export default function PhysiosAdmin() {
             />
           </div>
           <div>
-            <label htmlFor="fu-loc" className="mb-2 block text-sm font-medium text-ink">
-              Location / coverage <span className="text-red-600">*</span>
-            </label>
+            <FieldLabel htmlFor="fu-loc" required className="mb-2 block text-sm font-medium text-ink">
+              Location / coverage
+            </FieldLabel>
             <input
               id="fu-loc"
               value={fuLocation}
@@ -587,9 +588,9 @@ export default function PhysiosAdmin() {
         </p>
         <div className="mt-8 grid gap-5 sm:grid-cols-2">
           <div>
-            <label htmlFor="p-name" className="mb-2 block text-sm font-medium text-ink">
+            <FieldLabel htmlFor="p-name" required className="mb-2 block text-sm font-medium text-ink">
               Name
-            </label>
+            </FieldLabel>
             <input
               id="p-name"
               value={name}
@@ -600,9 +601,9 @@ export default function PhysiosAdmin() {
             />
           </div>
           <div>
-            <label htmlFor="p-spec" className="mb-2 block text-sm font-medium text-ink">
+            <FieldLabel htmlFor="p-spec" required className="mb-2 block text-sm font-medium text-ink">
               Specialization
-            </label>
+            </FieldLabel>
             <input
               id="p-spec"
               value={specialization}
@@ -626,9 +627,9 @@ export default function PhysiosAdmin() {
             />
           </div>
           <div className="sm:col-span-2">
-            <label htmlFor="p-loc" className="mb-2 block text-sm font-medium text-ink">
+            <FieldLabel htmlFor="p-loc" required className="mb-2 block text-sm font-medium text-ink">
               Location / coverage area
-            </label>
+            </FieldLabel>
             <input
               id="p-loc"
               value={location}

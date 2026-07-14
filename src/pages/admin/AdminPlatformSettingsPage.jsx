@@ -6,6 +6,7 @@ import Button from '../../components/ui/Button'
 import { DEFAULT_QUALIFICATION_DECLARATION } from '../../constants/qualificationDeclaration'
 import { assetUrl } from '../../utils/assetUrl'
 import { prepareUploadFile } from '../../utils/compressImage.js'
+import FieldLabel from '../../components/ui/FieldLabel'
 
 export default function AdminPlatformSettingsPage() {
   const [loading, setLoading] = useState(true)
@@ -219,9 +220,9 @@ export default function AdminPlatformSettingsPage() {
 
         <form onSubmit={onSave} className="mt-4 space-y-4">
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-600" htmlFor="admin-declaration-text">
+            <FieldLabel required className="mb-1 block text-xs font-medium text-slate-600" htmlFor="admin-declaration-text">
               Declaration text (max 8,000 characters)
-            </label>
+            </FieldLabel>
             <textarea
               id="admin-declaration-text"
               value={declarationText}
@@ -261,9 +262,9 @@ export default function AdminPlatformSettingsPage() {
 
         <form onSubmit={onSaveReferral} className="mt-4 space-y-4">
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-600" htmlFor="admin-referral-amount">
+            <FieldLabel required className="mb-1 block text-xs font-medium text-slate-600" htmlFor="admin-referral-amount">
               You earn when friend completes first session (₹)
-            </label>
+            </FieldLabel>
             <input
               id="admin-referral-amount"
               type="number"
@@ -276,9 +277,9 @@ export default function AdminPlatformSettingsPage() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-600" htmlFor="admin-signup-bonus">
+            <FieldLabel required className="mb-1 block text-xs font-medium text-slate-600" htmlFor="admin-signup-bonus">
               Friend gets on signup with your code (₹)
-            </label>
+            </FieldLabel>
             <input
               id="admin-signup-bonus"
               type="number"

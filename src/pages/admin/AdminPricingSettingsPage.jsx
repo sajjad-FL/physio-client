@@ -4,6 +4,7 @@ import toast from 'react-hot-toast'
 import { api } from '../../config/api'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
+import FieldLabel from '../../components/ui/FieldLabel'
 import { invalidatePricingSettingsCache } from '../../hooks/usePricingSettings'
 
 const inputCls =
@@ -420,20 +421,20 @@ export default function AdminPricingSettingsPage() {
                 </span>
               </p>
 
-              <label className="mt-4 block text-xs font-medium text-slate-600">
+              <FieldLabel required className="mt-4 block text-xs font-medium text-slate-600">
                 Patient pays (totalAmount) ₹
-                <input
-                  type="number"
-                  min={1}
-                  step={1}
-                  className={inputCls}
-                  value={totalAmount}
-                  onChange={(e) => setTotal(e.target.value)}
-                />
-                <span className="mt-1 block text-[11px] font-normal text-slate-500">
-                  Same amount with or without a manager
-                </span>
-              </label>
+              </FieldLabel>
+              <input
+                type="number"
+                min={1}
+                step={1}
+                className={inputCls}
+                value={totalAmount}
+                onChange={(e) => setTotal(e.target.value)}
+              />
+              <span className="mt-1 block text-[11px] font-normal text-slate-500">
+                Same amount with or without a manager
+              </span>
 
               <p className="mt-4 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                 {defaultsMode === 'with' ? 'With manager' : 'Without manager'} split
@@ -443,8 +444,10 @@ export default function AdminPricingSettingsPage() {
                   defaultsMode === 'with' ? 'sm:grid-cols-3' : 'sm:grid-cols-2'
                 }`}
               >
-                <label className="block text-xs font-medium text-slate-600">
-                  Platform (₹)
+                <div>
+                  <FieldLabel required className="block text-xs font-medium text-slate-600">
+                    Platform (₹)
+                  </FieldLabel>
                   <input
                     type="number"
                     min={0}
@@ -453,9 +456,11 @@ export default function AdminPricingSettingsPage() {
                     value={split.platform}
                     onChange={(e) => setSplitPart('platform', e.target.value)}
                   />
-                </label>
-                <label className="block text-xs font-medium text-slate-600">
-                  Physio (₹)
+                </div>
+                <div>
+                  <FieldLabel required className="block text-xs font-medium text-slate-600">
+                    Physio (₹)
+                  </FieldLabel>
                   <input
                     type="number"
                     min={0}
@@ -464,10 +469,12 @@ export default function AdminPricingSettingsPage() {
                     value={split.physio}
                     onChange={(e) => setSplitPart('physio', e.target.value)}
                   />
-                </label>
+                </div>
                 {defaultsMode === 'with' ? (
-                  <label className="block text-xs font-medium text-slate-600">
-                    Care manager (₹)
+                  <div>
+                    <FieldLabel required className="block text-xs font-medium text-slate-600">
+                      Care manager (₹)
+                    </FieldLabel>
                     <input
                       type="number"
                       min={0}
@@ -476,7 +483,7 @@ export default function AdminPricingSettingsPage() {
                       value={split.manager}
                       onChange={(e) => setSplitPart('manager', e.target.value)}
                     />
-                  </label>
+                  </div>
                 ) : null}
               </div>
 
@@ -599,20 +606,20 @@ export default function AdminPricingSettingsPage() {
                   <div key={issue} className="rounded-xl border border-slate-200 p-4">
                     <p className="text-sm font-semibold text-slate-900">{issue}</p>
 
-                    <label className="mt-3 block text-xs font-medium text-slate-600">
+                    <FieldLabel required className="mt-3 block text-xs font-medium text-slate-600">
                       Patient pays (totalAmount) ₹
-                      <input
-                        type="number"
-                        min={1}
-                        step={1}
-                        className={inputCls}
-                        value={totalAmount}
-                        onChange={(e) => setTotal(e.target.value)}
-                      />
-                      <span className="mt-1 block text-[11px] font-normal text-slate-500">
-                        Same amount with or without a manager
-                      </span>
-                    </label>
+                    </FieldLabel>
+                    <input
+                      type="number"
+                      min={1}
+                      step={1}
+                      className={inputCls}
+                      value={totalAmount}
+                      onChange={(e) => setTotal(e.target.value)}
+                    />
+                    <span className="mt-1 block text-[11px] font-normal text-slate-500">
+                      Same amount with or without a manager
+                    </span>
 
                     <p className="mt-4 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                       {techniqueMode === 'with' ? 'With manager' : 'Without manager'} split
@@ -622,8 +629,10 @@ export default function AdminPricingSettingsPage() {
                         techniqueMode === 'with' ? 'sm:grid-cols-3' : 'sm:grid-cols-2'
                       }`}
                     >
-                      <label className="block text-xs font-medium text-slate-600">
-                        Platform (₹)
+                      <div>
+                        <FieldLabel required className="block text-xs font-medium text-slate-600">
+                          Platform (₹)
+                        </FieldLabel>
                         <input
                           type="number"
                           min={0}
@@ -632,9 +641,11 @@ export default function AdminPricingSettingsPage() {
                           value={split.platform}
                           onChange={(e) => setSplitPart('platform', e.target.value)}
                         />
-                      </label>
-                      <label className="block text-xs font-medium text-slate-600">
-                        Physio (₹)
+                      </div>
+                      <div>
+                        <FieldLabel required className="block text-xs font-medium text-slate-600">
+                          Physio (₹)
+                        </FieldLabel>
                         <input
                           type="number"
                           min={0}
@@ -643,10 +654,12 @@ export default function AdminPricingSettingsPage() {
                           value={split.physio}
                           onChange={(e) => setSplitPart('physio', e.target.value)}
                         />
-                      </label>
+                      </div>
                       {techniqueMode === 'with' ? (
-                        <label className="block text-xs font-medium text-slate-600">
-                          Care manager (₹)
+                        <div>
+                          <FieldLabel required className="block text-xs font-medium text-slate-600">
+                            Care manager (₹)
+                          </FieldLabel>
                           <input
                             type="number"
                             min={0}
@@ -655,7 +668,7 @@ export default function AdminPricingSettingsPage() {
                             value={split.manager}
                             onChange={(e) => setSplitPart('manager', e.target.value)}
                           />
-                        </label>
+                        </div>
                       ) : null}
                     </div>
 
