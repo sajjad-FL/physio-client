@@ -1,85 +1,85 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>http://localhost:5001/</loc>
+    <loc>https://physiokhom.com/</loc>
     <lastmod>2026-07-15</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>http://localhost:5001/login</loc>
+    <loc>https://physiokhom.com/login</loc>
     <lastmod>2026-07-15</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>http://localhost:5001/register</loc>
+    <loc>https://physiokhom.com/register</loc>
     <lastmod>2026-07-15</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>http://localhost:5001/forgot-password</loc>
+    <loc>https://physiokhom.com/forgot-password</loc>
     <lastmod>2026-07-15</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>http://localhost:5001/register-physio</loc>
+    <loc>https://physiokhom.com/register-physio</loc>
     <lastmod>2026-07-15</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>http://localhost:5001/near-me-physio</loc>
+    <loc>https://physiokhom.com/near-me-physio</loc>
     <lastmod>2026-07-15</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>http://localhost:5001/physio-in/kokrajhar</loc>
+    <loc>https://physiokhom.com/physio-in/kokrajhar</loc>
     <lastmod>2026-07-15</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>http://localhost:5001/physio-in/kokrajhar/back-pain</loc>
+    <loc>https://physiokhom.com/physio-in/kokrajhar/back-pain</loc>
     <lastmod>2026-07-15</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>http://localhost:5001/physio-in/kokrajhar/knee-pain</loc>
+    <loc>https://physiokhom.com/physio-in/kokrajhar/knee-pain</loc>
     <lastmod>2026-07-15</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>http://localhost:5001/physio-in/kokrajhar/neck-shoulder-pain</loc>
+    <loc>https://physiokhom.com/physio-in/kokrajhar/neck-shoulder-pain</loc>
     <lastmod>2026-07-15</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>http://localhost:5001/physio-in/kokrajhar/post-surgery-rehab</loc>
+    <loc>https://physiokhom.com/physio-in/kokrajhar/post-surgery-rehab</loc>
     <lastmod>2026-07-15</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>http://localhost:5001/physio-in/kokrajhar/stroke-paralysis</loc>
+    <loc>https://physiokhom.com/physio-in/kokrajhar/stroke-paralysis</loc>
     <lastmod>2026-07-15</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>http://localhost:5001/physio-in/kokrajhar/sports-injury</loc>
+    <loc>https://physiokhom.com/physio-in/kokrajhar/sports-injury</loc>
     <lastmod>2026-07-15</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>http://localhost:5001/near-me-physio/kokrajhar</loc>
+    <loc>https://physiokhom.com/near-me-physio/kokrajhar</loc>
     <lastmod>2026-07-15</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.75</priority>
