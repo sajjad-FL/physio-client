@@ -5,12 +5,31 @@ import { api } from '../../config/api'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import FieldLabel from '../../components/ui/FieldLabel'
+import Pagination from '../../components/Pagination'
+import usePagination from '../../hooks/usePagination'
+import DetailSkeleton from '../../components/ui/skeletons/DetailSkeleton'
 
 const CASH_STATUS = {
-  open: { label: 'Waiting for admin', cls: 'bg-amber-50 text-amber-900 ring-amber-200' },
-  batched: { label: 'Admin processing', cls: 'bg-blue-50 text-blue-900 ring-blue-200' },
-  settled: { label: 'Settled', cls: 'bg-emerald-50 text-emerald-900 ring-emerald-200' },
-  disputed: { label: 'Disputed', cls: 'bg-rose-50 text-rose-900 ring-rose-200' },
+  open: {
+    label: 'Waiting for admin',
+    cls: 'bg-amber-50 text-amber-800 ring-amber-200/80',
+    accent: 'border-l-amber-400',
+  },
+  batched: {
+    label: 'Admin processing',
+    cls: 'bg-sky-50 text-sky-800 ring-sky-200/80',
+    accent: 'border-l-sky-400',
+  },
+  settled: {
+    label: 'Settled',
+    cls: 'bg-emerald-50 text-emerald-800 ring-emerald-200/80',
+    accent: 'border-l-emerald-500',
+  },
+  disputed: {
+    label: 'Disputed',
+    cls: 'bg-rose-50 text-rose-800 ring-rose-200/80',
+    accent: 'border-l-rose-400',
+  },
 }
 
 const TX_LABEL = {
@@ -23,7 +42,107 @@ function inr(n) {
 }
 
 function cashStatusMeta(status) {
-  return CASH_STATUS[status] || { label: status || '—', cls: 'bg-slate-50 text-slate-700 ring-slate-200' }
+  return (
+    CASH_STATUS[status] || {
+      label: status || '—',
+      cls: 'bg-slate-50 text-slate-700 ring-slate-200',
+      accent: 'border-l-slate-300',
+    }
+  )
+}
+
+function formatShortDate(value) {
+  if (!value) return ''
+  try {
+    return new Date(value).toLocaleDateString('en-IN', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    })
+  } catch {
+    return ''
+  }
+}
+
+function CollectionItemCard({
+  amount,
+  patientName,
+  issue,
+  statusLabel,
+  statusClass,
+  accentClass,
+  commission,
+  commissionNote,
+  dateLabel,
+  bookingId,
+  tone = 'default',
+}) {
+  const shell =
+    tone === 'phonepe'
+      ? 'border-sky-100 bg-gradient-to-r from-sky-50/80 to-white'
+      : 'border-slate-100 bg-white'
+
+  return (
+    <article
+      className={[
+        'group overflow-hidden rounded-xl border border-l-4 p-0 shadow-sm transition-all duration-200',
+        'hover:border-slate-200 hover:shadow-md',
+        accentClass || 'border-l-slate-300',
+        shell,
+      ].join(' ')}
+    >
+      <div className="flex flex-col gap-3 p-3.5 sm:flex-row sm:items-stretch sm:justify-between sm:gap-4 sm:p-4">
+        <div className="min-w-0 flex-1 space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-lg font-semibold tabular-nums tracking-tight text-slate-900">{inr(amount)}</p>
+            {statusLabel ? (
+              <span
+                className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ring-inset ${statusClass}`}
+              >
+                {statusLabel}
+              </span>
+            ) : null}
+            {tone === 'phonepe' ? (
+              <span className="inline-flex items-center rounded-full bg-sky-100 px-2 py-0.5 text-[11px] font-semibold text-sky-800 ring-1 ring-inset ring-sky-200/80">
+                PhonePe
+              </span>
+            ) : null}
+          </div>
+
+          <div className="min-w-0">
+            <p className="truncate text-sm font-medium text-slate-800">{patientName}</p>
+            <p className="mt-0.5 truncate text-xs text-slate-500">{issue}</p>
+          </div>
+
+          {Number(commission) > 0 ? (
+            <p className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-800 ring-1 ring-inset ring-emerald-100">
+              <span className="font-semibold tabular-nums">Your cut {inr(commission)}</span>
+              {commissionNote ? <span className="font-normal text-emerald-700/80">· {commissionNote}</span> : null}
+            </p>
+          ) : null}
+        </div>
+
+        <div className="flex shrink-0 items-center justify-between gap-3 border-t border-slate-100/80 pt-3 sm:flex-col sm:items-end sm:justify-between sm:border-t-0 sm:pt-0">
+          {dateLabel ? (
+            <time className="text-xs tabular-nums text-slate-500">{dateLabel}</time>
+          ) : (
+            <span />
+          )}
+          {bookingId ? (
+            <Link
+              to={`/manager/bookings/${bookingId}`}
+              className="inline-flex items-center gap-1 rounded-lg bg-teal-50 px-2.5 py-1.5 text-xs font-semibold text-teal-800 ring-1 ring-inset ring-teal-100 transition-colors hover:bg-teal-100 hover:text-teal-950"
+            >
+              View case
+              <span aria-hidden className="transition-transform group-hover:translate-x-0.5">
+                →
+              </span>
+            </Link>
+          ) : null}
+        </div>
+      </div>
+    </article>
+  )
 }
 
 function ymdLocal(d) {
@@ -58,6 +177,8 @@ export default function ManagerFinancePage() {
   const [wallet, setWallet] = useState(null)
   const [transactions, setTransactions] = useState([])
   const [loading, setLoading] = useState(true)
+  const cashPag = usePagination()
+  const txPag = usePagination()
   const [withdrawOpen, setWithdrawOpen] = useState(false)
   const [withdrawAmount, setWithdrawAmount] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -72,34 +193,70 @@ export default function ManagerFinancePage() {
   const [txFrom, setTxFrom] = useState('')
   const [txTo, setTxTo] = useState('')
 
+  const loadWallet = useCallback(async () => {
+    const wRes = await api.get('/manager/wallet')
+    setWallet(wRes.data)
+    setUpiId(wRes.data?.payoutUpiId || '')
+    setUpiName(wRes.data?.payoutDisplayName || '')
+  }, [])
+
+  const loadCash = useCallback(async () => {
+    const lRes = await api.get('/manager/ledger', {
+      params: {
+        page: cashPag.page,
+        limit: cashPag.pageSize,
+        status: cashStatus !== 'all' ? cashStatus : undefined,
+        dateFrom: cashFrom || undefined,
+        dateTo: cashTo || undefined,
+      },
+    })
+    setEntries(lRes.data?.entries || lRes.data?.data || [])
+    setOpenTotal(Number(lRes.data?.openTotal || 0))
+    cashPag.applyMeta(lRes.data)
+  }, [cashPag.page, cashPag.pageSize, cashPag.applyMeta, cashStatus, cashFrom, cashTo])
+
+  const loadTx = useCallback(async () => {
+    const tRes = await api.get('/manager/wallet/transactions', {
+      params: {
+        page: txPag.page,
+        limit: txPag.pageSize,
+        type: txType !== 'all' ? txType : undefined,
+        dateFrom: txFrom || undefined,
+        dateTo: txTo || undefined,
+      },
+    })
+    setTransactions(tRes.data?.transactions || tRes.data?.data || [])
+    txPag.applyMeta(tRes.data)
+  }, [txPag.page, txPag.pageSize, txPag.applyMeta, txType, txFrom, txTo])
+
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const [lRes, wRes, tRes] = await Promise.all([
-        api.get('/manager/ledger'),
-        api.get('/manager/wallet'),
-        api.get('/manager/wallet/transactions', { params: { page: 1, limit: 100 } }),
-      ])
-      setEntries(lRes.data?.entries || [])
-      setOpenTotal(Number(lRes.data?.openTotal || 0))
-      setWallet(wRes.data)
-      setTransactions(tRes.data?.transactions || [])
-      setUpiId(wRes.data?.payoutUpiId || '')
-      setUpiName(wRes.data?.payoutDisplayName || '')
+      await Promise.all([loadWallet(), loadCash(), loadTx()])
     } catch (e) {
       toast.error(e.response?.data?.message || 'Failed to load finance')
       setEntries([])
       setOpenTotal(0)
       setWallet(null)
       setTransactions([])
+      cashPag.clearMeta()
+      txPag.clearMeta()
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [loadWallet, loadCash, loadTx, cashPag.clearMeta, txPag.clearMeta])
 
   useEffect(() => {
     load()
   }, [load])
+
+  useEffect(() => {
+    cashPag.resetPage()
+  }, [cashStatus, cashFrom, cashTo, cashPag.resetPage])
+
+  useEffect(() => {
+    txPag.resetPage()
+  }, [txType, txFrom, txTo, txPag.resetPage])
 
   const cashHold = useMemo(() => {
     if (wallet?.cashToRemit != null) return Number(wallet.cashToRemit)
@@ -112,33 +269,19 @@ export default function ManagerFinancePage() {
   const pendingWithdraw = wallet?.pendingWithdraw
   const hasUpi = Boolean(String(wallet?.payoutUpiId || '').trim())
 
-  const filteredCashEntries = useMemo(() => {
-    return entries.filter((e) => {
-      if (cashStatus !== 'all' && e.status !== cashStatus) return false
-      return inDateRange(e.collectedAt, cashFrom, cashTo)
-    })
-  }, [entries, cashStatus, cashFrom, cashTo])
-
   const filteredPhonePe = useMemo(() => {
     const rows = wallet?.pendingPhonePe || []
     if (cashStatus !== 'all' && cashStatus !== 'open') return []
     return rows.filter((p) => inDateRange(p.createdAt, cashFrom, cashTo))
   }, [wallet, cashStatus, cashFrom, cashTo])
 
-  const filteredTx = useMemo(() => {
-    return transactions.filter((t) => {
-      if (txType !== 'all' && t.type !== txType) return false
-      return inDateRange(t.createdAt, txFrom, txTo)
-    })
-  }, [transactions, txType, txFrom, txTo])
-
   const filteredEarningsTotal = useMemo(() => {
-    return filteredTx.reduce((sum, t) => {
+    return transactions.reduce((sum, t) => {
       const amt = Number(t.totalAmount || 0)
       if (t.direction === 'credit') return sum + amt
       return sum - amt
     }, 0)
-  }, [filteredTx])
+  }, [transactions])
 
   function setTab(next) {
     const params =
@@ -202,7 +345,7 @@ export default function ManagerFinancePage() {
     }
   }
 
-  if (loading) return <div className="h-48 animate-pulse rounded-2xl bg-slate-100" />
+  if (loading) return <DetailSkeleton />
 
   return (
     <div className="space-y-4">
@@ -320,39 +463,25 @@ export default function ManagerFinancePage() {
                 const issue = ref?.issue || 'Home visit'
                 const bookingId = ref?.id
                 return (
-                  <Card key={p._id} hover={false} className="border-sky-100 bg-sky-50/40 p-4">
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <p className="font-medium text-slate-900">{inr(p.amount)}</p>
-                        <p className="mt-0.5 text-sm text-slate-700">{patientName}</p>
-                        <p className="text-xs text-slate-500">{issue}</p>
-                        {Number(p.managerCommissionAmount) > 0 ? (
-                          <p className="mt-2 text-xs font-medium text-emerald-700">
-                            Your cut: {inr(p.managerCommissionAmount)}
-                          </p>
-                        ) : null}
-                      </div>
-                      <div className="flex shrink-0 flex-col items-end gap-2">
-                        <span className="text-xs text-slate-500">
-                          {p.createdAt ? new Date(p.createdAt).toLocaleDateString('en-IN') : ''}
-                        </span>
-                        {bookingId ? (
-                          <Link
-                            to={`/manager/bookings/${bookingId}`}
-                            className="text-xs font-semibold text-teal-700 hover:text-teal-900"
-                          >
-                            View case →
-                          </Link>
-                        ) : null}
-                      </div>
-                    </div>
-                  </Card>
+                  <CollectionItemCard
+                    key={p._id}
+                    amount={p.amount}
+                    patientName={patientName}
+                    issue={issue}
+                    statusLabel="Pending confirm"
+                    statusClass="bg-sky-50 text-sky-800 ring-sky-200/80"
+                    accentClass="border-l-sky-400"
+                    commission={p.managerCommissionAmount}
+                    dateLabel={formatShortDate(p.createdAt)}
+                    bookingId={bookingId}
+                    tone="phonepe"
+                  />
                 )
               })}
             </div>
           ) : null}
 
-          {filteredCashEntries.length === 0 && filteredPhonePe.length === 0 ? (
+          {entries.length === 0 && filteredPhonePe.length === 0 ? (
             <Card hover={false} className="p-6 text-center">
               <p className="text-sm font-medium text-slate-800">No collections match these filters</p>
               <p className="mt-1 text-sm text-slate-600">
@@ -367,10 +496,10 @@ export default function ManagerFinancePage() {
             </Card>
           ) : (
             <div className="space-y-2">
-              {filteredPhonePe.length > 0 && filteredCashEntries.length > 0 ? (
+              {filteredPhonePe.length > 0 && entries.length > 0 ? (
                 <p className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-500">Cash handoff</p>
               ) : null}
-              {filteredCashEntries.map((e) => {
+              {entries.map((e) => {
                 const ref = e.bookingRef
                 const booking = e.bookingId
                 const patientName =
@@ -382,41 +511,22 @@ export default function ManagerFinancePage() {
                 const status = cashStatusMeta(e.status)
 
                 return (
-                  <Card key={e._id} hover={false} className="p-4">
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <p className="font-medium text-slate-900">{inr(e.amount)}</p>
-                        <p className="mt-0.5 text-sm text-slate-700">{patientName}</p>
-                        <p className="text-xs text-slate-500">{issue}</p>
-                        <span
-                          className={`mt-2 inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-semibold ring-1 ${status.cls}`}
-                        >
-                          {status.label}
-                        </span>
-                        {Number(e.managerCommissionAmount) > 0 ? (
-                          <p className="mt-2 text-xs font-medium text-emerald-700">
-                            Your cut: {inr(e.managerCommissionAmount)}
-                            {e.status === 'settled' ? ' — credited' : ' — after settle'}
-                          </p>
-                        ) : null}
-                      </div>
-                      <div className="flex shrink-0 flex-col items-end gap-2">
-                        <span className="text-xs text-slate-500">
-                          {e.collectedAt ? new Date(e.collectedAt).toLocaleDateString('en-IN') : ''}
-                        </span>
-                        {bookingId ? (
-                          <Link
-                            to={`/manager/bookings/${bookingId}`}
-                            className="text-xs font-semibold text-teal-700 hover:text-teal-900"
-                          >
-                            View case →
-                          </Link>
-                        ) : null}
-                      </div>
-                    </div>
-                  </Card>
+                  <CollectionItemCard
+                    key={e._id}
+                    amount={e.amount}
+                    patientName={patientName}
+                    issue={issue}
+                    statusLabel={status.label}
+                    statusClass={status.cls}
+                    accentClass={status.accent}
+                    commission={e.managerCommissionAmount}
+                    commissionNote={e.status === 'settled' ? 'credited' : 'after settle'}
+                    dateLabel={formatShortDate(e.collectedAt)}
+                    bookingId={bookingId}
+                  />
                 )
               })}
+              <Pagination {...cashPag.paginationProps} />
             </div>
           )}
         </div>
@@ -533,39 +643,47 @@ export default function ManagerFinancePage() {
 
               <Card hover={false} className="p-5">
                 <h3 className="font-semibold text-slate-900">History</h3>
-                {filteredTx.length === 0 ? (
+                {transactions.length === 0 ? (
                   <p className="mt-3 text-sm text-slate-600">
                     No transactions match these filters.
                   </p>
                 ) : (
-                  <div className="mt-3 divide-y divide-slate-100">
-                    {filteredTx.map((t) => {
-                      const isCredit = t.direction === 'credit'
-                      const booking = t.bookingId
-                      const patientName =
-                        booking?.userId && typeof booking.userId === 'object' ? booking.userId.name : null
-                      return (
-                        <div key={t._id} className="flex items-start justify-between gap-3 py-3">
-                          <div className="min-w-0 flex-1">
-                            <p className="text-sm font-medium text-slate-900">{TX_LABEL[t.type] || t.type}</p>
-                            <p className="text-xs text-slate-500">
-                              {patientName ? `${patientName} · ` : ''}
-                              {new Date(t.createdAt).toLocaleDateString('en-IN')}
-                              {t.meta?.payoutReference ? ` · Ref: ${t.meta.payoutReference}` : ''}
+                  <>
+                    <div className="mt-3 space-y-2">
+                      {transactions.map((t) => {
+                        const isCredit = t.direction === 'credit'
+                        const booking = t.bookingId
+                        const patientName =
+                          booking?.userId && typeof booking.userId === 'object' ? booking.userId.name : null
+                        return (
+                          <div
+                            key={t._id}
+                            className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 bg-slate-50/50 px-3.5 py-3 transition-colors hover:border-slate-200 hover:bg-white"
+                          >
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-medium text-slate-900">
+                                {TX_LABEL[t.type] || t.type}
+                              </p>
+                              <p className="mt-0.5 truncate text-xs text-slate-500">
+                                {patientName ? `${patientName} · ` : ''}
+                                {formatShortDate(t.createdAt)}
+                                {t.meta?.payoutReference ? ` · Ref: ${t.meta.payoutReference}` : ''}
+                              </p>
+                            </div>
+                            <p
+                              className={`shrink-0 text-sm font-semibold tabular-nums ${
+                                isCredit ? 'text-emerald-700' : 'text-rose-700'
+                              }`}
+                            >
+                              {isCredit ? '+' : '−'}
+                              {inr(t.totalAmount)}
                             </p>
                           </div>
-                          <p
-                            className={`shrink-0 text-sm font-semibold tabular-nums ${
-                              isCredit ? 'text-emerald-700' : 'text-rose-700'
-                            }`}
-                          >
-                            {isCredit ? '+' : '−'}
-                            {inr(t.totalAmount)}
-                          </p>
-                        </div>
-                      )
-                    })}
-                  </div>
+                        )
+                      })}
+                    </div>
+                    <Pagination {...txPag.paginationProps} />
+                  </>
                 )}
               </Card>
             </>

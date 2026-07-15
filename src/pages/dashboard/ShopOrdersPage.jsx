@@ -5,6 +5,8 @@ import { toastApiError } from '../../utils/formToast'
 import { resolveFileUrl } from '../../utils/serverOrigin'
 import { formatInr, shopOrderStatusClass, shopOrderStatusLabel } from '../../utils/shopDisplay'
 import Pagination from '../../components/Pagination'
+import usePagination from '../../hooks/usePagination'
+import ListSkeleton from '../../components/ui/skeletons/ListSkeleton'
 
 function itemSummary(items = []) {
   const names = items.map((i) => i.name).filter(Boolean)
@@ -111,22 +113,22 @@ function OrderCard({ order }) {
 export default function ShopOrdersPage() {
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(true)
-  const [page, setPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1)
+  const { page, pageSize, applyMeta, clearMeta, paginationProps } = usePagination()
 
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const { data } = await api.get('/shop/orders', { params: { page, limit: 10 } })
+      const { data } = await api.get('/shop/orders', { params: { page, limit: pageSize } })
       setOrders(data?.data || [])
-      setTotalPages(data?.totalPages || 1)
+      applyMeta(data)
     } catch (err) {
       toastApiError(err, 'Could not load orders')
       setOrders([])
+      clearMeta()
     } finally {
       setLoading(false)
     }
-  }, [page])
+  }, [page, pageSize, applyMeta, clearMeta])
 
   useEffect(() => {
     load()
@@ -153,7 +155,7 @@ export default function ShopOrdersPage() {
       </header>
 
       {loading ? (
-        <p className="text-sm text-ink-muted">Loading orders…</p>
+        <ListSkeleton count={4} />
       ) : orders.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-border-subtle bg-white p-8 text-center">
           <p className="text-sm text-ink-muted">No orders yet.</p>
@@ -171,7 +173,7 @@ export default function ShopOrdersPage() {
         </ul>
       )}
 
-      {totalPages > 1 ? <Pagination page={page} totalPages={totalPages} onPageChange={setPage} /> : null}
+      <Pagination {...paginationProps} />
     </div>
   )
 }

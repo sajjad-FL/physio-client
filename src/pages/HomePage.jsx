@@ -67,9 +67,9 @@ import illustrationNeuroRehab from '../assets/illustration_neuro_rehab.png'
 
 /* ─── SEO ──────────────────────────────────────────────────────────────── */
 
-const HOME_TITLE = 'PhysiOkhom — Home Visit Physiotherapy in Assam'
+const HOME_TITLE = 'PhysiOkhom — Home Visit Physiotherapy in Kokrajhar'
 const HOME_DESCRIPTION =
-  'Home visit physiotherapy in Assam with Care Manager–led assessment and care plans. Book a slot in Guwahati, Barpeta, Bongaigaon, Bijni, or Kokrajhar — then approve your plan and start therapy at home.'
+  'Home visit physiotherapy in Kokrajhar with Care Manager–led assessment and care plans. Book a slot, approve your plan, and start therapy at home.'
 
 const HOME_FAQ = [
   {
@@ -78,13 +78,13 @@ const HOME_FAQ = [
     cat: 'Booking',
   },
   {
-    q: 'Is this physiotherapist at home or in a clinic?',
-    a: 'Our focus is home visit physiotherapy so you can recover where you are comfortable, without the clinic commute.',
+    q: 'Will the physiotherapist visit my home?',
+    a: 'Yes. PhysiOkhom provides home visit physiotherapy. Your Care Manager and assigned physiotherapist come to your address, so you can receive assessment and treatment without travelling to a clinic.',
     cat: 'Booking',
   },
   {
     q: 'Are therapists verified?',
-    a: 'Profiles marked as verified have completed our platform checks. You can read reviews on individual physiotherapist pages before you book.',
+    a: 'Yes. Every physiotherapist listed on PhysiOkhom is verified through our platform checks before they can accept bookings. You can also read patient reviews on their profile.',
     cat: 'Therapists',
   },
   {
@@ -119,7 +119,7 @@ const HOME_FAQ = [
   },
   {
     q: 'How do payments work?',
-    a: 'Session fees are collected by your Care Manager after the plan is live — typically cash handoff or PhonePe QR. You do not pay online at booking to confirm the slot. Packages and per-session pricing are set in your care plan.',
+    a: 'Session fees are collected by your Care Manager after the plan is live — typically by cash or UPI, including PhonePe and other UPI apps. You do not pay online at booking to confirm the slot. Packages and per-session pricing are set in your care plan.',
     cat: 'Payments',
   },
 ]
@@ -287,7 +287,7 @@ export default function HomePage() {
   const [token, setToken] = useState(getToken())
   const [userName, setUserName] = useState('')
   const [userLocation, setUserLocation] = useState('')
-  const [searchCoords, setSearchCoords] = useState({ lat: 26.1445, lng: 91.7362 }) // Guwahati default
+  const [searchCoords, setSearchCoords] = useState({ lat: 26.4008, lng: 90.2711 }) // Kokrajhar default
   const [activeBooking, setActiveBooking] = useState(null)
   const [consultationClaimed, setConsultationClaimed] = useState(false)
 
@@ -364,7 +364,7 @@ export default function HomePage() {
   }, [token])
 
   // Fetch Live platform statistics
-  const serviceAreaLabel = userLocation || 'Guwahati'
+  const serviceAreaLabel = userLocation || 'Kokrajhar'
   useEffect(() => {
     let active = true
     async function fetchHomeStats() {
@@ -438,7 +438,7 @@ export default function HomePage() {
   const testimonials = [
     {
       name: 'Priya Bora',
-      location: 'Beltola, Kokrajhar',
+      location: 'Kokrajhar',
       text: 'My recovery after knee surgery was much faster thanks to regular home physiotherapy sessions. The physiotherapist was professional, punctual, and very caring. Highly recommended!',
       initials: 'PB',
       rating: 5,
@@ -446,7 +446,7 @@ export default function HomePage() {
     },
     {
       name: 'Rajesh Kalita',
-      location: 'Kahilipara, Kokrajhar',
+      location: 'Kokrajhar',
       text: 'Due to stroke, my father had severe mobility issues. The neuro rehabilitation specialist worked wonders. His posture and movement have improved by 70%.',
       initials: 'RK',
       rating: 5,
@@ -454,7 +454,7 @@ export default function HomePage() {
     },
     {
       name: 'Nayan Das',
-      location: 'Zoo Road, Kokrajhar',
+      location: 'Kokrajhar',
       text: 'Extremely convenient! No need to travel through heavy traffic with lower back pain. Dr. Sharma brought all bands and clinical gear. Excellent home treatment.',
       initials: 'ND',
       rating: 5,
@@ -1280,7 +1280,7 @@ export default function HomePage() {
                 <ul className="space-y-4">
                   {[
                     '0 Commute: Therapy in the comfort of your room',
-                    '1-on-1 focus: Full attention of your physician',
+                    '1-on-1 focus: Full attention of your physiotherapist',
                     'Flexible schedule times fitted to your daily routine',
                     'Pre-screened & highly vetted professional practitioners',
                     'GPS-tracked secure bookings with real-time arrival logs'

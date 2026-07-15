@@ -4,6 +4,9 @@ import { api } from '../../config/api'
 import toast from 'react-hot-toast'
 import { resolveFileUrl } from '../../utils/serverOrigin'
 import { formatPhysioSessionFeeLabel } from '../../utils/physioSessionFee.js'
+import Pagination from '../../components/Pagination'
+import usePagination from '../../hooks/usePagination'
+import TableSkeleton from '../../components/ui/skeletons/TableSkeleton'
 
 function DocLink({ label, url }) {
   if (!url) return <span className="text-ink-muted">{label}: —</span>
@@ -148,18 +151,32 @@ export default function VerificationsAdmin({ embedded = false }) {
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(null)
   const [viewing, setViewing] = useState(null)
+  const { page, pageSize, applyMeta, clearMeta, paginationProps } = usePagination()
 
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await api.get('/admin/physio-verifications')
-      setList(res.data || [])
+      const res = await api.get('/admin/physio-verifications', {
+        params: { page, limit: pageSize },
+      })
+      const rows = Array.isArray(res.data) ? res.data : res.data?.data || []
+      setList(rows)
+      if (Array.isArray(res.data)) {
+        applyMeta({ total: rows.length, totalPages: 1 })
+      } else {
+        applyMeta({
+          total: Number(res.data?.total) || rows.length,
+          totalPages: Number(res.data?.totalPages) || 1,
+        })
+      }
     } catch (e) {
       toast.error(e.response?.data?.message || 'Failed to load')
+      setList([])
+      clearMeta()
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [page, pageSize, applyMeta, clearMeta])
 
   useEffect(() => {
     load()
@@ -180,7 +197,7 @@ export default function VerificationsAdmin({ embedded = false }) {
   }
 
   if (loading) {
-    return <p className="text-sm text-slate-500">Loading…</p>
+    return <TableSkeleton rows={6} className="p-4" />
   }
 
   return (
@@ -258,6 +275,8 @@ export default function VerificationsAdmin({ embedded = false }) {
           </tbody>
         </table>
       </div>
+
+      <Pagination {...paginationProps} />
 
       {viewing ? (
         <div

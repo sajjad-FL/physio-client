@@ -95,6 +95,14 @@ export function managerWorkflowMeta(b) {
     }
   }
 
+  if (b?.physioId && (ws === 'plan_live' || ws === 'pending_physio_assignment')) {
+    return {
+      label: 'Physio assigned',
+      hint: b.physioId?.name || 'Physiotherapist assigned',
+      tone: 'progress',
+    }
+  }
+
   if (outstanding <= 0.009 && totalPaid > 0) {
     return {
       label: 'In treatment',

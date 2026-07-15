@@ -5,6 +5,7 @@ import { toastApiError } from '../../utils/formToast'
 import { resolveFileUrl } from '../../utils/serverOrigin'
 import { formatInr } from '../../utils/shopDisplay'
 import { useShopCart } from '../../hooks/useShopCart'
+import ListSkeleton from '../../components/ui/skeletons/ListSkeleton'
 
 export default function ShopCartPage() {
   const { cart, loading, updateItem } = useShopCart()
@@ -22,7 +23,7 @@ export default function ShopCartPage() {
   }
 
   if (loading) {
-    return <p className="text-sm text-ink-muted">Loading cart…</p>
+    return <ListSkeleton count={3} />
   }
 
   if (!cart.items?.length) {

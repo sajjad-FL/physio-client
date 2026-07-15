@@ -7,7 +7,9 @@ import { resolveFileUrl } from '../../utils/serverOrigin'
 import { formatInr } from '../../utils/shopDisplay'
 import AdminPageHeader from '../../components/admin/AdminPageHeader'
 import Pagination from '../../components/Pagination'
+import usePagination from '../../hooks/usePagination'
 import FieldLabel from '../../components/ui/FieldLabel'
+import TableSkeleton from '../../components/ui/skeletons/TableSkeleton'
 import { prepareUploadFile } from '../../utils/compressImage.js'
 
 function emptyForm() {
@@ -26,8 +28,7 @@ function emptyForm() {
 export default function AdminProductsPage() {
   const [list, setList] = useState([])
   const [loading, setLoading] = useState(true)
-  const [page, setPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1)
+  const { page, pageSize, applyMeta, clearMeta, paginationProps } = usePagination()
   const [showForm, setShowForm] = useState(false)
   const [editId, setEditId] = useState(null)
   const [form, setForm] = useState(emptyForm())
@@ -38,16 +39,17 @@ export default function AdminProductsPage() {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const { data } = await api.get('/admin/products', { params: { page, limit: 20 } })
+      const { data } = await api.get('/admin/products', { params: { page, limit: pageSize } })
       setList(data?.data || [])
-      setTotalPages(data?.totalPages || 1)
+      applyMeta(data)
     } catch (err) {
       toastApiError(err, 'Could not load products')
       setList([])
+      clearMeta()
     } finally {
       setLoading(false)
     }
-  }, [page])
+  }, [page, pageSize, applyMeta, clearMeta])
 
   useEffect(() => {
     load()
@@ -305,7 +307,7 @@ export default function AdminProductsPage() {
       ) : null}
 
       {loading ? (
-        <p className="text-sm text-ink-muted">Loading…</p>
+        <TableSkeleton rows={6} />
       ) : list.length === 0 ? (
         <p className="text-sm text-ink-muted">No products yet.</p>
       ) : (
@@ -359,11 +361,7 @@ export default function AdminProductsPage() {
         </div>
       )}
 
-      {totalPages > 1 ? (
-        <div className="mt-4">
-          <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
-        </div>
-      ) : null}
+      <Pagination {...paginationProps} />
     </div>
   )
 }

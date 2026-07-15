@@ -1,19 +1,17 @@
-import { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react'
+import { useCallback, useDeferredValue, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../../config/api'
 import toast from 'react-hot-toast'
 import { bookingStatusBadge, paymentBadge } from './dashboardUtils'
-import { matchesPatientBookingFilter, sortPatientBookingsLatestFirst } from './bookingFilterUtils'
 import EmptyState from '../../components/ui/EmptyState'
 import { formatBookingDateAndSlot } from '../../utils/date'
 import { bookingConditionLabel, bookingCodeBadge } from '../../utils/bookingDisplay'
-import { todayYmd } from '../../components/physio/physioBookingHelpers'
 import PatientBookingsFilterDrawer from '../../components/dashboard/PatientBookingsFilterDrawer'
 import PatientBookingsToolbar from '../../components/dashboard/PatientBookingsToolbar'
-
-function BookingRowSkeleton() {
-  return <div className="h-20 animate-pulse rounded-xl border border-gray-100 bg-white shadow-sm ring-1 ring-gray-100/80" />
-}
+import Pagination from '../../components/Pagination'
+import usePagination from '../../hooks/usePagination'
+import ListSkeleton from '../../components/ui/skeletons/ListSkeleton'
+import { ymdFromDate } from '../../components/physio/physioBookingHelpers'
 
 function physioInitial(name) {
   const s = (name || 'P').trim()
@@ -49,51 +47,42 @@ export default function DashboardBookings() {
   const [dateRange, setDateRange] = useState(null)
   const [filterOpen, setFilterOpen] = useState(false)
   const [search, setSearch] = useState('')
+  const { page, pageSize, total, applyMeta, clearMeta, resetPage, paginationProps } = usePagination()
 
   const deferredSearch = useDeferredValue(search)
 
   const load = useCallback(async () => {
     try {
-      const res = await api.get('/bookings/my', { params: { page: 1, limit: 100 } })
+      const res = await api.get('/bookings/my', {
+        params: {
+          page,
+          limit: pageSize,
+          search: deferredSearch.trim() || undefined,
+          date: filter,
+          dateFrom: filter === 'range' && dateRange?.[0] ? ymdFromDate(dateRange[0]) : undefined,
+          dateTo: filter === 'range' && dateRange?.[1] ? ymdFromDate(dateRange[1]) : undefined,
+        },
+      })
       setBookings(res.data?.data || [])
+      applyMeta(res.data)
     } catch {
       toast.error('Could not load bookings')
       setBookings([])
+      clearMeta()
     }
-  }, [])
+  }, [page, pageSize, deferredSearch, filter, dateRange, applyMeta, clearMeta])
 
   useEffect(() => {
     load()
   }, [load])
 
-  const today = todayYmd()
-
-  const filtered = useMemo(() => {
-    if (!bookings?.length) return []
-    let list = bookings.filter((b) => matchesPatientBookingFilter(b, { filter, dateRange, today }))
-    const q = deferredSearch.trim().toLowerCase()
-    if (q) {
-      list = list.filter((b) => {
-        const blob = [
-          b.physioId?.name,
-          b.issue,
-          formatBookingDateAndSlot(b.date, b.timeSlot),
-          b.serviceType,
-        ]
-          .filter(Boolean)
-          .join(' ')
-          .toLowerCase()
-        return blob.includes(q)
-      })
-    }
-    return sortPatientBookingsLatestFirst(list)
-  }, [bookings, filter, dateRange, today, deferredSearch])
-
   const loading = bookings === null
-  const totalLoaded = bookings?.length ?? 0
-  const filtersActive = filter !== 'all' || Boolean(dateRange?.[0] && dateRange?.[1])
+  const rows = bookings || []
+  const filtersActive =
+    filter !== 'all' || Boolean(deferredSearch.trim()) || Boolean(dateRange?.[0] && dateRange?.[1])
 
   function applyFilters(nextFilter, nextRange) {
+    resetPage()
     setFilter(nextFilter)
     setDateRange(nextFilter === 'range' ? nextRange : null)
   }
@@ -111,12 +100,8 @@ export default function DashboardBookings() {
       </div>
 
       {loading ? (
-        <div className="space-y-2">
-          <BookingRowSkeleton />
-          <BookingRowSkeleton />
-          <BookingRowSkeleton />
-        </div>
-      ) : totalLoaded === 0 ? (
+        <ListSkeleton count={5} />
+      ) : total === 0 && !filtersActive ? (
         <EmptyState
           title="No bookings yet"
           description="Book an appointment to see it here."
@@ -145,16 +130,17 @@ export default function DashboardBookings() {
           >
             <PatientBookingsToolbar
               search={search}
-              onSearchChange={setSearch}
+              onSearchChange={(value) => {
+                resetPage()
+                setSearch(value)
+              }}
               onFilterClick={() => setFilterOpen(true)}
               filtersActive={filtersActive}
             />
             <p className="mt-3 text-xs text-gray-500">
-              Showing <span className="font-semibold text-gray-800">{filtered.length}</span> of {totalLoaded}
+              Showing <span className="font-semibold text-gray-800">{rows.length}</span> of {total}
               {filtersActive ? <span className="text-gray-400"> · Filters on</span> : null}
-              {!filtersActive && filterSummary !== 'All' ? (
-                <span className="text-gray-400"> · {filterSummary}</span>
-              ) : null}
+              {filterSummary !== 'All' ? <span className="text-gray-400"> · {filterSummary}</span> : null}
             </p>
           </section>
 
@@ -167,7 +153,7 @@ export default function DashboardBookings() {
             />
           )}
 
-          {filtered.length === 0 ? (
+          {rows.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50/80 px-4 py-10 text-center">
               <p className="text-sm font-medium text-gray-900">No bookings match your search or filter</p>
               <p className="mt-2 text-sm text-gray-500">Try different keywords or clear filters.</p>
@@ -192,7 +178,7 @@ export default function DashboardBookings() {
             </div>
           ) : (
             <ul className="flex flex-col gap-2">
-              {filtered.map((b) => {
+              {rows.map((b) => {
                 const st = bookingStatusBadge(b.status, b.sessionStatus, b.paymentStatus, b.planStatus)
                 const pay = paymentBadge(b.paymentStatus)
                 const visit = formatBookingDateAndSlot(b.date, b.timeSlot)
@@ -267,6 +253,7 @@ export default function DashboardBookings() {
               })}
             </ul>
           )}
+          <Pagination {...paginationProps} />
         </>
       )}
     </div>

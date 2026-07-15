@@ -24,6 +24,7 @@ import { MAX_UPLOAD_SIZE_LABEL } from '../../constants/uploadLimits.js'
 import { formatPhysioDisplayName, stripPhysioNameAffixes } from '../../utils/physioDisplayName.js'
 import { prepareUploadFile } from '../../utils/compressImage.js'
 import FieldLabel from '../../components/ui/FieldLabel'
+import DetailSkeleton from '../../components/ui/skeletons/DetailSkeleton'
 import toast from 'react-hot-toast'
 
 const baseInputClass =
@@ -495,15 +496,7 @@ export default function PhysioOnboardingPage() {
   }
 
   if (loading) {
-    return (
-      <div className="flex items-center gap-3">
-        <div
-          className="h-5 w-5 animate-spin rounded-full border-2 border-border-subtle border-t-brand"
-          aria-hidden
-        />
-        <p className="text-sm text-ink-muted">Loading onboarding…</p>
-      </div>
-    )
+    return <DetailSkeleton />
   }
 
   if (onboardingLocked) {

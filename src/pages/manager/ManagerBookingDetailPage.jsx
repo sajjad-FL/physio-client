@@ -9,6 +9,7 @@ import InstallmentsCard from '../../components/payments/InstallmentsCard'
 import RecordCollectionModal from '../../components/payments/RecordCollectionModal'
 import BookingSessionTimeline from '../../components/bookings/BookingSessionTimeline'
 import RescheduleModal from '../../components/physio/RescheduleModal'
+import DetailSkeleton from '../../components/ui/skeletons/DetailSkeleton'
 import { hasComplimentaryAssessmentVisit } from '../../components/physio/physioBookingHelpers'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
@@ -403,7 +404,7 @@ export default function ManagerBookingDetailPage() {
     }
   }
 
-  if (loading) return <div className="h-48 animate-pulse rounded-2xl bg-slate-100" />
+  if (loading) return <DetailSkeleton />
   if (!pageCtx) {
     return (
       <Card hover={false} className="p-6">

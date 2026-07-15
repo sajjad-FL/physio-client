@@ -4,7 +4,7 @@ import toast from 'react-hot-toast'
 import { api } from '../../config/api'
 import { toastApiError } from '../../utils/formToast'
 import ShopProductCard from '../../components/shop/ShopProductCard'
-import Skeleton from '../../components/ui/Skeleton'
+import CardGridSkeleton from '../../components/ui/skeletons/CardGridSkeleton'
 import { useShopCart } from '../../hooks/useShopCart'
 
 export default function ShopPage() {
@@ -79,11 +79,7 @@ export default function ShopPage() {
       </header>
 
       {loading ? (
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(140px,160px))] gap-3">
-          {[0, 1, 2, 3].map((i) => (
-            <Skeleton key={i} className="aspect-[4/3] w-full rounded-xl" />
-          ))}
-        </div>
+        <CardGridSkeleton count={4} />
       ) : products.length === 0 ? (
         <p className="text-sm text-ink-muted">No products available right now.</p>
       ) : (

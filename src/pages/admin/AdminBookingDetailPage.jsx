@@ -18,6 +18,7 @@ import SessionProgressTracker from '../../components/bookings/SessionProgressTra
 import InstallmentsCard from '../../components/payments/InstallmentsCard'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
+import DetailSkeleton from '../../components/ui/skeletons/DetailSkeleton'
 import FieldLabel from '../../components/ui/FieldLabel'
 import AdminAssignPhysioModal from '../../components/admin/AdminAssignPhysioModal'
 import AdminAssignManagerModal from '../../components/admin/AdminAssignManagerModal'
@@ -383,7 +384,7 @@ export default function AdminBookingDetailPage() {
   }
 
   if (loading) {
-    return <div className="h-48 animate-pulse rounded-2xl bg-slate-100" />
+    return <DetailSkeleton />
   }
 
   if (error || !pageCtx || !b) {

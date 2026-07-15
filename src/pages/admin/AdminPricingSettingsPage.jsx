@@ -6,6 +6,7 @@ import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import FieldLabel from '../../components/ui/FieldLabel'
 import { invalidatePricingSettingsCache } from '../../hooks/usePricingSettings'
+import DetailSkeleton from '../../components/ui/skeletons/DetailSkeleton'
 
 const inputCls =
   'mt-1 h-11 w-full max-w-xs rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20'
@@ -285,7 +286,11 @@ export default function AdminPricingSettingsPage() {
   }
 
   if (loading) {
-    return <p className="p-8 text-sm text-slate-500">Loading pricing settings…</p>
+    return (
+      <div className="mx-auto max-w-2xl p-4">
+        <DetailSkeleton />
+      </div>
+    )
   }
 
   return (

@@ -3,6 +3,8 @@ import { api } from '../../config/api'
 import { formatBookingTimeSlot } from '../../utils/date'
 import toast from 'react-hot-toast'
 import Pagination from '../../components/Pagination'
+import usePagination from '../../hooks/usePagination'
+import ListSkeleton from '../../components/ui/skeletons/ListSkeleton'
 
 function disputeBadge(status) {
   const map = {
@@ -16,19 +18,19 @@ function disputeBadge(status) {
 
 export default function PhysioDisputesPage() {
   const [list, setList] = useState(null)
-  const [page, setPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1)
+  const { page, pageSize, applyMeta, clearMeta, paginationProps } = usePagination()
 
   const load = useCallback(async () => {
     try {
-      const res = await api.get('/disputes/my', { params: { page, limit: 8 } })
+      const res = await api.get('/disputes/my', { params: { page, limit: pageSize } })
       setList(res.data?.data || [])
-      setTotalPages(res.data?.totalPages || 1)
+      applyMeta(res.data)
     } catch {
       toast.error('Could not load disputes')
       setList([])
+      clearMeta()
     }
-  }, [page])
+  }, [page, pageSize, applyMeta, clearMeta])
 
   useEffect(() => {
     load()
@@ -46,15 +48,10 @@ export default function PhysioDisputesPage() {
       </div>
 
       {loading ? (
-        <div className="space-y-3">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="h-24 animate-pulse rounded-xl bg-white ring-1 ring-border-subtle/80" />
-          ))}
-        </div>
+        <ListSkeleton count={4} />
       ) : list.length === 0 ? (
         <p className="text-sm text-ink-muted">No disputes.</p>
       ) : (
-        <>
         <ul className="space-y-4">
           {list.map((d) => {
             const b = d.bookingId
@@ -88,9 +85,8 @@ export default function PhysioDisputesPage() {
             )
           })}
         </ul>
-        <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
-        </>
       )}
+      {!loading ? <Pagination {...paginationProps} /> : null}
     </div>
   )
 }

@@ -13,6 +13,7 @@ import {
 import { prepareUploadFile } from '../../utils/compressImage.js'
 import { MAX_UPLOAD_BYTES } from '../../constants/uploadLimits.js'
 import FieldLabel from '../ui/FieldLabel'
+import Skeleton from '../ui/Skeleton'
 
 function roundMoney2(n) {
   return Math.round((Number(n) + Number.EPSILON) * 100) / 100
@@ -318,7 +319,10 @@ export default function RecordCollectionModal({
           {isManager && method === 'phonepe_qr' ? (
             <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
               {qrLoading ? (
-                <p className="text-sm text-slate-600">Loading QR…</p>
+                <div className="flex flex-col items-center gap-2 py-2">
+                  <Skeleton className="h-40 w-40 rounded-xl" />
+                  <Skeleton className="h-3 w-28 rounded-md" />
+                </div>
               ) : !qrConfigured || !qrSrc ? (
                 <p className="text-sm text-rose-800">
                   PhonePe QR is not configured. Ask admin to upload it under Platform settings.

@@ -13,6 +13,7 @@ import FieldLabel from '../../components/ui/FieldLabel'
 import MapPickerModal from '../../components/location/MapPickerModal'
 import LocationSelectorRow from '../../components/location/LocationSelectorRow'
 import SeoNoIndex from '../../components/seo/SeoNoIndex'
+import DetailSkeleton from '../../components/ui/skeletons/DetailSkeleton'
 import { validateAvatarFile } from '../../utils/onboardingValidation'
 import { MAX_UPLOAD_SIZE_LABEL } from '../../constants/uploadLimits.js'
 import { prepareUploadFile } from '../../utils/compressImage.js'
@@ -309,9 +310,7 @@ export default function ProfilePage() {
     return (
       <>
         <SeoNoIndex />
-        <div className="flex min-h-[40vh] items-center justify-center">
-          <div className="h-9 w-9 animate-spin rounded-full border-2 border-gray-200 border-t-blue-600" aria-hidden />
-        </div>
+        <DetailSkeleton />
       </>
     )
   }

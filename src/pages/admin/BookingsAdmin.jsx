@@ -2,6 +2,8 @@ import { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'rea
 import { Link } from 'react-router-dom'
 import { api } from '../../config/api'
 import Pagination from '../../components/Pagination'
+import usePagination from '../../hooks/usePagination'
+import ListSkeleton from '../../components/ui/skeletons/ListSkeleton'
 import { formatBookingDateAndSlot } from '../../utils/date'
 import AdminBookingsToolbar from '../../components/admin/AdminBookingsToolbar'
 import AdminBookingsFilterDrawer, {
@@ -25,8 +27,8 @@ function visitSortKey(b) {
   return `${String(b.date || '')}\t${String(b.timeSlot || '')}`
 }
 
-function buildListParams(page, filters, search) {
-  const params = { page, limit: 25 }
+function buildListParams(page, pageSize, filters, search) {
+  const params = { page, limit: pageSize }
   if (filters.status !== 'all') params.status = filters.status
   if (filters.paymentStatus !== 'all') params.paymentStatus = filters.paymentStatus
   if (filters.assignment !== 'all') params.assignment = filters.assignment
@@ -43,9 +45,7 @@ export default function BookingsAdmin() {
   const [bookings, setBookings] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [page, setPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1)
-  const [total, setTotal] = useState(0)
+  const { page, pageSize, applyMeta, clearMeta, resetPage, paginationProps } = usePagination()
   const [filters, setFilters] = useState(() => ({ ...DEFAULT_ADMIN_BOOKING_FILTERS }))
   const [filterOpen, setFilterOpen] = useState(false)
   const [search, setSearch] = useState('')
@@ -67,25 +67,29 @@ export default function BookingsAdmin() {
       setError('')
       try {
         const bRes = await api.get('/bookings', {
-          params: buildListParams(page, filters, deferredSearch),
+          params: buildListParams(page, pageSize, filters, deferredSearch),
         })
         setBookings(bRes.data?.data || [])
-        setTotalPages(bRes.data?.totalPages || 1)
-        setTotal(bRes.data?.total ?? 0)
+        applyMeta(bRes.data)
       } catch (err) {
         setError(err.response?.data?.message || err.message || 'Failed to load data')
         setBookings([])
+        clearMeta()
       } finally {
         setLoading(false)
         setRefreshing(false)
       }
     },
-    [page, filters, deferredSearch],
+    [page, pageSize, filters, deferredSearch, applyMeta, clearMeta],
   )
 
   useEffect(() => {
     load({ showFullSpinner: true })
   }, [load])
+
+  useEffect(() => {
+    resetPage()
+  }, [deferredSearch, resetPage])
 
   const displayBookings = useMemo(() => {
     const list = [...bookings]
@@ -107,23 +111,16 @@ export default function BookingsAdmin() {
 
   function handleApplyFilters(next) {
     setFilters({ ...next })
-    setPage(1)
+    resetPage()
   }
 
   function handleResetFilters() {
     setFilters({ ...DEFAULT_ADMIN_BOOKING_FILTERS })
-    setPage(1)
+    resetPage()
   }
 
   if (loading && bookings.length === 0) {
-    return (
-      <div className="flex items-center gap-3">
-        <div className="h-5 w-5 animate-spin rounded-full border-2 border-border-subtle border-t-brand" aria-hidden />
-        <p className="text-sm font-medium text-ink-muted" role="status">
-          Loading bookings…
-        </p>
-      </div>
-    )
+    return <ListSkeleton count={6} />
   }
 
   return (
@@ -138,7 +135,10 @@ export default function BookingsAdmin() {
       <section className="rounded-2xl border border-border-subtle bg-white p-4 shadow-sm ring-1 ring-border-subtle/60 sm:p-5">
         <AdminBookingsToolbar
           search={search}
-          onSearchChange={setSearch}
+          onSearchChange={(value) => {
+            setSearch(value)
+            resetPage()
+          }}
           sort={sort}
           onSortChange={setSort}
           onFilterClick={() => setFilterOpen(true)}
@@ -148,18 +148,6 @@ export default function BookingsAdmin() {
           view={view}
           onViewChange={setView}
         />
-        <p className="mt-3 text-xs text-ink-muted">
-          Showing <span className="font-semibold text-ink">{displayBookings.length}</span> on this page
-          {total > 0 && (
-            <span className="text-ink-muted/80">
-              {' '}
-              · {total} total{filtersActive ? ' (filtered)' : ''}
-            </span>
-          )}
-          {deferredSearch.trim() && (
-            <span className="text-amber-800/90"> · Search narrows the current page only</span>
-          )}
-        </p>
       </section>
 
       {filterOpen && (
@@ -182,11 +170,9 @@ export default function BookingsAdmin() {
 
       {bookings.length === 0 && !error ? (
         <p className="rounded-2xl border border-dashed border-border-subtle bg-canvas/80 px-4 py-12 text-center text-sm text-ink-muted">
-          {filtersActive ? 'No bookings match these filters.' : 'No bookings yet.'}
-        </p>
-      ) : displayBookings.length === 0 ? (
-        <p className="rounded-2xl border border-dashed border-border-subtle bg-canvas/80 px-4 py-10 text-center text-sm text-ink-muted">
-          No bookings match your search. Try another query or clear search.
+          {filtersActive || deferredSearch.trim()
+            ? 'No bookings match these filters.'
+            : 'No bookings yet.'}
         </p>
       ) : view === 'calendar' ? (
         <SessionsCalendarView
@@ -215,9 +201,7 @@ export default function BookingsAdmin() {
                         </span>
                       ) : null}
                     </p>
-                    <p className="truncate text-xs font-medium text-ink">
-                      {bookedFor}
-                    </p>
+                    <p className="truncate text-xs font-medium text-ink">{bookedFor}</p>
                     <p className="truncate text-xs text-ink-muted">
                       {patient}
                       <span className="text-ink-muted/60"> · </span>
@@ -246,7 +230,7 @@ export default function BookingsAdmin() {
         </ul>
       )}
 
-      <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+      <Pagination {...paginationProps} />
     </div>
   )
 }

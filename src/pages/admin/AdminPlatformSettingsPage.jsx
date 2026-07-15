@@ -7,6 +7,7 @@ import { DEFAULT_QUALIFICATION_DECLARATION } from '../../constants/qualification
 import { assetUrl } from '../../utils/assetUrl'
 import { prepareUploadFile } from '../../utils/compressImage.js'
 import FieldLabel from '../../components/ui/FieldLabel'
+import DetailSkeleton from '../../components/ui/skeletons/DetailSkeleton'
 
 export default function AdminPlatformSettingsPage() {
   const [loading, setLoading] = useState(true)
@@ -142,7 +143,11 @@ export default function AdminPlatformSettingsPage() {
   }
 
   if (loading) {
-    return <p className="p-4 text-sm text-slate-600">Loading platform settings…</p>
+    return (
+      <div className="mx-auto max-w-2xl p-4">
+        <DetailSkeleton />
+      </div>
+    )
   }
 
   const qrSrc = assetUrl(phonePeQrUrl)

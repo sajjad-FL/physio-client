@@ -8,6 +8,7 @@ import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import Input from '../../components/ui/Input'
 import FieldLabel from '../../components/ui/FieldLabel'
+import usePagination from '../../hooks/usePagination'
 
 function formatInr(n) {
   const v = Number(n)
@@ -28,7 +29,7 @@ export default function AdminPaymentsPage() {
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
   const [applied, setApplied] = useState({ search: '', mode: '', status: '', dateFrom: '', dateTo: '' })
-  const [page, setPage] = useState(1)
+  const { page, pageSize, applyMeta, clearMeta, resetPage, paginationProps } = usePagination()
   const [loading, setLoading] = useState(true)
   const [payload, setPayload] = useState(null)
   const [verifyTarget, setVerifyTarget] = useState(null)
@@ -42,7 +43,7 @@ export default function AdminPaymentsPage() {
       const res = await api.get('/admin/payments', {
         params: {
           page,
-          limit: 20,
+          limit: pageSize,
           search: applied.search || undefined,
           mode: applied.mode || undefined,
           status: applied.status || undefined,
@@ -51,20 +52,21 @@ export default function AdminPaymentsPage() {
         },
       })
       setPayload(res.data)
+      applyMeta(res.data)
     } catch (e) {
       toast.error(e.response?.data?.message || 'Failed to load payments')
       setPayload(null)
+      clearMeta()
     } finally {
       setLoading(false)
     }
-  }, [page, applied])
+  }, [page, pageSize, applied, applyMeta, clearMeta])
 
   useEffect(() => {
     load()
   }, [load])
 
   const rows = payload?.data || []
-  const totalPages = payload?.totalPages || 1
   const counts = payload?.counts || {}
   const pendingVerification = payload?.pendingVerification ?? 0
 
@@ -76,7 +78,7 @@ export default function AdminPaymentsPage() {
       dateFrom: override.dateFrom !== undefined ? override.dateFrom : dateFrom,
       dateTo: override.dateTo !== undefined ? override.dateTo : dateTo,
     }))
-    setPage(1)
+    resetPage()
   }
 
   function setModeTab(next) {
@@ -91,7 +93,7 @@ export default function AdminPaymentsPage() {
     setDateFrom('')
     setDateTo('')
     setApplied({ search: '', mode: '', status: '', dateFrom: '', dateTo: '' })
-    setPage(1)
+    resetPage()
   }
 
   async function confirmVerify() {
@@ -241,9 +243,7 @@ export default function AdminPaymentsPage() {
         <AdminPaymentQueueTable
           rows={rows}
           loading={loading}
-          page={page}
-          totalPages={totalPages}
-          onPageChange={setPage}
+          {...paginationProps}
           busy={busy}
           onVerify={setVerifyTarget}
           onReject={(row) => {

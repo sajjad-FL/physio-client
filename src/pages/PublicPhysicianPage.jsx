@@ -7,20 +7,25 @@ import Card from '../components/ui/Card'
 import Button from '../components/ui/Button'
 import { StarRatingDisplay } from '../components/reviews/StarRating'
 import Pagination from '../components/Pagination'
+import usePagination from '../hooks/usePagination'
 import toast from 'react-hot-toast'
 import { formatPhysioSessionFeeLabel } from '../utils/physioSessionFee.js'
 import { absoluteUrl } from '../utils/siteMeta'
+import DetailSkeleton from '../components/ui/skeletons/DetailSkeleton'
 
 export default function PublicPhysicianPage() {
   const { id } = useParams()
   const navigate = useNavigate()
   const [physio, setPhysio] = useState(null)
   const [reviews, setReviews] = useState([])
-  const [page, setPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1)
+  const { page, pageSize, applyMeta, clearMeta, resetPage, paginationProps } = usePagination()
   const [loading, setLoading] = useState(true)
   const [reviewsLoading, setReviewsLoading] = useState(true)
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    resetPage()
+  }, [id, resetPage])
 
   /** Physio + first page of reviews in parallel (faster first paint). */
   useEffect(() => {
@@ -31,19 +36,20 @@ export default function PublicPhysicianPage() {
     setError('')
     Promise.all([
       api.get(`/physios/${id}`),
-      api.get(`/physios/${id}/reviews`, { params: { page: 1, limit: 8 } }),
+      api.get(`/physios/${id}/reviews`, { params: { page: 1, limit: pageSize } }),
     ])
       .then(([physioRes, revRes]) => {
         if (cancelled) return
         setPhysio(physioRes.data)
         setReviews(revRes.data?.data || [])
-        setTotalPages(revRes.data?.totalPages || 1)
+        applyMeta(revRes.data)
       })
       .catch((e) => {
         if (cancelled) return
         setError(e.response?.data?.message || 'Could not load profile')
         setPhysio(null)
         setReviews([])
+        clearMeta()
       })
       .finally(() => {
         if (!cancelled) {
@@ -54,7 +60,7 @@ export default function PublicPhysicianPage() {
     return () => {
       cancelled = true
     }
-  }, [id, page])
+  }, [id, page, pageSize, applyMeta, clearMeta])
 
   /** Later review pages only (no physio refetch). */
   useEffect(() => {
@@ -62,16 +68,17 @@ export default function PublicPhysicianPage() {
     let cancelled = false
     setReviewsLoading(true)
     api
-      .get(`/physios/${id}/reviews`, { params: { page, limit: 8 } })
+      .get(`/physios/${id}/reviews`, { params: { page, limit: pageSize } })
       .then((res) => {
         if (cancelled) return
         setReviews(res.data?.data || [])
-        setTotalPages(res.data?.totalPages || 1)
+        applyMeta(res.data)
       })
       .catch(() => {
         if (!cancelled) {
           toast.error('Could not load reviews')
           setReviews([])
+          clearMeta()
         }
       })
       .finally(() => {
@@ -80,7 +87,7 @@ export default function PublicPhysicianPage() {
     return () => {
       cancelled = true
     }
-  }, [id, page])
+  }, [id, page, pageSize, applyMeta, clearMeta])
 
   const profileUrl = id ? absoluteUrl(`/physician/${id}`) : absoluteUrl('/')
   const ogImage = absoluteUrl('/og-default.png')
@@ -122,8 +129,7 @@ export default function PublicPhysicianPage() {
           <link rel="canonical" href={profileUrl} />
         </Helmet>
         <div className="mx-auto max-w-3xl space-y-6 px-4 py-16 sm:px-6">
-          <div className="h-40 animate-pulse rounded-2xl bg-gray-100" />
-          <div className="h-32 animate-pulse rounded-2xl bg-gray-100" />
+          <DetailSkeleton />
         </div>
       </>
     )
@@ -224,7 +230,9 @@ export default function PublicPhysicianPage() {
           <p className="mt-0.5 text-sm text-gray-500">Feedback from verified patients after completed sessions.</p>
 
           {reviewsLoading ? (
-            <div className="mt-6 h-32 animate-pulse rounded-2xl bg-white ring-1 ring-gray-100" />
+            <div className="mt-6">
+              <DetailSkeleton />
+            </div>
           ) : reviews.length === 0 ? (
             <Card hover={false} className="mt-4 border border-dashed border-gray-200 p-8 text-center text-sm text-gray-500">
               No reviews yet.
@@ -248,11 +256,7 @@ export default function PublicPhysicianPage() {
             </ul>
           )}
 
-          {totalPages > 1 && (
-            <div className="mt-6">
-              <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
-            </div>
-          )}
+          <Pagination {...paginationProps} />
         </div>
 
         <div className="flex justify-center">

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { api } from '../../config/api'
 import toast from 'react-hot-toast'
+import Skeleton from '../../components/ui/Skeleton'
 
 export default function PhysioAvailabilityPage() {
   const [availability, setAvailability] = useState(true)
@@ -74,7 +75,7 @@ export default function PhysioAvailabilityPage() {
 
       <div className="surface-card max-w-md rounded-2xl p-8 shadow-sm ring-1 ring-border-subtle/80">
         {loading ? (
-          <div className="h-12 animate-pulse rounded-xl bg-canvas" />
+          <Skeleton className="h-12 w-full rounded-xl" />
         ) : (
           <label className="flex cursor-pointer items-center justify-between gap-4">
             <div>

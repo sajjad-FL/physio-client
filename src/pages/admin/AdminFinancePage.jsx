@@ -17,6 +17,9 @@ import Button from '../../components/ui/Button'
 import Input from '../../components/ui/Input'
 import FieldLabel from '../../components/ui/FieldLabel'
 import Pagination from '../../components/Pagination'
+import usePagination from '../../hooks/usePagination'
+import TableSkeleton from '../../components/ui/skeletons/TableSkeleton'
+import Skeleton from '../../components/ui/Skeleton'
 
 function formatInr(n) {
   const v = Number(n)
@@ -148,8 +151,7 @@ export default function AdminFinancePage() {
   const [walletFilter, setWalletFilter] = useState('active')
   const [walletSearch, setWalletSearch] = useState('')
   const [walletAppliedSearch, setWalletAppliedSearch] = useState('')
-  const [walletPage, setWalletPage] = useState(1)
-  const [walletTotalPages, setWalletTotalPages] = useState(1)
+  const walletPag = usePagination()
   const [walletLoading, setWalletLoading] = useState(true)
 
   const [selectedPhysio, setSelectedPhysio] = useState(null)
@@ -175,7 +177,7 @@ export default function AdminFinancePage() {
   const [queueAmountMin, setQueueAmountMin] = useState('')
   const [queueAmountMax, setQueueAmountMax] = useState('')
   const [queueApplied, setQueueApplied] = useState(emptyQueueFilters)
-  const [queuePage, setQueuePage] = useState(1)
+  const queuePag = usePagination()
   const [queueLoading, setQueueLoading] = useState(true)
   const [queuePayload, setQueuePayload] = useState(null)
   const [queueVerifyTarget, setQueueVerifyTarget] = useState(null)
@@ -188,6 +190,7 @@ export default function AdminFinancePage() {
   // 3. Tab: Withdrawal Requests States (physio + manager)
   const [withdrawalRows, setWithdrawalRows] = useState([])
   const [withdrawalLoading, setWithdrawalLoading] = useState(true)
+  const withdrawalPag = usePagination()
   const [withdrawalSearch, setWithdrawalSearch] = useState('')
   const [withdrawalPayee, setWithdrawalPayee] = useState('')
   const [withdrawalStatus, setWithdrawalStatus] = useState('pending')
@@ -214,20 +217,21 @@ export default function AdminFinancePage() {
     try {
       const res = await api.get('/admin/finance/physios', {
         params: {
-          page: walletPage,
-          limit: 20,
+          page: walletPag.page,
+          limit: walletPag.pageSize,
           search: walletAppliedSearch || undefined,
           filter: walletFilter,
         },
       })
       setWalletRows(res.data?.data || [])
-      setWalletTotalPages(res.data?.totalPages || 1)
+      walletPag.applyMeta(res.data)
     } catch (e) {
       toast.error(e.response?.data?.message || 'Failed to load wallets')
+      walletPag.clearMeta()
     } finally {
       setWalletLoading(false)
     }
-  }, [walletPage, walletAppliedSearch, walletFilter])
+  }, [walletPag.page, walletPag.pageSize, walletPag.applyMeta, walletPag.clearMeta, walletAppliedSearch, walletFilter])
 
   // Load Withdrawal Requests tab — physio + manager from /withdraw
   const loadWithdrawals = useCallback(async () => {
@@ -235,59 +239,35 @@ export default function AdminFinancePage() {
     try {
       const res = await api.get('/withdraw', {
         params: {
+          page: withdrawalPag.page,
+          limit: withdrawalPag.pageSize,
           payee: withdrawalApplied.payee || undefined,
+          status: withdrawalApplied.status || undefined,
+          search: withdrawalApplied.search || undefined,
+          dateFrom: withdrawalApplied.dateFrom || undefined,
+          dateTo: withdrawalApplied.dateTo || undefined,
+          amountMin: withdrawalApplied.amountMin || undefined,
+          amountMax: withdrawalApplied.amountMax || undefined,
         },
       })
-      const all = Array.isArray(res.data) ? res.data : []
-      let rows = all
-
-      if (withdrawalApplied.status) {
-        rows = rows.filter((r) => r.status === withdrawalApplied.status)
-      }
-
-      const q = withdrawalApplied.search.trim().toLowerCase()
-      if (q) {
-        rows = rows.filter((r) => {
-          const name = String(r.managerId?.name || r.physioId?.name || '').toLowerCase()
-          const phone = String(r.managerId?.phone || r.physioId?.phone || '')
-          const upi = String(r.payoutUpiId || '').toLowerCase()
-          return name.includes(q) || phone.includes(q) || upi.includes(q)
-        })
-      }
-
-      if (withdrawalApplied.dateFrom) {
-        const from = new Date(`${withdrawalApplied.dateFrom}T00:00:00`)
-        rows = rows.filter((r) => {
-          const d = new Date(r.requestedAt || r.createdAt)
-          return !Number.isNaN(d.getTime()) && d >= from
-        })
-      }
-      if (withdrawalApplied.dateTo) {
-        const to = new Date(`${withdrawalApplied.dateTo}T23:59:59.999`)
-        rows = rows.filter((r) => {
-          const d = new Date(r.requestedAt || r.createdAt)
-          return !Number.isNaN(d.getTime()) && d <= to
-        })
-      }
-
-      const min = Number(withdrawalApplied.amountMin)
-      if (Number.isFinite(min) && withdrawalApplied.amountMin !== '') {
-        rows = rows.filter((r) => Number(r.amount) >= min)
-      }
-      const max = Number(withdrawalApplied.amountMax)
-      if (Number.isFinite(max) && withdrawalApplied.amountMax !== '') {
-        rows = rows.filter((r) => Number(r.amount) <= max)
-      }
-
-      rows.sort((a, b) => new Date(b.requestedAt || 0) - new Date(a.requestedAt || 0))
+      const rows = Array.isArray(res.data) ? res.data : res.data?.data || []
       setWithdrawalRows(rows)
+      if (Array.isArray(res.data)) {
+        withdrawalPag.applyMeta({ total: rows.length, totalPages: 1 })
+      } else {
+        withdrawalPag.applyMeta({
+          total: Number(res.data?.total) || rows.length,
+          totalPages: Number(res.data?.totalPages) || 1,
+        })
+      }
     } catch (e) {
       toast.error(e.response?.data?.message || 'Failed to load withdrawal requests')
       setWithdrawalRows([])
+      withdrawalPag.clearMeta()
     } finally {
       setWithdrawalLoading(false)
     }
-  }, [withdrawalApplied])
+  }, [withdrawalApplied, withdrawalPag.page, withdrawalPag.pageSize, withdrawalPag.applyMeta, withdrawalPag.clearMeta])
 
   // Load Payment Queue Tab
   const loadQueue = useCallback(async () => {
@@ -295,8 +275,8 @@ export default function AdminFinancePage() {
     try {
       const res = await api.get('/admin/payments', {
         params: {
-          page: queuePage,
-          limit: 20,
+          page: queuePag.page,
+          limit: queuePag.pageSize,
           search: queueApplied.search || undefined,
           mode: queueApplied.mode || undefined,
           channel: queueApplied.channel || undefined,
@@ -309,13 +289,15 @@ export default function AdminFinancePage() {
         },
       })
       setQueuePayload(res.data)
+      queuePag.applyMeta(res.data)
     } catch (e) {
       toast.error(e.response?.data?.message || 'Failed to load payment history')
       setQueuePayload(null)
+      queuePag.clearMeta()
     } finally {
       setQueueLoading(false)
     }
-  }, [queuePage, queueApplied])
+  }, [queuePag.page, queuePag.pageSize, queuePag.applyMeta, queuePag.clearMeta, queueApplied])
 
   // Triggers loading on tab changes
   useEffect(() => {
@@ -332,7 +314,7 @@ export default function AdminFinancePage() {
   // Wallet search apply
   function applyWalletSearch() {
     setWalletAppliedSearch(walletSearch.trim())
-    setWalletPage(1)
+    walletPag.resetPage()
   }
 
   // Withdrawal filters
@@ -349,6 +331,7 @@ export default function AdminFinancePage() {
   }
 
   function applyWithdrawalFilters(override = {}) {
+    withdrawalPag.resetPage()
     setWithdrawalApplied({ ...readWithdrawFilterDraft(), ...override })
   }
 
@@ -360,6 +343,7 @@ export default function AdminFinancePage() {
     setWithdrawalDateTo('')
     setWithdrawalAmountMin('')
     setWithdrawalAmountMax('')
+    withdrawalPag.resetPage()
     setWithdrawalApplied(emptyWithdrawFilters())
   }
 
@@ -371,6 +355,7 @@ export default function AdminFinancePage() {
     setWithdrawalDateTo(next.dateTo || '')
     setWithdrawalAmountMin(next.amountMin || '')
     setWithdrawalAmountMax(next.amountMax || '')
+    withdrawalPag.resetPage()
     setWithdrawalApplied({
       search: String(next.search || '').trim(),
       payee: next.payee || '',
@@ -399,14 +384,14 @@ export default function AdminFinancePage() {
     setWalletSearch('')
     setWalletAppliedSearch('')
     setWalletFilter('active')
-    setWalletPage(1)
+    walletPag.resetPage()
   }
 
   function applyWalletFiltersFromDrawer(next) {
     setWalletFilter(next.filter || 'active')
     setWalletSearch(next.search || '')
     setWalletAppliedSearch(String(next.search || '').trim())
-    setWalletPage(1)
+    walletPag.resetPage()
   }
 
   function countWalletAdvancedFilters() {
@@ -473,7 +458,7 @@ export default function AdminFinancePage() {
   function applyQueueFilters(override = {}) {
     const draft = readQueueFilterDraft()
     setQueueApplied({ ...draft, ...override, search: override.search !== undefined ? override.search : draft.search })
-    setQueuePage(1)
+    queuePag.resetPage()
   }
 
   function applyQueueFiltersFromDrawer(next) {
@@ -497,7 +482,7 @@ export default function AdminFinancePage() {
       amountMin: String(next.amountMin || '').trim(),
       amountMax: String(next.amountMax || '').trim(),
     })
-    setQueuePage(1)
+    queuePag.resetPage()
   }
 
   function countQueueAdvancedFilters() {
@@ -543,7 +528,7 @@ export default function AdminFinancePage() {
     setQueueAmountMin('')
     setQueueAmountMax('')
     setQueueApplied(next)
-    setQueuePage(1)
+    queuePag.resetPage()
     setActiveTab('queue')
   }
 
@@ -558,7 +543,7 @@ export default function AdminFinancePage() {
     setQueueAmountMin('')
     setQueueAmountMax('')
     setQueueApplied(emptyQueueFilters())
-    setQueuePage(1)
+    queuePag.resetPage()
   }
 
   // Open physio details drawer
@@ -701,7 +686,6 @@ export default function AdminFinancePage() {
 
   // Render variables for Payment Queue Tab
   const queueRows = queuePayload?.data || []
-  const queueTotalPages = queuePayload?.totalPages || 1
   const queueCounts = queuePayload?.counts || {}
   const queuePendingVerification =
     queuePayload?.pendingVerification ?? summary?.pendingVerification ?? 0
@@ -729,7 +713,7 @@ export default function AdminFinancePage() {
       {!summary ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-28 animate-pulse rounded-2xl bg-gray-100" />
+            <Skeleton key={i} className="h-28 rounded-2xl" />
           ))}
         </div>
       ) : (
@@ -837,7 +821,7 @@ export default function AdminFinancePage() {
                       type="button"
                       onClick={() => {
                         setWalletFilter(f.id)
-                        setWalletPage(1)
+                        walletPag.resetPage()
                       }}
                       className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
                         active ? 'bg-gray-900 text-white shadow-sm' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -873,7 +857,9 @@ export default function AdminFinancePage() {
 
           <Card hover={false} className="min-w-0 overflow-hidden p-0">
             {walletLoading ? (
-              <div className="p-12 text-center text-sm text-gray-500">Loading…</div>
+              <div className="p-4">
+                <TableSkeleton rows={6} />
+              </div>
             ) : walletRows.length === 0 ? (
               <div className="p-12 text-center">
                 <p className="text-sm font-medium text-gray-900">No physiotherapist wallets found</p>
@@ -1024,7 +1010,7 @@ export default function AdminFinancePage() {
             )}
             {!walletLoading && walletRows.length > 0 && (
               <div className="border-t border-gray-100 px-4 py-3">
-                <Pagination page={walletPage} totalPages={walletTotalPages} onPageChange={setWalletPage} />
+                <Pagination {...walletPag.paginationProps} />
               </div>
             )}
           </Card>
@@ -1337,9 +1323,7 @@ export default function AdminFinancePage() {
             <AdminPaymentQueueTable
               rows={queueRows}
               loading={queueLoading}
-              page={queuePage}
-              totalPages={queueTotalPages}
-              onPageChange={setQueuePage}
+              {...queuePag.paginationProps}
               busy={busyAction}
               onVerify={setQueueVerifyTarget}
               onReject={(row) => {
@@ -1557,7 +1541,9 @@ export default function AdminFinancePage() {
 
           <Card hover={false} className="min-w-0 overflow-hidden p-0">
             {withdrawalLoading ? (
-              <div className="p-12 text-center text-sm text-gray-500">Loading…</div>
+              <div className="p-4">
+                <TableSkeleton rows={6} />
+              </div>
             ) : withdrawalRows.length === 0 ? (
               <div className="p-12 text-center">
                 <p className="text-sm font-medium text-gray-900">No withdrawal requests match your filters</p>
@@ -1735,6 +1721,11 @@ export default function AdminFinancePage() {
                 </div>
               </>
             )}
+            {!withdrawalLoading && withdrawalRows.length > 0 ? (
+              <div className="border-t border-gray-100 px-4 py-3">
+                <Pagination {...withdrawalPag.paginationProps} />
+              </div>
+            ) : null}
           </Card>
 
           {withdrawFiltersOpen ? (
@@ -2302,13 +2293,7 @@ function Section({ title, empty, children }) {
 }
 
 function SkeletonRows() {
-  return (
-    <div className="space-y-2">
-      {[1, 2, 3].map((i) => (
-        <div key={i} className="h-12 animate-pulse rounded-xl bg-gray-100" />
-      ))}
-    </div>
-  )
+  return <TableSkeleton rows={3} />
 }
 
 function WithdrawStatusBadge({ status }) {

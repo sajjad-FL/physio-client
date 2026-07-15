@@ -4,30 +4,26 @@ import { api } from '../../config/api'
 import toast from 'react-hot-toast'
 import { disputeStatusBadge, paymentBadge } from './dashboardUtils'
 import Pagination from '../../components/Pagination'
+import usePagination from '../../hooks/usePagination'
 import { formatBookingTimeSlot } from '../../utils/date'
 import { bookingCodeBadge } from '../../utils/bookingDisplay'
-
-function RowSkeleton() {
-  return (
-    <div className="h-16 animate-pulse rounded-xl bg-white shadow-sm ring-1 ring-border-subtle/80" />
-  )
-}
+import ListSkeleton from '../../components/ui/skeletons/ListSkeleton'
 
 export default function DashboardDisputes() {
   const [list, setList] = useState(null)
-  const [page, setPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1)
+  const { page, pageSize, applyMeta, clearMeta, paginationProps } = usePagination()
 
   const load = useCallback(async () => {
     try {
-      const res = await api.get('/disputes/my', { params: { page, limit: 8 } })
+      const res = await api.get('/disputes/my', { params: { page, limit: pageSize } })
       setList(res.data?.data || [])
-      setTotalPages(res.data?.totalPages || 1)
+      applyMeta(res.data)
     } catch {
       toast.error('Could not load disputes')
       setList([])
+      clearMeta()
     }
-  }, [page])
+  }, [page, pageSize, applyMeta, clearMeta])
 
   useEffect(() => {
     load()
@@ -45,15 +41,10 @@ export default function DashboardDisputes() {
       </div>
 
       {loading ? (
-        <div className="space-y-3">
-          <RowSkeleton />
-          <RowSkeleton />
-          <RowSkeleton />
-        </div>
+        <ListSkeleton count={4} />
       ) : list.length === 0 ? (
         <p className="text-sm text-ink-muted">No disputes yet.</p>
       ) : (
-        <>
         <ul className="space-y-4">
           {list.map((d) => {
             const st = disputeStatusBadge(d.status)
@@ -103,9 +94,8 @@ export default function DashboardDisputes() {
             )
           })}
         </ul>
-        <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
-        </>
       )}
+      {!loading ? <Pagination {...paginationProps} /> : null}
     </div>
   )
 }

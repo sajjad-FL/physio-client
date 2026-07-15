@@ -4,7 +4,10 @@ import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import toast from 'react-hot-toast'
 import Pagination from '../../components/Pagination'
+import usePagination from '../../hooks/usePagination'
 import FieldLabel from '../../components/ui/FieldLabel'
+import TableSkeleton from '../../components/ui/skeletons/TableSkeleton'
+import Skeleton from '../../components/ui/Skeleton'
 
 function formatInr(n) {
   const v = Number(n)
@@ -56,8 +59,7 @@ export default function PhysioWalletPage() {
   const [tx, setTx] = useState([])
   const [loading, setLoading] = useState(true)
   const [txLoading, setTxLoading] = useState(true)
-  const [page, setPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1)
+  const { page, pageSize, applyMeta, clearMeta, paginationProps } = usePagination()
   const [pendingWithdraw, setPendingWithdraw] = useState(null)
   const [withdrawOpen, setWithdrawOpen] = useState(false)
   const [withdrawAmount, setWithdrawAmount] = useState('')
@@ -91,15 +93,16 @@ export default function PhysioWalletPage() {
   const loadTx = useCallback(async () => {
     setTxLoading(true)
     try {
-      const res = await api.get('/physio/wallet/transactions', { params: { page, limit: 15 } })
+      const res = await api.get('/physio/wallet/transactions', { params: { page, limit: pageSize } })
       setTx(res.data?.data || [])
-      setTotalPages(res.data?.totalPages || 1)
+      applyMeta(res.data)
     } catch {
       toast.error('Failed to load transactions')
+      clearMeta()
     } finally {
       setTxLoading(false)
     }
-  }, [page])
+  }, [page, pageSize, applyMeta, clearMeta])
 
   useEffect(() => {
     loadDash()
@@ -189,7 +192,7 @@ export default function PhysioWalletPage() {
       {loading ? (
         <div className="grid gap-4 sm:grid-cols-3">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-28 animate-pulse rounded-2xl bg-gray-100" />
+            <Skeleton key={i} className="h-28 rounded-2xl" />
           ))}
         </div>
       ) : (
@@ -350,7 +353,9 @@ export default function PhysioWalletPage() {
           </p>
         </div>
         {txLoading ? (
-          <div className="p-8 text-center text-sm text-gray-500">Loading…</div>
+          <div className="p-4">
+            <TableSkeleton rows={5} />
+          </div>
         ) : tx.length === 0 ? (
           <div className="p-8 text-center text-sm text-gray-500">No transactions yet.</div>
         ) : (
@@ -420,9 +425,9 @@ export default function PhysioWalletPage() {
             </table>
           </div>
         )}
-        {!txLoading && tx.length > 0 && (
+        {!txLoading && (
           <div className="border-t border-gray-100 px-4 py-3">
-            <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+            <Pagination {...paginationProps} />
           </div>
         )}
       </Card>

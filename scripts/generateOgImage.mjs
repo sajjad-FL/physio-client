@@ -105,7 +105,7 @@ const html = `<!doctype html>
     <h1>Physio near me in Assam \u2014 home visit physiotherapist</h1>
     <p>Verified physiotherapists at your door for back pain, knee pain, post-surgery rehab and stroke recovery.</p>
     <div class="cities">
-      <span class="chip">Guwahati</span>
+      <span class="chip">Kokrajhar</span>
       <span class="chip">Barpeta</span>
       <span class="chip">Bongaigaon</span>
       <span class="chip">Bijni</span>

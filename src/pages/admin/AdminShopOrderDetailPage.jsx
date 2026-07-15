@@ -7,6 +7,7 @@ import { resolveFileUrl } from '../../utils/serverOrigin'
 import { formatInr, shopOrderStatusClass, shopOrderStatusLabel } from '../../utils/shopDisplay'
 import ShopOrderStatusTimeline from '../../components/shop/ShopOrderStatusTimeline'
 import FieldLabel from '../../components/ui/FieldLabel'
+import DetailSkeleton from '../../components/ui/skeletons/DetailSkeleton'
 
 const NEXT_ACTIONS = {
   placed: [{ status: 'confirmed', label: 'Confirm order' }],
@@ -55,7 +56,7 @@ export default function AdminShopOrderDetailPage() {
     }
   }
 
-  if (loading) return <p className="text-sm text-ink-muted">Loading…</p>
+  if (loading) return <DetailSkeleton />
   if (!order) {
     return (
       <div>

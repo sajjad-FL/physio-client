@@ -5,33 +5,35 @@ import { toastApiError } from '../../utils/formToast'
 import { formatInr, shopOrderStatusClass, shopOrderStatusLabel } from '../../utils/shopDisplay'
 import AdminPageHeader from '../../components/admin/AdminPageHeader'
 import Pagination from '../../components/Pagination'
+import usePagination from '../../hooks/usePagination'
+import TableSkeleton from '../../components/ui/skeletons/TableSkeleton'
 
 const STATUS_TABS = ['', 'placed', 'confirmed', 'shipped', 'delivered', 'cancelled']
 
 export default function AdminShopOrdersPage() {
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(true)
-  const [page, setPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1)
+  const { page, pageSize, applyMeta, clearMeta, resetPage, paginationProps } = usePagination()
   const [status, setStatus] = useState('')
   const [search, setSearch] = useState('')
 
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const params = { page, limit: 20 }
+      const params = { page, limit: pageSize }
       if (status) params.status = status
       if (search.trim()) params.search = search.trim()
       const { data } = await api.get('/admin/shop/orders', { params })
       setOrders(data?.data || [])
-      setTotalPages(data?.totalPages || 1)
+      applyMeta(data)
     } catch (err) {
       toastApiError(err, 'Could not load orders')
       setOrders([])
+      clearMeta()
     } finally {
       setLoading(false)
     }
-  }, [page, status, search])
+  }, [page, pageSize, status, search, applyMeta, clearMeta])
 
   useEffect(() => {
     load()
@@ -57,7 +59,7 @@ export default function AdminShopOrdersPage() {
             type="button"
             onClick={() => {
               setStatus(s)
-              setPage(1)
+              resetPage()
             }}
             className={`rounded-full px-3 py-1 text-xs font-semibold ${status === s ? 'bg-teal-600 text-white' : 'bg-slate-100 text-ink-muted'}`}
           >
@@ -70,7 +72,7 @@ export default function AdminShopOrdersPage() {
         className="mb-4 flex gap-2"
         onSubmit={(e) => {
           e.preventDefault()
-          setPage(1)
+          resetPage()
           load()
         }}
       >
@@ -86,7 +88,7 @@ export default function AdminShopOrdersPage() {
       </form>
 
       {loading ? (
-        <p className="text-sm text-ink-muted">Loading…</p>
+        <TableSkeleton rows={6} />
       ) : orders.length === 0 ? (
         <p className="text-sm text-ink-muted">No orders found.</p>
       ) : (
@@ -127,11 +129,7 @@ export default function AdminShopOrdersPage() {
         </div>
       )}
 
-      {totalPages > 1 ? (
-        <div className="mt-4">
-          <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
-        </div>
-      ) : null}
+      <Pagination {...paginationProps} />
     </div>
   )
 }

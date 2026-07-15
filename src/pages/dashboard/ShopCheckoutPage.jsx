@@ -6,6 +6,7 @@ import { toastApiError } from '../../utils/formToast'
 import { formatInr } from '../../utils/shopDisplay'
 import { useShopCart } from '../../hooks/useShopCart'
 import FieldLabel from '../../components/ui/FieldLabel'
+import DetailSkeleton from '../../components/ui/skeletons/DetailSkeleton'
 
 export default function ShopCheckoutPage() {
   const navigate = useNavigate()
@@ -52,7 +53,7 @@ export default function ShopCheckoutPage() {
     }
   }
 
-  if (loading) return <p className="text-sm text-ink-muted">Loading…</p>
+  if (loading) return <DetailSkeleton />
 
   return (
     <div className="mx-auto max-w-lg space-y-4">

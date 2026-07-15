@@ -10,6 +10,7 @@ import LocationAutocomplete from '../components/booking/LocationAutocomplete'
 import LocationPickerModal from '../components/location/LocationPickerModal'
 import SeoNoIndex from '../components/seo/SeoNoIndex'
 import FieldLabel, { RequiredMark } from '../components/ui/FieldLabel'
+import Skeleton from '../components/ui/Skeleton'
 import { todayISO, defaultBookableDate, filterSelectableSlots } from '../constants/slots'
 import { formatBookingTimeSlot } from '../utils/date'
 import { getCurrentCoords } from '../utils/geolocation'
@@ -192,7 +193,10 @@ export default function TechniqueBookPage() {
             Home visit · {priceLabel} · physio assigned after booking
           </p>
           {profileLoading ? (
-            <p className="mt-3 text-sm text-slate-500">Loading profile…</p>
+            <div className="mt-3 space-y-2">
+              <Skeleton className="h-4 w-48 rounded-md" />
+              <Skeleton className="h-3 w-64 rounded-md" />
+            </div>
           ) : profileName.trim() ? (
             <p className="mt-3 text-sm text-slate-700">
               Booking as <span className="font-semibold text-slate-900">{profileName.trim()}</span>

@@ -4,6 +4,7 @@ import { api } from '../../config/api'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import FieldLabel from '../../components/ui/FieldLabel'
+import DetailSkeleton from '../../components/ui/skeletons/DetailSkeleton'
 
 export default function AdminZonesPage() {
   const [zones, setZones] = useState([])
@@ -59,7 +60,7 @@ export default function AdminZonesPage() {
     }
   }
 
-  if (loading) return <div className="h-40 animate-pulse rounded-2xl bg-slate-100" />
+  if (loading) return <DetailSkeleton />
 
   return (
     <div className="space-y-6">

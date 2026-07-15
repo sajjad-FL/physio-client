@@ -4,10 +4,12 @@ import { api } from '../../config/api'
 import toast from 'react-hot-toast'
 import { toastApiError, toastValidationErrors } from '../../utils/formToast'
 import Pagination from '../../components/Pagination'
+import usePagination from '../../hooks/usePagination'
 import AdminPageHeader from '../../components/admin/AdminPageHeader'
 import VerificationsAdmin from './VerificationsAdmin'
 import FieldLabel from '../../components/ui/FieldLabel'
 import { formatPhysioSessionFeeLabel } from '../../utils/physioSessionFee.js'
+import TableSkeleton from '../../components/ui/skeletons/TableSkeleton'
 
 const TABS = [
   { id: 'directory', label: 'Directory & manage' },
@@ -62,8 +64,7 @@ export default function PhysiosAdmin() {
   const [fuLat, setFuLat] = useState('')
   const [fuLng, setFuLng] = useState('')
   const [fuAvailability, setFuAvailability] = useState(true)
-  const [page, setPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1)
+  const { page, pageSize, applyMeta, clearMeta, paginationProps } = usePagination()
 
   const inputClass =
     'h-11 w-full rounded-lg border border-border-subtle bg-white px-3 text-sm text-ink shadow-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/20'
@@ -72,20 +73,21 @@ export default function PhysiosAdmin() {
     setError('')
     try {
       const [pRes, uRes] = await Promise.all([
-        api.get('/admin/physios', { params: { page, limit: 10 } }),
+        api.get('/admin/physios', { params: { page, limit: pageSize } }),
         api.get('/admin/users', { params: { withoutPhysio: true } }),
       ])
       setList(pRes.data?.data || [])
-      setTotalPages(pRes.data?.totalPages || 1)
+      applyMeta(pRes.data)
       setCandidates(uRes.data || [])
     } catch (err) {
       const msg = err.response?.data?.message || err.message || 'Failed to load data'
       setError(msg)
+      clearMeta()
       toastApiError(err, 'Failed to load physiotherapists')
     } finally {
       setLoading(false)
     }
-  }, [page])
+  }, [page, pageSize, applyMeta, clearMeta])
 
   useEffect(() => {
     load()
@@ -314,14 +316,7 @@ export default function PhysiosAdmin() {
   }
 
   if (loading && activeTab === 'directory') {
-    return (
-      <div className="flex items-center gap-3">
-        <div className="h-5 w-5 animate-spin rounded-full border-2 border-border-subtle border-t-brand" aria-hidden />
-        <p className="text-sm font-medium text-ink-muted" role="status">
-          Loading…
-        </p>
-      </div>
-    )
+    return <TableSkeleton rows={8} />
   }
 
   return (
@@ -811,7 +806,7 @@ export default function PhysiosAdmin() {
           </table>
         </div>
       </div>
-      <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+      <Pagination {...paginationProps} />
         </>
       )}
     </div>

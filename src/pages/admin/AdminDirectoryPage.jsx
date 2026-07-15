@@ -7,9 +7,9 @@ import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import Input from '../../components/ui/Input'
 import Pagination from '../../components/Pagination'
+import usePagination from '../../hooks/usePagination'
 import { toastApiError } from '../../utils/formToast'
-
-const PAGE_SIZE = 20
+import TableSkeleton from '../../components/ui/skeletons/TableSkeleton'
 
 function roleLabel(role) {
   if (role === 'physio') return 'Physiotherapist'
@@ -68,7 +68,7 @@ export default function AdminDirectoryPage() {
   const [userRole, setUserRole] = useState('')
   const [userLinked, setUserLinked] = useState('')
   const [appliedUsers, setAppliedUsers] = useState({ search: '', role: '', linkedPhysio: '' })
-  const [userPage, setUserPage] = useState(1)
+  const { page, pageSize, applyMeta, clearMeta, resetPage, paginationProps } = usePagination()
   const [usersPayload, setUsersPayload] = useState(null)
   const [usersLoading, setUsersLoading] = useState(true)
   const [deletingUserId, setDeletingUserId] = useState('')
@@ -78,21 +78,23 @@ export default function AdminDirectoryPage() {
     try {
       const { data } = await api.get('/admin/users', {
         params: {
-          page: userPage,
-          limit: PAGE_SIZE,
+          page,
+          limit: pageSize,
           search: appliedUsers.search || undefined,
           role: appliedUsers.role || undefined,
           linkedPhysio: appliedUsers.linkedPhysio || undefined,
         },
       })
       setUsersPayload(data)
+      applyMeta(data)
     } catch (err) {
       setUsersPayload(null)
+      clearMeta()
       toastApiError(err, 'Failed to load users')
     } finally {
       setUsersLoading(false)
     }
-  }, [userPage, appliedUsers])
+  }, [page, pageSize, appliedUsers, applyMeta, clearMeta])
 
   useEffect(() => {
     loadUsers()
@@ -111,7 +113,7 @@ export default function AdminDirectoryPage() {
       role: userRole,
       linkedPhysio: userLinked,
     })
-    setUserPage(1)
+    resetPage()
   }
 
   function resetUserFilters() {
@@ -119,7 +121,7 @@ export default function AdminDirectoryPage() {
     setUserRole('')
     setUserLinked('')
     setAppliedUsers({ search: '', role: '', linkedPhysio: '' })
-    setUserPage(1)
+    resetPage()
   }
 
   async function promoteToCareManager(user) {
@@ -212,7 +214,9 @@ export default function AdminDirectoryPage() {
           </p>
         </div>
         {usersLoading ? (
-          <div className="p-12 text-center text-sm text-slate-500">Loading...</div>
+          <div className="p-4">
+            <TableSkeleton rows={8} />
+          </div>
         ) : users.length === 0 ? (
           <div className="p-12 text-center text-sm text-slate-500">No users match these filters.</div>
         ) : (
@@ -281,9 +285,9 @@ export default function AdminDirectoryPage() {
             </table>
           </div>
         )}
-        {!usersLoading && users.length > 0 && (
+        {!usersLoading && (
           <div className="border-t border-slate-100 px-4 py-3">
-            <Pagination page={userPage} totalPages={usersPayload?.totalPages || 1} onPageChange={setUserPage} />
+            <Pagination {...paginationProps} />
           </div>
         )}
       </Card>

@@ -17,6 +17,7 @@ import { getCurrentCoords } from '../utils/geolocation'
 import SeoNoIndex from '../components/seo/SeoNoIndex'
 import WhatsAppSupportFab from '../components/support/WhatsAppSupportFab'
 import FieldLabel, { RequiredMark } from '../components/ui/FieldLabel'
+import ListSkeleton from '../components/ui/skeletons/ListSkeleton'
 import { useReferralMyCode } from '../hooks/useReferral'
 import { todayISO, defaultBookableDate, filterSelectableSlots } from '../constants/slots'
 
@@ -676,7 +677,7 @@ export default function PhysioListPage() {
             </div>
             <div className="max-h-[62vh] overflow-y-auto px-4 py-4 sm:px-6">
               {physioLoading ? (
-                <p className="py-8 text-center text-sm text-gray-500">Loading physiotherapists…</p>
+                <ListSkeleton count={4} />
               ) : availablePhysios.length === 0 ? (
                 <p className="py-8 text-center text-sm text-gray-500">
                   No registered physiotherapists found for your location. Try changing location.

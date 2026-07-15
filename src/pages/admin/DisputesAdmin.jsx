@@ -5,8 +5,10 @@ import { formatBookingTimeSlot } from '../../utils/date'
 import toast from 'react-hot-toast'
 import AdminPageHeader, { AdminLink } from '../../components/admin/AdminPageHeader'
 import Pagination from '../../components/Pagination'
+import usePagination from '../../hooks/usePagination'
 import FieldLabel from '../../components/ui/FieldLabel'
 import { bookingCodeBadge } from '../../utils/bookingDisplay'
+import TableSkeleton from '../../components/ui/skeletons/TableSkeleton'
 
 export default function DisputesAdmin() {
   const [list, setList] = useState([])
@@ -16,21 +18,21 @@ export default function DisputesAdmin() {
   const [resolution, setResolution] = useState('')
   const [action, setAction] = useState('reject')
   const [submitting, setSubmitting] = useState(false)
-  const [page, setPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1)
+  const { page, pageSize, applyMeta, clearMeta, paginationProps } = usePagination()
 
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await api.get('/admin/disputes', { params: { page, limit: 10 } })
+      const res = await api.get('/admin/disputes', { params: { page, limit: pageSize } })
       setList(res.data?.data || [])
-      setTotalPages(res.data?.totalPages || 1)
+      applyMeta(res.data)
     } catch (e) {
       toast.error(e.response?.data?.message || 'Failed to load')
+      clearMeta()
     } finally {
       setLoading(false)
     }
-  }, [page])
+  }, [page, pageSize, applyMeta, clearMeta])
 
   useEffect(() => {
     load()
@@ -65,12 +67,7 @@ export default function DisputesAdmin() {
   }
 
   if (loading) {
-    return (
-      <div className="space-y-4">
-        <div className="h-8 w-48 animate-pulse rounded-lg bg-canvas" />
-        <div className="h-64 animate-pulse rounded-2xl bg-white ring-1 ring-border-subtle/80" />
-      </div>
-    )
+    return <TableSkeleton rows={6} />
   }
 
   return (
@@ -165,7 +162,7 @@ export default function DisputesAdmin() {
           </tbody>
         </table>
       </div>
-      <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+      <Pagination {...paginationProps} />
 
       {detail && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4 backdrop-blur-sm">

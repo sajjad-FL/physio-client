@@ -6,6 +6,13 @@ import AdminPageHeader, { AdminLink } from '../../components/admin/AdminPageHead
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import { resolveAdminCaseContext } from '../../components/admin/AdminCaseContext'
+import AdminFilterSheet, {
+  FILTER_FIELD,
+  MobileFilterIconButton,
+} from '../../components/admin/AdminFilterSheet'
+import Pagination from '../../components/Pagination'
+import usePagination from '../../hooks/usePagination'
+import TableSkeleton from '../../components/ui/skeletons/TableSkeleton'
 
 function formatDate(d) {
   if (!d) return '—'
@@ -46,11 +53,14 @@ export default function AdminSettlementsPage() {
   const [historyDateFrom, setHistoryDateFrom] = useState('')
   const [historyDateTo, setHistoryDateTo] = useState('')
   const [historySort, setHistorySort] = useState('newest')
+  const [historyFiltersOpen, setHistoryFiltersOpen] = useState(false)
+  const historyPag = usePagination()
+  const ledgerPag = usePagination()
 
   const loadBatches = useCallback(async () => {
     try {
-      const res = await api.get('/admin/settlement-batches')
-      setBatches(res.data?.batches || [])
+      const res = await api.get('/admin/settlement-batches', { params: { limit: 50 } })
+      setBatches(res.data?.batches || res.data?.data || [])
     } catch {
       setBatches([])
     }
@@ -66,9 +76,14 @@ export default function AdminSettlementsPage() {
       .then((res) => setPendingPhonePeCount(Number(res.data?.pendingVerification || 0)))
       .catch(() => setPendingPhonePeCount(0))
     api
-      .get('/withdraw', { params: { payee: 'manager' } })
+      .get('/withdraw', { params: { payee: 'manager', status: 'pending', limit: 1 } })
       .then((res) => {
-        const list = Array.isArray(res.data) ? res.data : []
+        const total = Number(res.data?.total)
+        if (Number.isFinite(total)) {
+          setPendingManagerPayouts(total)
+          return
+        }
+        const list = Array.isArray(res.data) ? res.data : res.data?.data || []
         setPendingManagerPayouts(list.filter((r) => r.status === 'pending').length)
       })
       .catch(() => setPendingManagerPayouts(0))
@@ -78,16 +93,28 @@ export default function AdminSettlementsPage() {
     if (!managerId) {
       setLedger(null)
       setSelectedEntryIds([])
+      ledgerPag.clearMeta()
       return
     }
     try {
-      const res = await api.get(`/admin/managers/${managerId}/ledger`)
+      const res = await api.get(`/admin/managers/${managerId}/ledger`, {
+        params: { status: 'open', page: ledgerPag.page, limit: ledgerPag.pageSize },
+      })
       setLedger(res.data)
+      ledgerPag.applyMeta({
+        total: Number(res.data?.total) || (res.data?.entries || []).length,
+        totalPages: Number(res.data?.totalPages) || 1,
+      })
       setSelectedEntryIds([])
     } catch {
       setLedger(null)
+      ledgerPag.clearMeta()
     }
-  }, [])
+  }, [ledgerPag.page, ledgerPag.pageSize, ledgerPag.applyMeta, ledgerPag.clearMeta])
+
+  useEffect(() => {
+    ledgerPag.resetPage()
+  }, [selectedManagerId, ledgerPag.resetPage])
 
   useEffect(() => {
     loadLedger(selectedManagerId)
@@ -135,10 +162,7 @@ export default function AdminSettlementsPage() {
     }
   }
 
-  const openEntries = useMemo(
-    () => (ledger?.entries || []).filter((e) => e.status === 'open'),
-    [ledger],
-  )
+  const openEntries = useMemo(() => ledger?.entries || [], [ledger])
 
   const visibleBatches = useMemo(() => {
     let list = batches
@@ -189,6 +213,24 @@ export default function AdminSettlementsPage() {
     return list
   }, [visibleBatches.settled, historySearch, historyDateFrom, historyDateTo, historySort])
 
+  const historyTotalPages = Math.max(1, Math.ceil(historyRows.length / historyPag.pageSize))
+  const pagedHistoryRows = useMemo(() => {
+    const start = (historyPag.page - 1) * historyPag.pageSize
+    return historyRows.slice(start, start + historyPag.pageSize)
+  }, [historyRows, historyPag.page, historyPag.pageSize])
+
+  useEffect(() => {
+    historyPag.resetPage()
+  }, [historySearch, historyDateFrom, historyDateTo, historySort, selectedManagerId, historyPag.resetPage])
+
+  useEffect(() => {
+    historyPag.applyMeta({ total: historyRows.length, totalPages: historyTotalPages })
+  }, [historyRows.length, historyTotalPages, historyPag.applyMeta])
+
+  useEffect(() => {
+    if (historyPag.page > historyTotalPages) historyPag.setPage(historyTotalPages)
+  }, [historyPag.page, historyTotalPages, historyPag.setPage])
+
   const historyStats = useMemo(() => {
     const cash = historyRows.reduce((s, b) => s + Number(b.expectedAmount || 0), 0)
     const commission = historyRows.reduce((s, b) => s + Number(b.commissionTotal || 0), 0)
@@ -199,10 +241,22 @@ export default function AdminSettlementsPage() {
     return { cash, commission, cases, count: historyRows.length }
   }, [historyRows])
 
+  const historyFilterCount =
+    Number(Boolean(historyDateFrom)) +
+    Number(Boolean(historyDateTo)) +
+    Number(historySort !== 'newest')
+
+  function resetHistoryFilters() {
+    setHistorySearch('')
+    setHistoryDateFrom('')
+    setHistoryDateTo('')
+    setHistorySort('newest')
+  }
+
   const selectedManager = managers.find((m) => String(m._id) === String(selectedManagerId))
 
   const tabCounts = {
-    settle: openEntries.length,
+    settle: ledgerPag.total || openEntries.length,
     batches: visibleBatches.open.length,
     history: visibleBatches.settled.length,
   }
@@ -302,6 +356,8 @@ export default function AdminSettlementsPage() {
           {activeTab === 'settle' ? (
             !selectedManagerId ? (
               <EmptyHint>Select a care manager above to settle open collections.</EmptyHint>
+            ) : ledger === null ? (
+              <TableSkeleton rows={5} />
             ) : openEntries.length === 0 ? (
               <EmptyHint>
                 No open collections for {selectedManager?.name || 'this manager'}.
@@ -330,7 +386,7 @@ export default function AdminSettlementsPage() {
                     className="text-xs font-semibold text-teal-700 hover:underline"
                     onClick={selectAllOpen}
                   >
-                    Select all
+                    Select page
                   </button>
                 </div>
                 <ul className="divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200">
@@ -381,6 +437,7 @@ export default function AdminSettlementsPage() {
                 >
                   Create batch ({selectedEntryIds.length})
                 </Button>
+                <Pagination {...ledgerPag.paginationProps} />
               </div>
             )
           ) : null}
@@ -422,7 +479,23 @@ export default function AdminSettlementsPage() {
                   <HistoryStat label="Cases" value={String(historyStats.cases)} />
                 </div>
 
-                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="flex items-center gap-2 sm:hidden">
+                  <input
+                    type="search"
+                    aria-label="Search settlement history"
+                    placeholder="Search manager…"
+                    value={historySearch}
+                    onChange={(e) => setHistorySearch(e.target.value)}
+                    className="min-h-10 min-w-0 flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 shadow-sm placeholder:text-slate-400"
+                  />
+                  <MobileFilterIconButton
+                    count={historyFilterCount}
+                    onClick={() => setHistoryFiltersOpen(true)}
+                    label="Open history filters"
+                  />
+                </div>
+
+                <div className="hidden gap-2 sm:grid sm:grid-cols-2 lg:grid-cols-4">
                   <input
                     type="search"
                     placeholder="Search manager…"
@@ -465,12 +538,7 @@ export default function AdminSettlementsPage() {
                     <button
                       type="button"
                       className="text-xs font-semibold text-slate-600 hover:text-slate-900"
-                      onClick={() => {
-                        setHistorySearch('')
-                        setHistoryDateFrom('')
-                        setHistoryDateTo('')
-                        setHistorySort('newest')
-                      }}
+                      onClick={resetHistoryFilters}
                     >
                       Clear filters
                     </button>
@@ -480,15 +548,18 @@ export default function AdminSettlementsPage() {
                 {historyRows.length === 0 ? (
                   <EmptyHint>No settled batches match these filters.</EmptyHint>
                 ) : (
-                  <ul className="overflow-hidden rounded-xl border border-slate-200 divide-y divide-slate-100">
-                    {historyRows.map((batch) => (
-                      <HistoryRow
-                        key={batch._id}
-                        batch={batch}
-                        onOpen={() => setSelectedBatch(batch)}
-                      />
-                    ))}
-                  </ul>
+                  <>
+                    <ul className="overflow-hidden rounded-xl border border-slate-200 divide-y divide-slate-100">
+                      {pagedHistoryRows.map((batch) => (
+                        <HistoryRow
+                          key={batch._id}
+                          batch={batch}
+                          onOpen={() => setSelectedBatch(batch)}
+                        />
+                      ))}
+                    </ul>
+                    <Pagination {...historyPag.paginationProps} />
+                  </>
                 )}
               </div>
             )
@@ -506,7 +577,94 @@ export default function AdminSettlementsPage() {
           }
         />
       ) : null}
+
+      {historyFiltersOpen ? (
+        <HistoryFiltersSheet
+          filters={{
+            search: historySearch,
+            dateFrom: historyDateFrom,
+            dateTo: historyDateTo,
+            sort: historySort,
+          }}
+          onClose={() => setHistoryFiltersOpen(false)}
+          onApply={(filters) => {
+            setHistorySearch(filters.search)
+            setHistoryDateFrom(filters.dateFrom)
+            setHistoryDateTo(filters.dateTo)
+            setHistorySort(filters.sort)
+          }}
+          onReset={resetHistoryFilters}
+        />
+      ) : null}
     </div>
+  )
+}
+
+function HistoryFiltersSheet({ filters, onClose, onApply, onReset }) {
+  const [draft, setDraft] = useState(filters)
+  const set = (key, value) => setDraft((current) => ({ ...current, [key]: value }))
+
+  return (
+    <AdminFilterSheet
+      title="History filters"
+      onClose={onClose}
+      onApply={() => onApply(draft)}
+      onReset={onReset}
+    >
+      <div>
+        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+          Search manager
+        </label>
+        <input
+          type="search"
+          className={FILTER_FIELD}
+          placeholder="Name or phone"
+          value={draft.search}
+          onChange={(e) => set('search', e.target.value)}
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+            From
+          </label>
+          <input
+            type="date"
+            className={FILTER_FIELD}
+            value={draft.dateFrom}
+            onChange={(e) => set('dateFrom', e.target.value)}
+          />
+        </div>
+        <div>
+          <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+            To
+          </label>
+          <input
+            type="date"
+            className={FILTER_FIELD}
+            value={draft.dateTo}
+            onChange={(e) => set('dateTo', e.target.value)}
+          />
+        </div>
+      </div>
+
+      <div>
+        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+          Sort
+        </label>
+        <select
+          className={FILTER_FIELD}
+          value={draft.sort}
+          onChange={(e) => set('sort', e.target.value)}
+        >
+          <option value="newest">Newest first</option>
+          <option value="oldest">Oldest first</option>
+          <option value="amount-high">Amount: high → low</option>
+          <option value="amount-low">Amount: low → high</option>
+        </select>
+      </div>
+    </AdminFilterSheet>
   )
 }
 
@@ -530,6 +688,7 @@ function HistoryStat({ label, value }) {
 function HistoryRow({ batch, onOpen }) {
   const cases = batch.entryCount ?? batch.entries?.length ?? 0
   const settledAt = batch.settledAt || batch.distributedAt || batch.createdAt
+  const cuts = batchCuts(batch)
   return (
     <li>
       <button
@@ -537,37 +696,20 @@ function HistoryRow({ batch, onOpen }) {
         onClick={onOpen}
         className="flex w-full items-center gap-3 px-3 py-3 text-left transition hover:bg-teal-50/60 sm:px-4"
       >
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 space-y-2">
           <div className="flex flex-wrap items-center gap-2">
             <p className="truncate font-semibold text-slate-900">{batch.managerId?.name || 'Manager'}</p>
             <span className="inline-flex rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-800 ring-1 ring-emerald-200">
               Settled
             </span>
           </div>
-          <p className="mt-0.5 text-xs text-slate-500">
+          <p className="text-xs text-slate-500">
             {formatDate(settledAt)}
             {cases ? ` · ${cases} case${cases === 1 ? '' : 's'}` : ''}
+            <span className="mx-1.5 text-slate-300">·</span>
+            Cash {formatInr(cuts.cash)}
           </p>
-          <div className="mt-2 grid grid-cols-3 gap-2 sm:max-w-md">
-            <div>
-              <p className="text-[10px] uppercase tracking-wide text-slate-400">Cash</p>
-              <p className="text-sm font-semibold tabular-nums text-slate-900">
-                {formatInr(batch.expectedAmount)}
-              </p>
-            </div>
-            <div>
-              <p className="text-[10px] uppercase tracking-wide text-slate-400">Manager</p>
-              <p className="text-sm font-semibold tabular-nums text-emerald-800">
-                {formatInr(batch.commissionTotal)}
-              </p>
-            </div>
-            <div>
-              <p className="text-[10px] uppercase tracking-wide text-slate-400">Physio</p>
-              <p className="text-sm font-semibold tabular-nums text-slate-700">
-                {formatInr(batch.physioPayoutTotal)}
-              </p>
-            </div>
-          </div>
+          <CutsBreakdown cuts={cuts} compact />
         </div>
         <span className="shrink-0 text-xs font-semibold text-teal-700">Details →</span>
       </button>
@@ -575,32 +717,84 @@ function HistoryRow({ batch, onOpen }) {
   )
 }
 
+function batchCuts(batch) {
+  const preview = batch?.distributionPreview
+  if (preview) {
+    return {
+      cash: Number(batch.expectedAmount) || 0,
+      physio: Number(preview.physioTotal) || 0,
+      manager: Number(preview.managerTotal) || 0,
+      platform: Number(preview.platformTotal) || 0,
+      source: 'preview',
+    }
+  }
+  const cash = Number(batch?.expectedAmount) || 0
+  const physio = Number(batch?.physioPayoutTotal) || 0
+  const manager = Number(batch?.commissionTotal) || 0
+  const platform = Math.max(0, Math.round((cash - physio - manager) * 100) / 100)
+  return { cash, physio, manager, platform, source: 'stored' }
+}
+
+function CutsBreakdown({ cuts, compact = false }) {
+  const items = [
+    { key: 'physio', label: 'Physio gets', value: cuts.physio, tone: 'text-slate-800' },
+    { key: 'manager', label: 'Manager gets', value: cuts.manager, tone: 'text-emerald-800' },
+    { key: 'platform', label: 'Platform keeps', value: cuts.platform, tone: 'text-sky-800' },
+  ]
+  return (
+    <div
+      className={[
+        'grid grid-cols-3 gap-2',
+        compact ? '' : 'rounded-xl bg-slate-50 p-2.5 ring-1 ring-slate-100',
+      ].join(' ')}
+    >
+      {items.map((item) => (
+        <div
+          key={item.key}
+          className={compact ? '' : 'rounded-lg bg-white px-2.5 py-2 ring-1 ring-slate-100'}
+        >
+          <p className="text-[10px] font-medium uppercase tracking-wide text-slate-500">{item.label}</p>
+          <p className={`mt-0.5 text-sm font-semibold tabular-nums ${item.tone}`}>{formatInr(item.value)}</p>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 function BatchRow({ batch, busy, onOpen, onSettle, showSettle, settled }) {
   const cases = batch.entryCount ?? batch.entries?.length ?? 0
+  const cuts = batchCuts(batch)
+
   return (
-    <li className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+    <li className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
       <button
         type="button"
         onClick={onOpen}
-        className="flex w-full items-start justify-between gap-3 px-3 py-3 text-left transition hover:bg-slate-50 sm:px-4"
+        className="flex w-full flex-col gap-3 px-3 py-3.5 text-left transition hover:bg-slate-50/80 sm:px-4"
       >
-        <div className="min-w-0">
-          <p className="font-semibold text-slate-900">
-            {batch.managerId?.name || 'Manager'}
-            <span className="mx-1.5 font-normal text-slate-300">·</span>
-            <span className="tabular-nums">{formatInr(batch.expectedAmount)}</span>
-          </p>
-          <p className="mt-0.5 text-xs text-slate-500">
-            {settled
-              ? `Settled ${formatDate(batch.settledAt || batch.distributedAt || batch.createdAt)}`
-              : `Created ${formatDate(batch.createdAt)}`}
-            {cases ? ` · ${cases} case${cases === 1 ? '' : 's'}` : ''}
-            {settled && batch.commissionTotal != null
-              ? ` · manager ${formatInr(batch.commissionTotal)}`
-              : ''}
-          </p>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="font-semibold text-slate-900">{batch.managerId?.name || 'Manager'}</p>
+            <p className="mt-0.5 text-xs text-slate-500">
+              {settled
+                ? `Settled ${formatDate(batch.settledAt || batch.distributedAt || batch.createdAt)}`
+                : `Created ${formatDate(batch.createdAt)}`}
+              {cases ? ` · ${cases} case${cases === 1 ? '' : 's'}` : ''}
+            </p>
+          </div>
+          <div className="shrink-0 text-right">
+            <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400">Cash in</p>
+            <p className="text-base font-semibold tabular-nums text-slate-900">{formatInr(cuts.cash)}</p>
+            <span className="mt-1 inline-block text-xs font-semibold text-teal-700">Details →</span>
+          </div>
         </div>
-        <span className="shrink-0 text-xs font-semibold text-teal-700">Details →</span>
+
+        <CutsBreakdown cuts={cuts} />
+        {!settled ? (
+          <p className="text-[11px] text-slate-500">
+            On settle these amounts credit physio + manager wallets; platform share stays with you.
+          </p>
+        ) : null}
       </button>
       {showSettle ? (
         <div className="border-t border-slate-100 px-3 py-2.5 sm:px-4">
@@ -682,16 +876,18 @@ function BatchDetailDrawer({ batch, busy, onClose, onSettle }) {
           </dl>
 
           {isOpen && preview ? (
-            <div className="rounded-xl bg-slate-50 px-3 py-2.5 text-xs text-slate-700 ring-1 ring-slate-200">
-              On settle: physio {formatInr(preview.physioTotal)} · manager {formatInr(preview.managerTotal)} ·
-              platform {formatInr(preview.platformTotal)}
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Who gets what on settle
+              </p>
+              <CutsBreakdown cuts={batchCuts(batch)} />
             </div>
           ) : null}
 
           {!isOpen ? (
-            <div className="rounded-xl bg-emerald-50 px-3 py-2.5 text-xs text-emerald-900 ring-1 ring-emerald-100">
-              Distributed: physio {formatInr(batch.physioPayoutTotal)} · manager{' '}
-              {formatInr(batch.commissionTotal)}
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Distributed</p>
+              <CutsBreakdown cuts={batchCuts(batch)} />
             </div>
           ) : null}
 

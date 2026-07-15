@@ -6,6 +6,7 @@ import { toastApiError } from '../../utils/formToast'
 import { resolveFileUrl } from '../../utils/serverOrigin'
 import VerificationBadge from '../../components/physio/VerificationBadge'
 import { formatPhysioSessionFeeLabel } from '../../utils/physioSessionFee.js'
+import DetailSkeleton from '../../components/ui/skeletons/DetailSkeleton'
 
 function verificationLevelForBadge(level) {
   if (level === 'verified' || level === 'premium') return 'verified'
@@ -83,7 +84,7 @@ export default function AdminPhysioDetailPage() {
   }
 
   if (loading) {
-    return <p className="text-sm text-ink-muted">Loading…</p>
+    return <DetailSkeleton />
   }
   if (!p) {
     return (

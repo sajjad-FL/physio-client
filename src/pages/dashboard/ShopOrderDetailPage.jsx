@@ -5,6 +5,7 @@ import { toastApiError } from '../../utils/formToast'
 import { resolveFileUrl } from '../../utils/serverOrigin'
 import { formatInr, shopOrderStatusClass, shopOrderStatusLabel } from '../../utils/shopDisplay'
 import ShopOrderStatusTimeline from '../../components/shop/ShopOrderStatusTimeline'
+import DetailSkeleton from '../../components/ui/skeletons/DetailSkeleton'
 
 export default function ShopOrderDetailPage() {
   const { id } = useParams()
@@ -29,7 +30,7 @@ export default function ShopOrderDetailPage() {
     load()
   }, [load])
 
-  if (loading) return <p className="text-sm text-ink-muted">Loading order…</p>
+  if (loading) return <DetailSkeleton />
   if (!order) {
     return (
       <div>

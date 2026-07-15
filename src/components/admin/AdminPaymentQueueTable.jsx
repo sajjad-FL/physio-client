@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import Pagination from '../Pagination'
+import TableSkeleton from '../ui/skeletons/TableSkeleton'
 import AdminCaseContext from './AdminCaseContext'
 import { assetUrl } from '../../utils/assetUrl'
 
@@ -112,6 +113,9 @@ export default function AdminPaymentQueueTable({
   page,
   totalPages,
   onPageChange,
+  total,
+  pageSize,
+  onPageSizeChange,
   busy,
   onVerify,
   onReject,
@@ -120,7 +124,7 @@ export default function AdminPaymentQueueTable({
   emptyHint = 'Adjust the filters or try a different search.',
 }) {
   if (loading) {
-    return <div className="p-12 text-center text-sm text-gray-500">Loading…</div>
+    return <TableSkeleton rows={6} className="p-4" />
   }
 
   if (!rows.length) {
@@ -260,7 +264,14 @@ export default function AdminPaymentQueueTable({
       </div>
       {rows.length > 0 ? (
         <div className="border-t border-gray-100 px-4 py-3">
-          <Pagination page={page} totalPages={totalPages} onPageChange={onPageChange} />
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            onPageChange={onPageChange}
+            total={total}
+            pageSize={pageSize}
+            onPageSizeChange={onPageSizeChange}
+          />
         </div>
       ) : null}
     </>

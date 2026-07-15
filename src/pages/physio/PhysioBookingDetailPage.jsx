@@ -21,6 +21,7 @@ import InstallmentsCard from '../../components/payments/InstallmentsCard'
 import RecordCollectionModal from '../../components/payments/RecordCollectionModal'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
+import DetailSkeleton from '../../components/ui/skeletons/DetailSkeleton'
 import { openGoogleMapsDestination } from '../../utils/googleMaps'
 import { isPlanLive } from '../../utils/planStatus'
 import { buildSessionPaymentMap } from '../../utils/sessionPaymentMap'
@@ -230,7 +231,7 @@ export default function PhysioBookingDetailPage() {
   }
 
   if (loading) {
-    return <div className="h-48 animate-pulse rounded-2xl bg-slate-100" />
+    return <DetailSkeleton />
   }
 
   if (error || !pageCtx) {

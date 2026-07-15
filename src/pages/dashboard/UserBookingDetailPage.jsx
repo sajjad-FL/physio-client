@@ -14,6 +14,7 @@ import BookingSessionTimeline from '../../components/bookings/BookingSessionTime
 import BookingWorkflowStepRail from '../../components/bookings/BookingWorkflowStepRail'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
+import DetailSkeleton from '../../components/ui/skeletons/DetailSkeleton'
 import ReviewSubmitModal from '../../components/reviews/ReviewSubmitModal'
 import { StarRatingDisplay } from '../../components/reviews/StarRating'
 import { normalizeSessionRows } from '../../components/physio/physioBookingHelpers'
@@ -167,7 +168,7 @@ export default function UserBookingDetailPage() {
   }
 
   if (loading) {
-    return <div className="h-48 animate-pulse rounded-2xl bg-slate-100" />
+    return <DetailSkeleton />
   }
 
   if (error || !pageCtx) {
