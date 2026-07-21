@@ -186,9 +186,9 @@ export default function RegisterPage() {
 
   const stepSub =
     step === STEP_PHONE
-      ? 'We will text a one-time code to verify this number.'
+      ? 'We will send a one-time code on WhatsApp to verify this number.'
       : step === STEP_OTP
-        ? 'Enter the 4-digit code we sent to your phone.'
+        ? 'Enter the 4-digit code we sent on WhatsApp.'
         : 'Your account is created with your name and password. Add date of birth, gender, and address in Profile whenever you like — you will need them before booking.'
 
   return (

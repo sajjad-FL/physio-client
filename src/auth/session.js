@@ -17,12 +17,21 @@ function normalizeRoleInput(input) {
   if (input == null || input === '') return 'user'
   if (typeof input === 'string') {
     if (input === 'patient') return 'user'
-    if (input === 'user' || input === 'physio' || input === 'admin' || input === 'care_manager') return input
+    if (
+      input === 'user' ||
+      input === 'physio' ||
+      input === 'admin' ||
+      input === 'care_manager' ||
+      input === 'clinic_staff'
+    ) {
+      return input
+    }
     return 'user'
   }
   if (Array.isArray(input)) {
     if (input.includes('admin')) return 'admin'
     if (input.includes('care_manager')) return 'care_manager'
+    if (input.includes('clinic_staff')) return 'clinic_staff'
     if (input.includes('physio')) return 'physio'
     return 'user'
   }
@@ -61,11 +70,19 @@ export function getToken() {
   return localStorage.getItem(TOKEN_KEY)
 }
 
-/** @returns {'user' | 'physio' | 'admin' | 'care_manager'} */
+/** @returns {'user' | 'physio' | 'admin' | 'care_manager' | 'clinic_staff'} */
 export function getRole() {
   try {
     const single = localStorage.getItem(ROLE_KEY)
-    if (single === 'user' || single === 'physio' || single === 'admin' || single === 'care_manager') return single
+    if (
+      single === 'user' ||
+      single === 'physio' ||
+      single === 'admin' ||
+      single === 'care_manager' ||
+      single === 'clinic_staff'
+    ) {
+      return single
+    }
     if (single === 'patient') return 'user'
   } catch {
     /* ignore */
@@ -145,6 +162,7 @@ export function getDefaultDashboardPath() {
   const role = getRole()
   if (role === 'admin') return '/admin'
   if (role === 'care_manager') return '/manager'
+  if (role === 'clinic_staff') return '/clinic'
   if (role === 'physio') return PHYSIO_DASHBOARD_ENTRY
   return '/dashboard'
 }
@@ -160,19 +178,23 @@ export function redirectPathForRoleMismatch(pathname) {
 
   if (role === 'care_manager') {
     if (path.startsWith('/dashboard') || path.startsWith('/book')) return '/manager'
-    if (path.startsWith('/physio')) return '/manager'
+    if (path.startsWith('/physio') || path.startsWith('/clinic')) return '/manager'
+  }
+  if (role === 'clinic_staff') {
+    if (path.startsWith('/dashboard') || path.startsWith('/book')) return '/clinic'
+    if (path.startsWith('/physio') || path.startsWith('/manager')) return '/clinic'
   }
   if (role === 'physio') {
     if (path.startsWith('/dashboard') || path.startsWith('/book')) return PHYSIO_DASHBOARD_ENTRY
-    if (path.startsWith('/manager')) return PHYSIO_DASHBOARD_ENTRY
+    if (path.startsWith('/manager') || path.startsWith('/clinic')) return PHYSIO_DASHBOARD_ENTRY
   }
   if (role === 'admin') {
     if (path.startsWith('/dashboard') || path.startsWith('/book')) return '/admin'
-    if (path.startsWith('/manager')) return '/admin'
+    if (path.startsWith('/manager') || path.startsWith('/clinic')) return '/admin'
     if (path.startsWith('/physio')) return '/admin'
   }
   if (role === 'user') {
-    if (path.startsWith('/manager')) return '/dashboard'
+    if (path.startsWith('/manager') || path.startsWith('/clinic')) return '/dashboard'
     if (path.startsWith('/physio')) return '/dashboard'
     if (path.startsWith('/admin')) return '/dashboard'
   }

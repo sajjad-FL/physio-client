@@ -10,11 +10,14 @@ import Pagination from '../../components/Pagination'
 import usePagination from '../../hooks/usePagination'
 import { toastApiError } from '../../utils/formToast'
 import TableSkeleton from '../../components/ui/skeletons/TableSkeleton'
+import CreatePatientModal from '../../components/staff/CreatePatientModal'
+import ConfirmDeleteUserModal from '../../components/staff/ConfirmDeleteUserModal'
 
 function roleLabel(role) {
   if (role === 'physio') return 'Physiotherapist'
   if (role === 'admin') return 'Admin'
   if (role === 'care_manager') return 'Care Manager'
+  if (role === 'clinic_staff') return 'Clinic Staff'
   return role || 'User'
 }
 
@@ -71,6 +74,8 @@ export default function AdminDirectoryPage() {
   const { page, pageSize, applyMeta, clearMeta, resetPage, paginationProps } = usePagination()
   const [usersPayload, setUsersPayload] = useState(null)
   const [usersLoading, setUsersLoading] = useState(true)
+  const [createOpen, setCreateOpen] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState(null)
   const [deletingUserId, setDeletingUserId] = useState('')
 
   const loadUsers = useCallback(async () => {
@@ -136,13 +141,13 @@ export default function AdminDirectoryPage() {
     }
   }
 
-  async function deleteUser(user) {
-    const ok = window.confirm(`Delete this user account?\n\n${user.name || user.phone || user._id}`)
-    if (!ok) return
-    setDeletingUserId(user._id)
+  async function confirmDeleteUser() {
+    if (!deleteTarget?._id) return
+    setDeletingUserId(deleteTarget._id)
     try {
-      await api.delete(`/admin/users/${user._id}`)
+      await api.delete(`/admin/users/${deleteTarget._id}`)
       toast.success('User deleted')
+      setDeleteTarget(null)
       await loadUsers()
     } catch (err) {
       toastApiError(err, 'Delete failed')
@@ -163,10 +168,29 @@ export default function AdminDirectoryPage() {
         breadcrumbs={[{ label: 'Admin', to: '/admin' }, { label: 'Users' }]}
         actions={
           <>
+            <Button type="button" onClick={() => setCreateOpen(true)}>
+              Add patient
+            </Button>
             <AdminLink to="/admin/physios">Physiotherapists →</AdminLink>
             <AdminLink to="/admin/physios?tab=queue">Verification queue →</AdminLink>
           </>
         }
+      />
+
+      <CreatePatientModal
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        apiPath="/admin/users"
+        onCreated={() => loadUsers()}
+      />
+      <ConfirmDeleteUserModal
+        open={Boolean(deleteTarget)}
+        user={deleteTarget}
+        busy={Boolean(deletingUserId)}
+        onClose={() => {
+          if (!deletingUserId) setDeleteTarget(null)
+        }}
+        onConfirm={confirmDeleteUser}
       />
 
       <Card hover={false} className="p-4 sm:p-5">
@@ -189,6 +213,7 @@ export default function AdminDirectoryPage() {
               <option value="physio">Physiotherapist</option>
               <option value="admin">Admin</option>
               <option value="care_manager">Care Manager</option>
+              <option value="clinic_staff">Clinic Staff</option>
             </Select>
           </div>
           <div>
@@ -273,7 +298,7 @@ export default function AdminDirectoryPage() {
                           variant="outline"
                           className="px-3 py-1.5 text-xs text-rose-700"
                           disabled={deletingUserId === u._id || u.role === 'admin'}
-                          onClick={() => deleteUser(u)}
+                          onClick={() => setDeleteTarget(u)}
                         >
                           {deletingUserId === u._id ? 'Deleting...' : 'Delete'}
                         </Button>

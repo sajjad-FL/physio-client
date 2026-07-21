@@ -204,7 +204,7 @@ export default function PhysioListPage() {
           date &&
           timeSlot &&
           issueOk &&
-          (serviceType === 'home' || selectedPhysioId),
+          (serviceType === 'home' || serviceType === 'clinic' || selectedPhysioId),
       ),
     [profileName, location, resolvedIssue, date, timeSlot, issueOk, serviceType, selectedPhysioId],
   )
@@ -250,7 +250,7 @@ export default function PhysioListPage() {
   }, [serviceType, lat, lng])
 
   useEffect(() => {
-    if (serviceType !== 'home') return
+    if (serviceType === 'online') return
     setSelectedPhysioId('')
   }, [serviceType])
 
@@ -277,6 +277,18 @@ export default function PhysioListPage() {
         const homeId = homeRes.data?._id
         if (homeId) {
           navigate(`/dashboard/bookings/${homeId}`, { replace: true })
+        } else {
+          navigate('/dashboard/bookings', { replace: true })
+        }
+        return
+      }
+
+      if (serviceType === 'clinic') {
+        const clinicRes = await api.post('/bookings/request-clinic', body)
+        toast.success('Clinic visit requested. Our admin will assign a clinic for your appointment.')
+        const clinicBookingId = clinicRes.data?._id
+        if (clinicBookingId) {
+          navigate(`/dashboard/bookings/${clinicBookingId}`, { replace: true })
         } else {
           navigate('/dashboard/bookings', { replace: true })
         }
@@ -496,7 +508,7 @@ export default function PhysioListPage() {
           </div>
           <div className="mt-4">
             <span className={label}>Service</span>
-            <div className="mt-1 inline-flex rounded-xl border border-gray-200 bg-gray-50 p-1">
+            <div className="mt-1 inline-flex flex-wrap rounded-xl border border-gray-200 bg-gray-50 p-1">
               <button
                 type="button"
                 className={`rounded-lg px-4 py-2 text-sm font-semibold transition-all ${
@@ -514,6 +526,15 @@ export default function PhysioListPage() {
                 onClick={() => setServiceType('online')}
               >
                 Online Consultation
+              </button>
+              <button
+                type="button"
+                className={`rounded-lg px-4 py-2 text-sm font-semibold transition-all ${
+                  serviceType === 'clinic' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-600'
+                }`}
+                onClick={() => setServiceType('clinic')}
+              >
+                Clinic
               </button>
             </div>
           </div>
@@ -564,11 +585,19 @@ export default function PhysioListPage() {
 
         <StepShell
           step={4}
-          title={serviceType === 'online' ? 'Choose your physiotherapist' : 'How matching works'}
+          title={
+            serviceType === 'online'
+              ? 'Choose your physiotherapist'
+              : serviceType === 'clinic'
+                ? 'Clinic visit'
+                : 'How matching works'
+          }
           subtitle={
             serviceType === 'online'
               ? 'For online consultation, pick a registered physiotherapist before confirming.'
-              : 'You do not need to choose a physiotherapist — our team picks the best match.'
+              : serviceType === 'clinic'
+                ? 'You do not pick a clinic here — after booking, admin assigns the facility for your appointment.'
+                : 'You do not need to choose a physiotherapist — our team picks the best match.'
           }
           locked={!issueOk}
         >

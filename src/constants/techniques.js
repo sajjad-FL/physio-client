@@ -4,7 +4,7 @@ import imgKinesio from '../assets/technique_kinesio.png'
 import imgIastm from '../assets/technique_iastm.png'
 
 /**
- * Treatment techniques for Book-by-Need detail pages and direct home booking.
+ * Treatment techniques for Book-by-Need detail pages and direct home or clinic booking.
  * `bookingIssue` must match ISSUE_OPTIONS / server TECHNIQUE_ISSUES.
  */
 export const TECHNIQUES = [
@@ -30,7 +30,7 @@ export const TECHNIQUES = [
       },
       {
         q: 'Is this a clinic visit or at home?',
-        a: 'This is a home visit. If you already have an active recovery plan with a care manager, they handle physio assignment. Otherwise our team assigns a physiotherapist directly.',
+        a: 'You can book either a home visit or a clinic visit. If you already have an active recovery plan with a care manager, they handle physio assignment. Otherwise our team assigns a physiotherapist directly.',
       },
     ],
   },
@@ -58,6 +58,10 @@ export const TECHNIQUES = [
         q: 'Will it hurt?',
         a: 'You may feel a brief twitch or ache. Most people find it tolerable; tell your physiotherapist if anything feels too sharp.',
       },
+      {
+        q: 'Is this a clinic visit or at home?',
+        a: 'You can book either a home visit or a clinic visit. If you already have an active recovery plan with a care manager, they handle physio assignment. Otherwise our team assigns a physiotherapist directly.',
+      },
     ],
   },
   {
@@ -84,6 +88,10 @@ export const TECHNIQUES = [
         q: 'Can I shower with it on?',
         a: 'Yes, with care — pat dry rather than rub. Avoid oils and lotions on the taped skin.',
       },
+      {
+        q: 'Is this a clinic visit or at home?',
+        a: 'You can book either a home visit or a clinic visit. If you already have an active recovery plan with a care manager, they handle physio assignment. Otherwise our team assigns a physiotherapist directly.',
+      },
     ],
   },
   {
@@ -108,7 +116,7 @@ export const TECHNIQUES = [
       },
       {
         q: 'Is this a clinic visit or at home?',
-        a: 'This is a home visit. If you already have an active recovery plan with a care manager, they handle physio assignment. Otherwise our team assigns a physiotherapist directly.',
+        a: 'You can book either a home visit or a clinic visit. If you already have an active recovery plan with a care manager, they handle physio assignment. Otherwise our team assigns a physiotherapist directly.',
       },
     ],
   },

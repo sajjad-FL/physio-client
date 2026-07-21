@@ -273,7 +273,11 @@ export default function DashboardHome() {
       ? {
           name: nextSession.booking.physioId.name,
           detail: `${nextSession.booking.physioId.specialization || 'Verified Physiotherapist'} · ${
-            nextSession.booking.serviceType === 'online' ? 'Online' : 'At Home'
+            nextSession.booking.serviceType === 'online'
+              ? 'Online'
+              : nextSession.booking.serviceType === 'clinic'
+                ? 'Clinic'
+                : 'At Home'
           }`,
         }
       : nextSession.booking.managerId?.name
@@ -283,7 +287,12 @@ export default function DashboardHome() {
           }
         : {
             name: 'Care team assigning…',
-            detail: nextSession.booking.serviceType === 'online' ? 'Online visit' : 'Home visit',
+            detail:
+              nextSession.booking.serviceType === 'online'
+                ? 'Online visit'
+                : nextSession.booking.serviceType === 'clinic'
+                  ? 'Clinic visit'
+                  : 'Home visit',
           }
     : null
 

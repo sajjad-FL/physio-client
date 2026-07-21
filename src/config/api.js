@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { getToken } from '../auth/session'
+import { clearToken, getToken } from '../auth/session'
 
 function normalizeApiBase(raw) {
   const trimmed = String(raw || '').trim().replace(/\/+$/, '')
@@ -20,3 +20,42 @@ api.interceptors.request.use((config) => {
   }
   return config
 })
+
+let clearingUnauthorizedSession = false
+
+function isCredentialAuthRequest(config) {
+  const url = String(config?.url || '')
+  // Relative paths on this client (baseURL already includes /api)
+  return /\/auth\/(login|register|register-physio|signup-otp|send-otp|forgot-password|reset-password|debug-login-otp)/i.test(
+    url,
+  )
+}
+
+function redirectToLogin() {
+  if (typeof window === 'undefined') return
+  const path = window.location.pathname || ''
+  if (path.startsWith('/login') || path.startsWith('/register')) return
+  window.location.replace('/login')
+}
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const status = error?.response?.status
+    if (
+      status === 401 &&
+      getToken() &&
+      !clearingUnauthorizedSession &&
+      !isCredentialAuthRequest(error.config)
+    ) {
+      clearingUnauthorizedSession = true
+      try {
+        clearToken()
+        redirectToLogin()
+      } finally {
+        clearingUnauthorizedSession = false
+      }
+    }
+    return Promise.reject(error)
+  },
+)

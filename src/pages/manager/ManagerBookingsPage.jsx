@@ -13,6 +13,8 @@ import { bookingCodeBadge } from '../../utils/bookingDisplay'
 import Pagination from '../../components/Pagination'
 import usePagination from '../../hooks/usePagination'
 import ListSkeleton from '../../components/ui/skeletons/ListSkeleton'
+import Button from '../../components/ui/Button'
+import CreatePatientModal from '../../components/staff/CreatePatientModal'
 
 function badgeClass(tone) {
   switch (tone) {
@@ -63,6 +65,7 @@ export default function ManagerBookingsPage() {
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [search, setSearch] = useState('')
   const [sort, setSort] = useState('latest')
+  const [createOpen, setCreateOpen] = useState(false)
 
   const deferredSearch = useDeferredValue(search)
 
@@ -100,12 +103,23 @@ export default function ManagerBookingsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="type-page-title text-gray-900">Your cases</h1>
-        <p className="mt-1 max-w-2xl text-sm leading-relaxed text-gray-500">
-          Search, filter — open a row for assessment, care plan, physio assignment, and payment actions.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="type-page-title text-gray-900">Your cases</h1>
+          <p className="mt-1 max-w-2xl text-sm leading-relaxed text-gray-500">
+            Search, filter — open a row for assessment, care plan, physio assignment, and payment actions.
+          </p>
+        </div>
+        <Button type="button" onClick={() => setCreateOpen(true)}>
+          Add patient
+        </Button>
       </div>
+
+      <CreatePatientModal
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        apiPath="/manager/users"
+      />
 
       {!loading && (total > 0 || filtersActive || deferredSearch.trim()) ? (
         <section

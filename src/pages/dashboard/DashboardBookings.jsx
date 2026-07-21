@@ -5,7 +5,7 @@ import toast from 'react-hot-toast'
 import { bookingStatusBadge, paymentBadge } from './dashboardUtils'
 import EmptyState from '../../components/ui/EmptyState'
 import { formatBookingDateAndSlot } from '../../utils/date'
-import { bookingConditionLabel, bookingCodeBadge } from '../../utils/bookingDisplay'
+import { bookingConditionLabel, bookingCodeBadge, serviceTypeLabel } from '../../utils/bookingDisplay'
 import PatientBookingsFilterDrawer from '../../components/dashboard/PatientBookingsFilterDrawer'
 import PatientBookingsToolbar from '../../components/dashboard/PatientBookingsToolbar'
 import Pagination from '../../components/Pagination'
@@ -217,7 +217,7 @@ export default function DashboardBookings() {
                               b.serviceType,
                             )}`}
                           >
-                            {b.serviceType === 'online' ? 'Online' : 'Home'}
+                            {serviceTypeLabel(b.serviceType)}
                           </span>
                         </div>
 

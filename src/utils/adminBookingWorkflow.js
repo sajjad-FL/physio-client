@@ -13,6 +13,7 @@ export function adminWorkflowMeta(b, ctx) {
   const {
     activeDispute,
     needsManager,
+    needsClinic,
     canAssign,
     needsPaymentVerify,
     canVerifyOffline,
@@ -22,6 +23,9 @@ export function adminWorkflowMeta(b, ctx) {
 
   if (activeDispute) {
     return { label: 'Open dispute', tone: 'urgent' }
+  }
+  if (needsClinic) {
+    return { label: 'Assign clinic', tone: 'action' }
   }
   if (needsManager) {
     return { label: 'Assign manager', tone: 'action' }
@@ -55,9 +59,12 @@ export function buildAdminWorkflowSteps(ctx) {
   const {
     b,
     isOnline,
+    isClinic,
     hasManager,
+    hasClinic,
     hasPhysio,
     needsManager,
+    needsClinic,
     canAssign,
     sessionsComplete,
     completedCount,
@@ -86,16 +93,29 @@ export function buildAdminWorkflowSteps(ctx) {
     id: 'staffing',
     num: num++,
     label: 'Staffing',
-    hint: needsManager
-      ? 'Assign manager'
-      : canAssign
-      ? 'Assign physio'
-      : hasPhysio
-      ? b.physioId?.name || 'Staffed'
-      : hasManager
-      ? 'Manager assigned'
-      : 'Team',
-    state: needsManager || canAssign ? 'current' : hasPhysio || (isOnline && hasPhysio) ? 'done' : hasManager ? 'done' : 'upcoming',
+    hint: needsClinic
+      ? 'Assign clinic'
+      : needsManager
+        ? 'Assign manager'
+        : canAssign
+          ? 'Assign physio'
+          : hasPhysio
+            ? b.physioId?.name || 'Staffed'
+            : hasClinic
+              ? b.clinicId?.name || 'Clinic assigned'
+              : hasManager
+                ? 'Manager assigned'
+                : 'Team',
+    state:
+      needsClinic || needsManager || canAssign
+        ? 'current'
+        : hasPhysio || hasClinic || (isOnline && hasPhysio)
+          ? 'done'
+          : hasManager
+            ? 'done'
+            : isClinic
+              ? 'upcoming'
+              : 'upcoming',
   })
 
   steps.push({
@@ -174,11 +194,14 @@ export function adminPageContext(booking, opts = {}) {
   const activeDispute = disputes.find((d) => d.status === 'open' || d.status === 'under_review') || null
   const isOnline = b.serviceType === 'online'
   const isHome = b.serviceType === 'home'
+  const isClinic = b.serviceType === 'clinic'
   const hasManager = Boolean(b.managerId)
+  const hasClinic = Boolean(b.clinicId)
   const hasPhysio = Boolean(b.physioId)
   const techniqueDirect = b.carePath === 'technique_direct'
   const techniqueManaged = b.carePath === 'technique_managed'
   const needsManager = isHome && !hasManager && !techniqueDirect && !techniqueManaged
+  const needsClinic = isClinic && !hasClinic
   const paymentSummary = b.paymentSummary || null
   const payments = Array.isArray(b.payments) ? b.payments : []
   const outstanding = Number(paymentSummary?.outstanding || 0)
@@ -187,7 +210,11 @@ export function adminPageContext(booking, opts = {}) {
   const totalSessions = rows.length
   const sessionsComplete = b.sessionStatus === 'completed'
 
-  const canAssign = !hasPhysio && b.status !== 'completed' && b.paymentStatus !== 'refunded'
+  const canAssign =
+    !needsClinic &&
+    !hasPhysio &&
+    b.status !== 'completed' &&
+    b.paymentStatus !== 'refunded'
   const canComplete = b.paymentStatus === 'held' && b.status !== 'completed'
   const canRelease = b.paymentStatus === 'held' && b.sessionStatus === 'completed'
   const canVerifyOffline =
@@ -203,9 +230,12 @@ export function adminPageContext(booking, opts = {}) {
     b,
     isOnline,
     isHome,
+    isClinic,
     hasManager,
+    hasClinic,
     hasPhysio,
     needsManager,
+    needsClinic,
     techniqueDirect,
     techniqueManaged,
     paymentSummary,

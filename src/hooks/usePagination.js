@@ -45,6 +45,9 @@ export default function usePagination({ defaultPageSize = DEFAULT_PAGE_SIZE } = 
     [page, totalPages, total, pageSize, setPageSizeAndReset],
   )
 
+  /** Stable object so list load effects don't re-fire when only totals update. */
+  const params = useMemo(() => ({ page, limit: pageSize }), [page, pageSize])
+
   return {
     page,
     pageSize,
@@ -59,6 +62,6 @@ export default function usePagination({ defaultPageSize = DEFAULT_PAGE_SIZE } = 
     clearMeta,
     paginationProps,
     /** Query params for list APIs */
-    params: { page, limit: pageSize },
+    params,
   }
 }

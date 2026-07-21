@@ -78,6 +78,45 @@ export function buildPatientWorkflowSteps(ctx) {
     ]
   }
 
+  if (b.serviceType === 'clinic' || b.carePath === 'clinic_visit') {
+    const clinicName = typeof b.clinicId === 'object' ? b.clinicId?.name : null
+    return [
+      {
+        id: 'team',
+        num: 1,
+        label: 'Clinic',
+        hint: clinicName || (b.clinicId ? 'Clinic assigned' : 'Awaiting clinic'),
+        state: b.clinicId ? 'done' : 'current',
+      },
+      {
+        id: 'treatment',
+        num: 2,
+        label: 'Visit',
+        hint: sessionsComplete ? 'Completed' : formatBookingHint(b),
+        state: !b.clinicId ? 'upcoming' : sessionsComplete ? 'done' : 'current',
+      },
+      {
+        id: 'payment',
+        num: 3,
+        label: 'Payment',
+        hint:
+          outstanding > 0.009
+            ? `₹${Math.round(outstanding)} due`
+            : totalPaid > 0
+              ? 'Paid'
+              : 'Pay at clinic',
+        state:
+          outstanding > 0.009
+            ? 'current'
+            : totalPaid > 0 || b.paymentStatus === 'held' || b.paymentStatus === 'released'
+              ? 'done'
+              : b.clinicId
+                ? 'current'
+                : 'upcoming',
+      },
+    ]
+  }
+
   const techniqueDirect =
     b.carePath === 'technique_direct' || b.workflowStatus === 'pending_physio_assignment'
   const techniqueManaged = b.carePath === 'technique_managed'
@@ -219,13 +258,19 @@ export function patientPageContext(booking) {
   if (!booking) return null
   const b = booking
   const isOnline = b.serviceType === 'online'
+  const isClinic = b.serviceType === 'clinic' || b.carePath === 'clinic_visit'
   const techniqueDirect =
     b.carePath === 'technique_direct' || b.workflowStatus === 'pending_physio_assignment'
   const techniqueManaged = b.carePath === 'technique_managed'
   const techniqueShort = techniqueDirect || techniqueManaged
   const planLive =
-    isPlanLive(b.planStatus) || isOnline || (techniqueShort && Boolean(b.physioId)) || techniqueManaged
-  const awaitingConsent = !isOnline && !techniqueShort && isAwaitingPatientConsent(b.planStatus)
+    isPlanLive(b.planStatus) ||
+    isOnline ||
+    isClinic ||
+    (techniqueShort && Boolean(b.physioId)) ||
+    techniqueManaged
+  const awaitingConsent =
+    !isOnline && !isClinic && !techniqueShort && isAwaitingPatientConsent(b.planStatus)
   const assessmentDone = Boolean(b.assessmentCompletedAt) || techniqueShort
   const careTeamActive = techniqueShort
     ? Boolean(b.physioId) || (techniqueManaged && Boolean(b.managerId))

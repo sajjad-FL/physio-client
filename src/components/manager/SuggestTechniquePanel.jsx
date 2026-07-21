@@ -53,9 +53,11 @@ export default function SuggestTechniquePanel({ sourceBookingId, disabled = fals
   const [visitDates, setVisitDates] = useState(() => buildDefaultDates(1))
   const [visitTimes, setVisitTimes] = useState(() => buildDefaultTimes(1))
   const [busy, setBusy] = useState(false)
+  const [serviceType, setServiceType] = useState('home')
 
   const prices = settings?.techniquePrices || {}
   const minDate = todayISO()
+  const isClinic = serviceType === 'clinic'
 
   const options = useMemo(
     () =>
@@ -155,11 +157,12 @@ export default function SuggestTechniquePanel({ sourceBookingId, disabled = fals
         times: visitTimes,
         // First session time kept for older API consumers
         timeSlot: visitTimes[0],
+        serviceType,
       })
       toast.success(
         sessionCount > 1
-          ? `${issue} · ${sessionCount} sessions — assign a physiotherapist next`
-          : `${issue} booked — assign a physiotherapist next`,
+          ? `${issue} · ${sessionCount} sessions (${isClinic ? 'clinic' : 'home'}) — assign a physiotherapist next`
+          : `${issue} booked (${isClinic ? 'clinic' : 'home'}) — assign a physiotherapist next`,
       )
       navigate(`/manager/bookings/${res.data._id}`)
     } catch (e) {
@@ -179,8 +182,8 @@ export default function SuggestTechniquePanel({ sourceBookingId, disabled = fals
         <div className="min-w-0">
           <h2 className="text-base font-semibold text-slate-900">Suggest technique</h2>
           <p className="mt-0.5 text-sm text-slate-500">
-            Book a separate technique visit under your care. Each session can have its own date and
-            time.
+            Book a separate technique visit under your care (home or clinic). Each session can have its own
+            date and time.
           </p>
         </div>
         <button
@@ -199,6 +202,37 @@ export default function SuggestTechniquePanel({ sourceBookingId, disabled = fals
 
       {open ? (
         <div className="space-y-5 border-t border-slate-100 bg-slate-50/40 px-4 py-4 sm:px-5">
+          <section>
+            <FieldLabel required className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Visit type
+            </FieldLabel>
+            <div className="flex gap-2">
+              {[
+                { id: 'home', label: 'Home visit' },
+                { id: 'clinic', label: 'Clinic visit' },
+              ].map((opt) => (
+                <button
+                  key={opt.id}
+                  type="button"
+                  disabled={busy}
+                  onClick={() => setServiceType(opt.id)}
+                  className={`flex-1 rounded-xl border px-3 py-2.5 text-sm font-semibold transition ${
+                    serviceType === opt.id
+                      ? 'border-teal-500 bg-teal-50 text-teal-900 ring-1 ring-teal-500/25'
+                      : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+            {isClinic ? (
+              <p className="mt-2 text-xs text-slate-500">
+                Assign a clinic on the new case if one is not already linked.
+              </p>
+            ) : null}
+          </section>
+
           <section>
             <FieldLabel required className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
               Technique

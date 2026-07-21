@@ -19,7 +19,7 @@ export default function BookingSummaryBar({
 }) {
   const priceLabel =
     selectedPhysio && selectedPhysio._id ? formatPhysioSessionFeeLabel(selectedPhysio) : null
-  const teamAssigns = serviceType === 'home' || !selectedPhysio?._id
+  const teamAssigns = serviceType === 'home' || serviceType === 'clinic' || !selectedPhysio?._id
   const onlineNeedsPhysio = serviceType === 'online' && !selectedPhysio?._id
 
   return (
@@ -53,13 +53,15 @@ export default function BookingSummaryBar({
               )}
             </div>
             <p className="text-xs text-gray-500">
-              {serviceType === 'home'
-                ? 'Home visit — our team will pick a physiotherapist after you confirm.'
-                : onlineNeedsPhysio
-                  ? 'Select a physiotherapist above before you can confirm.'
-                  : teamAssigns
-                    ? 'Online session — fee is confirmed at payment.'
-                    : 'Online consultation'}
+              {serviceType === 'clinic'
+                ? 'Clinic visit — admin will assign a facility after you confirm.'
+                : serviceType === 'home'
+                  ? 'Home visit — our team will pick a physiotherapist after you confirm.'
+                  : onlineNeedsPhysio
+                    ? 'Select a physiotherapist above before you can confirm.'
+                    : teamAssigns
+                      ? 'Online session — fee is confirmed at payment.'
+                      : 'Online consultation'}
             </p>
             {serviceType === 'online' && onlinePaymentHint ? (
               <p className="text-[11px] leading-snug text-gray-500">{onlinePaymentHint}</p>

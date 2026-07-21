@@ -86,6 +86,7 @@ const baseNavItems = [
     countKeys: ['physios', 'verifications'],
   },
   { section: 'Operations', to: '/admin/zones', label: 'Service zones', icon: iconDoc },
+  { section: 'Operations', to: '/admin/clinics', label: 'Clinics', icon: iconDoc },
   { section: 'Finance', to: '/admin/manager-settlements', label: 'Manager settlements', icon: iconCash },
   { section: 'Finance', to: '/admin/finance', label: 'Wallets & payouts', icon: iconWithdraw, countKey: 'finance' },
   { section: 'Settings', to: '/admin/pricing', label: 'Pricing & rates', icon: iconPricing },

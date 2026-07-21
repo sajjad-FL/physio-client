@@ -50,12 +50,22 @@ export function bookingCodeBadge(b) {
 }
 
 export function paymentModeLabel(b) {
+  if (b.serviceType === 'clinic') {
+    return 'Clinic (cash / UPI)'
+  }
   if (b.serviceType === 'home') {
     if (b.homePlanPaymentMode === 'offline') return 'Offline (cash / UPI)'
     if (b.homePlanPaymentMode === 'online') return 'Online'
     return '—'
   }
   return 'Online'
+}
+
+/** Short service-type label for lists and badges. */
+export function serviceTypeLabel(serviceType) {
+  if (serviceType === 'online') return 'Online'
+  if (serviceType === 'clinic') return 'Clinic'
+  return 'Home'
 }
 
 export function billingTypeLabel(b) {

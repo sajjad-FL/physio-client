@@ -232,6 +232,8 @@ export default function ManagerBookingDetailPage() {
   const [assessmentData, setAssessmentData] = useState({ ...EMPTY_ASSESSMENT_DATA })
   const [assignPhysioId, setAssignPhysioId] = useState('')
   const [assignModalOpen, setAssignModalOpen] = useState(false)
+  const [clinics, setClinics] = useState([])
+  const [assignClinicId, setAssignClinicId] = useState('')
   const [collectionModalOpen, setCollectionModalOpen] = useState(false)
   const [rescheduleRow, setRescheduleRow] = useState(null)
   const [sessionBusy, setSessionBusy] = useState(null)
@@ -242,9 +244,10 @@ export default function ManagerBookingDetailPage() {
     if (!id) return
     setLoading(true)
     try {
-      const [bRes, pRes] = await Promise.all([
+      const [bRes, pRes, cRes] = await Promise.all([
         api.get(`/manager/bookings/${id}`),
         api.get('/manager/physios', { params: { bookingId: id } }),
+        api.get('/manager/clinics', { params: { active: '1' } }).catch(() => ({ data: { clinics: [] } })),
       ])
       setBooking(bRes.data)
       setAssessmentData(
@@ -256,6 +259,10 @@ export default function ManagerBookingDetailPage() {
             },
       )
       setPhysios(pRes.data?.physios || [])
+      setClinics(cRes.data?.clinics || [])
+      if (bRes.data?.clinicId) {
+        setAssignClinicId(bRes.data.clinicId?._id || bRes.data.clinicId || '')
+      }
     } catch (e) {
       toast.error(e.response?.data?.message || 'Failed to load booking')
       setBooking(null)
@@ -378,6 +385,20 @@ export default function ManagerBookingDetailPage() {
       setOpenStep('payment')
     } catch (e) {
       toast.error(e.response?.data?.message || 'Could not assign physio')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function assignClinic() {
+    if (!assignClinicId) return
+    setBusy(true)
+    try {
+      const res = await api.patch(`/manager/bookings/${id}/assign-clinic`, { clinicId: assignClinicId })
+      setBooking(res.data)
+      toast.success('Clinic assigned — case moves to clinic care')
+    } catch (e) {
+      toast.error(e.response?.data?.message || 'Could not assign clinic')
     } finally {
       setBusy(false)
     }
@@ -616,7 +637,8 @@ export default function ManagerBookingDetailPage() {
             ) : null}
             {pageCtx.techniqueManaged && !hasPhysio ? (
               <p className="text-sm text-slate-600">
-                Fixed technique price {paymentAmountLabel(b)}. Assign a physiotherapist for this home visit.
+                Fixed technique price {paymentAmountLabel(b)}. Assign a physiotherapist for this{' '}
+                {b.serviceType === 'clinic' ? 'clinic visit' : 'home visit'}.
               </p>
             ) : null}
 
@@ -680,6 +702,37 @@ export default function ManagerBookingDetailPage() {
                 <Button type="button" disabled={busy || !assignPhysioId} onClick={assignPhysio}>
                   Assign physio
                 </Button>
+              </div>
+            ) : null}
+
+            {b.assessmentCompletedAt || b.workflowStatus === 'assessment_done' || b.planStatus ? (
+              <div className="space-y-3 rounded-xl border border-teal-200 bg-teal-50/30 p-4">
+                <h3 className="text-sm font-semibold text-slate-900">Refer to clinic</h3>
+                <p className="text-xs text-slate-500">
+                  If the patient needs facility equipment, assign a clinic. You remain the referrer for commission.
+                </p>
+                {b.clinicId ? (
+                  <p className="text-sm text-slate-700">
+                    Assigned: {typeof b.clinicId === 'object' ? b.clinicId.name : 'Clinic'}
+                  </p>
+                ) : null}
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <select
+                    value={assignClinicId}
+                    onChange={(e) => setAssignClinicId(e.target.value)}
+                    className="h-11 flex-1 rounded-xl border border-slate-200 bg-white px-3 text-sm"
+                  >
+                    <option value="">Choose clinic…</option>
+                    {clinics.map((c) => (
+                      <option key={c._id} value={c._id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                  <Button type="button" disabled={busy || !assignClinicId} onClick={assignClinic}>
+                    Assign clinic
+                  </Button>
+                </div>
               </div>
             ) : null}
 

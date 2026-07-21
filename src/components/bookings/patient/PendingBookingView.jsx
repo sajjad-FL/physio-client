@@ -4,17 +4,40 @@ import { openSupportWhatsApp } from '../../../utils/physioContact'
 
 export default function PendingBookingView({ booking: b }) {
   const directTechnique = b.carePath === 'technique_direct'
-  const serviceLabel =
-    b.serviceType === 'online' ? 'Online Consultation' : directTechnique ? 'Technique Home Visit' : 'Home Visit'
+  const managedTechnique = b.carePath === 'technique_managed'
+  const isTechnique = directTechnique || managedTechnique
+  const isClinic = b.serviceType === 'clinic'
+  const clinicName = b.clinicId && typeof b.clinicId === 'object' ? b.clinicId.name : null
+  const serviceLabel = isTechnique
+    ? isClinic
+      ? 'Technique Clinic Visit'
+      : 'Technique Home Visit'
+    : isClinic
+      ? 'Clinic Visit'
+      : b.serviceType === 'online'
+        ? 'Online Consultation'
+        : 'Home Visit'
   const bookingRef = bookingCodeBadge(b) || '—'
   const managerName =
     b.managerId && typeof b.managerId === 'object' ? b.managerId.name : null
-  const heading = managerName ? 'Your Care Manager is on it' : 'We received your booking'
-  const subcopy = managerName
-    ? `${managerName} will visit, prepare your plan, and coordinate your physiotherapist.`
-    : directTechnique
-      ? 'Our team is assigning a physiotherapist for your technique visit. You can pay online after assignment.'
-      : 'Our team is assigning a care manager for your home visit. You will be notified when your plan is ready.'
+  const heading = isClinic
+    ? clinicName
+      ? 'Your clinic visit is confirmed'
+      : isTechnique
+        ? 'Technique clinic visit requested'
+        : 'Clinic visit requested'
+    : managerName
+      ? 'Your Care Manager is on it'
+      : 'We received your booking'
+  const subcopy = isClinic
+    ? clinicName
+      ? `Please visit ${clinicName} at your scheduled time. Our clinic team will guide you.`
+      : 'Our admin team is assigning a clinic for your appointment. You will be notified once it is confirmed.'
+    : managerName
+      ? `${managerName} will visit, prepare your plan, and coordinate your physiotherapist.`
+      : directTechnique
+        ? 'Our team is assigning a physiotherapist for your technique visit. You can pay online after assignment.'
+        : 'Our team is assigning a care manager for your home visit. You will be notified when your plan is ready.'
 
   return (
     <div className="mx-auto max-w-lg space-y-6 py-2">

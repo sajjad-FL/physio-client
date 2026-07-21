@@ -57,8 +57,15 @@ import ManagerLayout from './pages/manager/ManagerLayout'
 import ManagerBookingsPage from './pages/manager/ManagerBookingsPage'
 import ManagerBookingDetailPage from './pages/manager/ManagerBookingDetailPage'
 import ManagerFinancePage from './pages/manager/ManagerFinancePage'
+import ClinicLayout from './pages/clinic/ClinicLayout'
+import ClinicBookingsPage from './pages/clinic/ClinicBookingsPage'
+import ClinicBookingDetailPage from './pages/clinic/ClinicBookingDetailPage'
+import ClinicFinancePage from './pages/clinic/ClinicFinancePage'
+import ClinicPatientsPage from './pages/clinic/ClinicPatientsPage'
+import ClinicStaffPage from './pages/clinic/ClinicStaffPage'
 import AdminZonesPage from './pages/admin/AdminZonesPage'
 import AdminSettlementsPage from './pages/admin/AdminSettlementsPage'
+import AdminClinicsPage from './pages/admin/AdminClinicsPage'
 import { ShopCartProvider } from './hooks/useShopCart'
 import RoleProtectedRoute from './components/RoleProtectedRoute'
 import LegacyPhysioDashboardRedirect from './components/LegacyPhysioDashboardRedirect'
@@ -99,7 +106,7 @@ export default function App() {
         <Route
           path="/profile"
           element={
-            <RoleProtectedRoute allowedRoles={['user', 'physio', 'admin', 'care_manager']}>
+            <RoleProtectedRoute allowedRoles={['user', 'physio', 'admin', 'care_manager', 'clinic_staff']}>
               <ProfilePage />
             </RoleProtectedRoute>
           }
@@ -201,6 +208,22 @@ export default function App() {
           <Route path="profile" element={<ProfilePage />} />
         </Route>
         <Route
+          path="/clinic"
+          element={
+            <RoleProtectedRoute allowedRoles={['clinic_staff']}>
+              <ClinicLayout />
+            </RoleProtectedRoute>
+          }
+        >
+          <Route index element={<Navigate to="/clinic/bookings" replace />} />
+          <Route path="bookings" element={<ClinicBookingsPage />} />
+          <Route path="bookings/:id" element={<ClinicBookingDetailPage />} />
+          <Route path="patients" element={<ClinicPatientsPage />} />
+          <Route path="staff" element={<ClinicStaffPage />} />
+          <Route path="finance" element={<ClinicFinancePage />} />
+          <Route path="profile" element={<ProfilePage />} />
+        </Route>
+        <Route
           path="/admin"
           element={
             <RoleProtectedRoute allowedRoles={['admin']}>
@@ -218,6 +241,7 @@ export default function App() {
           <Route path="payments" element={<Navigate to="/admin/finance?tab=queue" replace />} />
           <Route path="finance" element={<AdminFinancePage />} />
           <Route path="zones" element={<AdminZonesPage />} />
+          <Route path="clinics" element={<AdminClinicsPage />} />
           <Route path="manager-settlements" element={<AdminSettlementsPage />} />
           <Route path="withdrawals" element={<Navigate to="/admin/finance" replace />} />
           <Route path="settlements" element={<Navigate to="/admin/finance" replace />} />

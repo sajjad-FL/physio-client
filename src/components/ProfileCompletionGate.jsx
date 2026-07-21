@@ -43,7 +43,9 @@ export default function ProfileCompletionGate({ children }) {
           const isPhysio =
             r === 'physio' || (!r && legacy.includes('physio'))
           const isCareManager =
-            r === 'care_manager' || (!r && legacy.includes('care_manager'))
+            r === 'care_manager' ||
+            r === 'clinic_staff' ||
+            (!r && (legacy.includes('care_manager') || legacy.includes('clinic_staff')))
           setProfileCompleteStored(ok)
           if (ok) {
             setState('complete')

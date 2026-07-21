@@ -27,10 +27,19 @@ const GENDERS = [
 ]
 
 function profileRoleFromApi(d) {
-  if (d?.role === 'user' || d?.role === 'physio' || d?.role === 'admin' || d?.role === 'care_manager') return d.role
+  if (
+    d?.role === 'user' ||
+    d?.role === 'physio' ||
+    d?.role === 'admin' ||
+    d?.role === 'care_manager' ||
+    d?.role === 'clinic_staff'
+  ) {
+    return d.role
+  }
   const arr = Array.isArray(d?.roles) ? d.roles : []
   if (arr.includes('admin')) return 'admin'
   if (arr.includes('care_manager')) return 'care_manager'
+  if (arr.includes('clinic_staff')) return 'clinic_staff'
   if (arr.includes('physio')) return 'physio'
   return 'user'
 }

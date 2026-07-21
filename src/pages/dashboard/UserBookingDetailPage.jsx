@@ -186,11 +186,15 @@ export default function UserBookingDetailPage() {
     pageCtx.b.serviceType === 'home' && isAwaitingPatientConsent(pageCtx.b.planStatus)
   const planLiveEarly =
     pageCtx.b.serviceType === 'home' && isPlanLive(pageCtx.b.planStatus)
+  const clinicAwaitingFacility =
+    pageCtx.b.serviceType === 'clinic' && !pageCtx.b.clinicId
 
   if (
-    (pageCtx.b.status === 'pending' || pageCtx.b.status === 'assigned') &&
-    !planAwaitingConsent &&
-    !planLiveEarly
+    clinicAwaitingFacility ||
+    ((pageCtx.b.status === 'pending' || pageCtx.b.status === 'assigned') &&
+      !planAwaitingConsent &&
+      !planLiveEarly &&
+      pageCtx.b.serviceType !== 'clinic')
   ) {
     return <PendingBookingView booking={pageCtx.b} />
   }
@@ -252,7 +256,7 @@ export default function UserBookingDetailPage() {
 
   const sessionPaymentMap = buildSessionPaymentMap(b, payments, paymentSummary)
   const activeStepMeta = steps.find((s) => s.id === openStep)
-  const stepColumns = isOnline ? 3 : 4
+  const stepColumns = isOnline || b.serviceType === 'clinic' ? 3 : 4
 
   function handlePaid() {
     load()
@@ -273,7 +277,10 @@ export default function UserBookingDetailPage() {
               <p className="mt-1 font-mono text-xs font-semibold text-slate-500">{bookingCodeBadge(b)}</p>
             ) : null}
             <p className="mt-0.5 text-sm text-slate-600">
-              {physioDisplayName || managerName || (isOnline ? 'Online consultation' : 'Home visit')}
+              {physioDisplayName ||
+                (typeof b.clinicId === 'object' ? b.clinicId?.name : null) ||
+                managerName ||
+                (isOnline ? 'Online consultation' : b.serviceType === 'clinic' ? 'Clinic visit' : 'Home visit')}
             </p>
             <p className="mt-2 text-sm text-slate-500">{formatBookingVisitWithCondition(b)}</p>
           </div>
@@ -319,6 +326,21 @@ export default function UserBookingDetailPage() {
                 Your online session is booked for{' '}
                 <span className="font-medium">{formatBookingDateAndSlot(b.date, b.timeSlot)}</span>.
                 {hasPhysio ? ` ${physioDisplayName} will see you.` : ' We are confirming your physiotherapist.'}
+              </p>
+            ) : b.serviceType === 'clinic' ? (
+              <p className="text-sm text-slate-600">
+                Your clinic visit is scheduled for{' '}
+                <span className="font-medium">{formatBookingDateAndSlot(b.date, b.timeSlot)}</span>
+                {typeof b.clinicId === 'object' && b.clinicId?.name ? (
+                  <>
+                    {' '}
+                    at <span className="font-medium">{b.clinicId.name}</span>
+                    {b.clinicId.address ? ` (${b.clinicId.address})` : ''}.
+                  </>
+                ) : (
+                  '. Our team is confirming the facility.'
+                )}
+                {hasPhysio ? ` ${physioDisplayName} will treat you at the clinic.` : ''}
               </p>
             ) : (
               <>

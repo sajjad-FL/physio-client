@@ -1,9 +1,17 @@
+import { useState } from 'react'
 import { formatBookingDateAndSlot } from '../../../utils/date'
 import { hasComplimentaryAssessmentVisit } from '../../physio/physioBookingHelpers'
 import Button from '../../ui/Button'
 import Card from '../../ui/Card'
 
+const PREVIEW_COUNT = 3
+
 export default function PlanProposedCard({ booking: b, onApprove, approving }) {
+  const [showAllSessions, setShowAllSessions] = useState(false)
+  const schedule = Array.isArray(b.schedule) ? b.schedule : []
+  const hiddenCount = Math.max(0, schedule.length - PREVIEW_COUNT)
+  const visibleSessions = showAllSessions ? schedule : schedule.slice(0, PREVIEW_COUNT)
+
   return (
     <Card hover={false} className="border-teal-100 bg-teal-50/30 p-5 sm:p-6">
       <div className="flex items-start gap-3">
@@ -41,7 +49,7 @@ export default function PlanProposedCard({ booking: b, onApprove, approving }) {
         </div>
       )}
 
-      {Array.isArray(b.schedule) && b.schedule.length > 0 ? (
+      {schedule.length > 0 ? (
         <div className="mt-5 rounded-xl bg-white p-4 ring-1 ring-slate-200/80">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Scheduled Sessions</p>
           {hasComplimentaryAssessmentVisit(b) ? (
@@ -52,16 +60,23 @@ export default function PlanProposedCard({ booking: b, onApprove, approving }) {
             </p>
           ) : null}
           <ul className="mt-3 space-y-2">
-            {b.schedule.slice(0, 3).map((s, i) => (
-              <li key={i} className="flex items-center gap-2 text-sm text-slate-700">
+            {visibleSessions.map((s, i) => (
+              <li key={`${s.date}-${s.time}-${i}`} className="flex items-center gap-2 text-sm text-slate-700">
                 <span className="h-1.5 w-1.5 rounded-full bg-teal-500" />
                 {formatBookingDateAndSlot(s.date, s.time)}
               </li>
             ))}
-            {b.schedule.length > 3 ? (
-              <li className="text-xs text-slate-500">+{b.schedule.length - 3} more sessions</li>
-            ) : null}
           </ul>
+          {hiddenCount > 0 ? (
+            <button
+              type="button"
+              onClick={() => setShowAllSessions((v) => !v)}
+              className="mt-2 text-left text-xs font-semibold text-teal-700 underline-offset-2 hover:text-teal-900 hover:underline"
+              aria-expanded={showAllSessions}
+            >
+              {showAllSessions ? 'Show fewer sessions' : `+${hiddenCount} more sessions`}
+            </button>
+          ) : null}
         </div>
       ) : null}
 

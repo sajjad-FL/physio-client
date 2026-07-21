@@ -156,6 +156,9 @@ export default function AdminBookingsFilterDrawer({ appliedFilters, onClose, onA
             <OptionPill active={draft.serviceType === 'online'} onClick={() => set('serviceType', 'online')}>
               Online
             </OptionPill>
+            <OptionPill active={draft.serviceType === 'clinic'} onClick={() => set('serviceType', 'clinic')}>
+              Clinic
+            </OptionPill>
           </Section>
 
           <Section title="Session">

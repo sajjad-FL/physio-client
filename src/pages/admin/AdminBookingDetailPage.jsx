@@ -81,6 +81,8 @@ export default function AdminBookingDetailPage() {
   const [careManagers, setCareManagers] = useState([])
   const [assignManagerId, setAssignManagerId] = useState('')
   const [assignManagerModalOpen, setAssignManagerModalOpen] = useState(false)
+  const [clinics, setClinics] = useState([])
+  const [assignClinicId, setAssignClinicId] = useState('')
   const [openStep, setOpenStep] = useState('case')
   const [stepReady, setStepReady] = useState(false)
 
@@ -89,15 +91,17 @@ export default function AdminBookingDetailPage() {
     setLoading(true)
     setError(null)
     try {
-      const [bRes, pRes, dRes, mRes] = await Promise.all([
+      const [bRes, pRes, dRes, mRes, cRes] = await Promise.all([
         api.get(`/admin/bookings/${id}`),
         api.get('/physios', { params: { page: 1, limit: 100 } }),
         api.get('/admin/disputes', { params: { page: 1, limit: 20, bookingId: id } }),
         api.get('/admin/care-managers').catch(() => ({ data: { managers: [] } })),
+        api.get('/admin/clinics', { params: { active: '1' } }).catch(() => ({ data: { clinics: [] } })),
       ])
       setBooking(bRes.data)
       setPhysios(pRes.data?.data || [])
       setDisputes(dRes.data?.data || [])
+      setClinics(cRes.data?.clinics || [])
       setCareManagers(mRes.data?.managers || [])
       setAssignManagerId(bRes.data?.managerId?._id || bRes.data?.managerId || '')
     } catch (e) {
@@ -202,6 +206,23 @@ export default function AdminBookingDetailPage() {
       setOpenStep('staffing')
     } catch (err) {
       toast.error(err.response?.data?.message || 'Assign manager failed')
+    } finally {
+      setRowBusy(null)
+    }
+  }
+
+  async function handleAssignClinic() {
+    if (!b || !assignClinicId) {
+      toast.error('Choose a clinic.')
+      return
+    }
+    setRowBusy('clinic')
+    try {
+      await api.patch(`/admin/bookings/${b._id}/assign-clinic`, { clinicId: assignClinicId })
+      toast.success('Clinic assigned')
+      await load()
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Assign clinic failed')
     } finally {
       setRowBusy(null)
     }
@@ -518,6 +539,40 @@ export default function AdminBookingDetailPage() {
 
         {openStep === 'staffing' && (
           <div className="space-y-6">
+            {(b.serviceType === 'clinic' || b.clinicId) ? (
+              <div className="space-y-3 rounded-xl border border-teal-200 bg-teal-50/40 p-4">
+                <p className="text-sm font-semibold text-slate-900">Clinic assignment</p>
+                {b.clinicId ? (
+                  <p className="text-sm text-slate-700">
+                    {typeof b.clinicId === 'object' ? b.clinicId.name : 'Assigned'}
+                    {b.clinicSource ? ` · ${b.clinicSource.replace('_', ' ')}` : ''}
+                  </p>
+                ) : (
+                  <p className="text-xs text-amber-800">Patient booked a clinic visit — assign a facility</p>
+                )}
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <select
+                    value={assignClinicId}
+                    onChange={(e) => setAssignClinicId(e.target.value)}
+                    className="h-11 flex-1 rounded-xl border border-slate-200 bg-white px-3 text-sm"
+                  >
+                    <option value="">Choose clinic…</option>
+                    {clinics.map((c) => (
+                      <option key={c._id} value={c._id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                  <Button
+                    type="button"
+                    disabled={rowBusy === 'clinic' || !assignClinicId}
+                    onClick={handleAssignClinic}
+                  >
+                    {rowBusy === 'clinic' ? '…' : b.clinicId ? 'Reassign clinic' : 'Assign clinic'}
+                  </Button>
+                </div>
+              </div>
+            ) : null}
             {isHome ? (
               <div className="space-y-3">
                 <p className="text-sm font-semibold text-slate-900">Care manager</p>

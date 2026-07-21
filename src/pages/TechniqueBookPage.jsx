@@ -37,11 +37,13 @@ export default function TechniqueBookPage() {
   const [slots, setSlots] = useState([])
   const [consentAccepted, setConsentAccepted] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [serviceType, setServiceType] = useState('home')
 
   const price = Number(settings?.techniquePrices?.[tech?.bookingIssue])
   const priceLabel = Number.isFinite(price) && price > 0 ? `₹${price.toLocaleString('en-IN')}` : '—'
   const hasLocation = Boolean(location.trim())
   const showLocationEditor = editingLocation || !hasLocation
+  const isClinic = serviceType === 'clinic'
 
   useLayoutEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
@@ -99,8 +101,16 @@ export default function TechniqueBookPage() {
 
   const canSubmit = useMemo(
     () =>
-      Boolean(profileName?.trim() && location.trim() && date && timeSlot && consentAccepted && tech && !profileLoading),
-    [profileName, location, date, timeSlot, consentAccepted, tech, profileLoading],
+      Boolean(
+        profileName?.trim() &&
+          date &&
+          timeSlot &&
+          consentAccepted &&
+          tech &&
+          !profileLoading &&
+          (isClinic || location.trim()),
+      ),
+    [profileName, location, date, timeSlot, consentAccepted, tech, profileLoading, isClinic],
   )
 
   async function useMyLocation() {
@@ -128,7 +138,7 @@ export default function TechniqueBookPage() {
       toast.error('Add your name in Profile before booking')
       return
     }
-    if (!location.trim()) {
+    if (!isClinic && !location.trim()) {
       toast.error('Add a home address to continue')
       setEditingLocation(true)
       return
@@ -137,22 +147,27 @@ export default function TechniqueBookPage() {
     try {
       const body = {
         name: profileName.trim(),
-        location: location.trim(),
         issue: tech.bookingIssue,
         date,
         timeSlot,
         consentAccepted: true,
+        serviceType,
       }
-      if (lat != null && lng != null) {
-        body.lat = lat
-        body.lng = lng
+      if (!isClinic) {
+        body.location = location.trim()
+        if (lat != null && lng != null) {
+          body.lat = lat
+          body.lng = lng
+        }
       }
       const res = await api.post('/bookings/request-technique', body)
       const managed = res.data?.carePath === 'technique_managed'
       toast.success(
         managed
           ? 'Booking received. Your care manager will assign a physiotherapist.'
-          : 'Booking received. We will assign a physiotherapist for your home visit.',
+          : isClinic
+            ? 'Booking received. We will assign a clinic and physiotherapist for your visit.'
+            : 'Booking received. We will assign a physiotherapist for your home visit.',
       )
       const id = res.data?._id
       if (id) navigate(`/dashboard/bookings/${id}`, { replace: true })
@@ -190,7 +205,7 @@ export default function TechniqueBookPage() {
         <div className="mt-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <h1 className="text-lg font-semibold text-slate-900">Book {tech.label}</h1>
           <p className="mt-1 text-sm text-slate-600">
-            Home visit · {priceLabel} · physio assigned after booking
+            {isClinic ? 'Clinic visit' : 'Home visit'} · {priceLabel} · physio assigned after booking
           </p>
           {profileLoading ? (
             <div className="mt-3 space-y-2">
@@ -211,6 +226,37 @@ export default function TechniqueBookPage() {
           )}
         </div>
 
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <FieldLabel required={true} className={labelCls}>
+            Visit type
+          </FieldLabel>
+          <div className="flex gap-2">
+            {[
+              { id: 'home', label: 'Home visit' },
+              { id: 'clinic', label: 'Clinic visit' },
+            ].map((opt) => (
+              <button
+                key={opt.id}
+                type="button"
+                onClick={() => setServiceType(opt.id)}
+                className={`flex-1 rounded-xl px-3 py-2.5 text-sm font-semibold ring-1 transition ${
+                  serviceType === opt.id
+                    ? 'bg-teal-600 text-white ring-teal-600'
+                    : 'bg-white text-slate-700 ring-slate-200 hover:bg-slate-50'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+          {isClinic ? (
+            <p className="mt-2 text-xs text-slate-500">
+              Our team will assign a clinic for your appointment after you book.
+            </p>
+          ) : null}
+        </div>
+
+        {!isClinic ? (
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="flex items-start justify-between gap-3">
             <FieldLabel required={true} className={labelCls}>
@@ -272,6 +318,7 @@ export default function TechniqueBookPage() {
             </>
           )}
         </div>
+        ) : null}
 
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <FieldLabel required={true} className={labelCls}>
@@ -314,7 +361,9 @@ export default function TechniqueBookPage() {
             onChange={(e) => setConsentAccepted(e.target.checked)}
           />
           <span>
-            I consent to a physiotherapist visiting my home for this treatment session.
+            {isClinic
+              ? 'I consent to receiving this treatment at a PhysiOkhom clinic.'
+              : 'I consent to a physiotherapist visiting my home for this treatment session.'}
             <RequiredMark />
           </span>
         </label>
