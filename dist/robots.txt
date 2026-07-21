@@ -9,4 +9,4 @@ Disallow: /profile
 Disallow: /unauthorized
 Disallow: /physio-dashboard
 
-Sitemap: http://localhost:5001/sitemap.xml
+Sitemap: https://physiokhom.com/sitemap.xml
