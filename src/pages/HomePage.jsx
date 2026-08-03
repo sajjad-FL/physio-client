@@ -67,9 +67,9 @@ import illustrationNeuroRehab from '../assets/illustration_neuro_rehab.png'
 
 /* ─── SEO ──────────────────────────────────────────────────────────────── */
 
-const HOME_TITLE = 'PhysiOkhom — Home Visit Physiotherapy in Kokrajhar'
+const HOME_TITLE = 'PhysiOkhom — Home, Clinic & Online Physiotherapy in Kokrajhar'
 const HOME_DESCRIPTION =
-  'Home visit physiotherapy in Kokrajhar with Care Manager–led assessment and care plans. Book a slot, approve your plan, and start therapy at home.'
+  'PhysiOkhom offers home visit, clinic visit, and online physiotherapy in Kokrajhar with Care Manager–led assessment and care plans. Book a slot, approve your plan, and start therapy.'
 
 const HOME_FAQ = [
   {
@@ -79,7 +79,12 @@ const HOME_FAQ = [
   },
   {
     q: 'Will the physiotherapist visit my home?',
-    a: 'Yes. PhysiOkhom provides home visit physiotherapy. Your Care Manager and assigned physiotherapist come to your address, so you can receive assessment and treatment without travelling to a clinic.',
+    a: 'Yes — for home visit bookings. Your Care Manager and assigned physiotherapist come to your address. You can also book a clinic visit or an online consultation if that suits you better.',
+    cat: 'Booking',
+  },
+  {
+    q: 'Do you offer clinic and online physiotherapy?',
+    a: 'Yes. PhysiOkhom supports home visits, clinic visits, and online consultations. Choose the mode when you book; your Care Manager and care team guide the next steps for that path.',
     cat: 'Booking',
   },
   {
@@ -162,7 +167,7 @@ function homeStructuredData({ siteBase, ogImage, areas }) {
       name: 'PhysiOkhom',
       alternateName: ['physiokhom'],
       url: `${siteBase}/`,
-      logo: `${siteBase}/logo.png`,
+      logo: `${siteBase}/physiokhom-logo.svg`,
       description: HOME_DESCRIPTION,
       image: ogImage,
       medicalSpecialty: 'Physiotherapy',
@@ -170,6 +175,9 @@ function homeStructuredData({ siteBase, ogImage, areas }) {
       address: { '@type': 'PostalAddress', addressRegion: 'Assam', addressCountry: 'IN' },
       ...(areaServed.length ? { areaServed } : {}),
       availableService: [
+        { '@type': 'MedicalTherapy', name: 'Home visit physiotherapy' },
+        { '@type': 'MedicalTherapy', name: 'Clinic visit physiotherapy' },
+        { '@type': 'MedicalTherapy', name: 'Online physiotherapy consultation' },
         { '@type': 'MedicalTherapy', name: 'Back pain physiotherapy' },
         { '@type': 'MedicalTherapy', name: 'Knee pain physiotherapy' },
         { '@type': 'MedicalTherapy', name: 'Neck pain physiotherapy' },
@@ -472,7 +480,7 @@ export default function HomePage() {
         <meta property="og:type" content="website" />
         <meta property="og:site_name" content="PhysiOkhom" />
         <meta name="application-name" content="PhysiOkhom" />
-        <meta name="keywords" content="PhysiOkhom, physiokhom, home visit physiotherapy, physiotherapist near me, physiotherapist at home Assam, back pain physiotherapy, knee pain physiotherapy" />
+        <meta name="keywords" content="PhysiOkhom, physiokhom, home visit physiotherapy, clinic physiotherapy, online physiotherapy consultation, physiotherapist near me, physiotherapist at home Assam, back pain physiotherapy, knee pain physiotherapy" />
         <meta property="og:title" content={HOME_TITLE} />
         <meta property="og:description" content={HOME_DESCRIPTION} />
         <meta property="og:url" content={canonical} />
@@ -536,11 +544,11 @@ export default function HomePage() {
                   {userName ? (
                     <>
                       Hello, {userName} 👋 <br />
-                      Home visit physiotherapy with Care Manager support
+                      Home, clinic &amp; online physio with Care Manager support
                     </>
                   ) : (
                     <>
-                      Home visit physiotherapy <br />
+                      Home, clinic &amp; online physiotherapy <br />
                       with Care Manager support
                     </>
                   )}
@@ -548,7 +556,7 @@ export default function HomePage() {
 
                 {/* Subtitle */}
                 <p className="type-body max-w-2xl text-slate-300 sm:text-lg">
-                  Book a slot, get a complimentary Care Manager assessment and care plan, then verified physiotherapists treat you at home.
+                  Book a home visit, clinic visit, or online consultation. Get a complimentary Care Manager assessment and care plan, then verified physiotherapists treat you where it suits you.
                   {areaLine ? (
                     <>
                       {' '}Currently serving <span className="font-semibold text-teal-300 underline decoration-teal-500/30 decoration-2 underline-offset-4">{areaLine}</span>.
@@ -1484,7 +1492,7 @@ export default function HomePage() {
               labelIcon={HelpCircle}
               label="FAQ"
               title="Common questions"
-              subtitle="Quick details about booking home visit physiotherapy sessions with PhysiOkhom."
+              subtitle="Quick details about booking home, clinic, and online physiotherapy with PhysiOkhom."
               center
             />
 

@@ -25,7 +25,7 @@ export default function SiteHeader() {
           onClick={() => setMobileOpen(false)}
         >
           <img
-            src="/logo.png"
+            src="/logo.svg"
             alt="PhysiOkhom Logo"
             className="h-9 w-9 shrink-0 object-contain transition-transform duration-200 motion-safe:hover:scale-105 sm:h-12 sm:w-12"
           />
