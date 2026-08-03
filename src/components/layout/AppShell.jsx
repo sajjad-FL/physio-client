@@ -69,10 +69,22 @@ export default function AppShell({
         <Link to="/" className="flex min-w-0 items-center gap-2" onClick={() => setMobileOpen(false)}>
           <img
             src="/logo.png"
-            alt="PhysiOkhom"
+            alt=""
             className="h-11 w-11 shrink-0 object-contain transition-transform duration-200 motion-safe:group-hover:scale-105"
           />
-          <span className="sr-only">{brand || 'PhysiOkhom'}</span>
+          <span className="truncate text-[15px] font-semibold tracking-tight">
+            {(() => {
+              const label = String(brand || 'PhysiOkhom')
+              const m = label.match(/^(.*?)(Okhom|khom)$/i)
+              if (!m) return <span className="text-slate-900">{label}</span>
+              return (
+                <>
+                  <span className="text-slate-900">{m[1] || 'Physi'}</span>
+                  <span className="text-teal-600">{m[2]}</span>
+                </>
+              )
+            })()}
+          </span>
         </Link>
         {badge && (
           <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">

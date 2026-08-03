@@ -26,10 +26,13 @@ export default function SiteHeader() {
         >
           <img
             src="/logo.png"
-            alt="PhysiOkhom"
+            alt=""
             className="h-10 w-10 shrink-0 object-contain transition-transform duration-200 motion-safe:hover:scale-105 sm:h-12 sm:w-12"
           />
-          <span className="sr-only">PhysiOkhom</span>
+          <span className="truncate">
+            <span className="text-slate-900">Physi</span>
+            <span className="text-teal-600">Okhom</span>
+          </span>
         </Link>
 
         <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
