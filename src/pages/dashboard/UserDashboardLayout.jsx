@@ -91,6 +91,7 @@ const bottomNavItems = [
 
 function titleForPath(pathname) {
   if (pathname === '/dashboard' || pathname === '/dashboard/') return 'Home'
+  if (/\/dashboard\/bookings\/[^/]+\/payment/.test(pathname)) return 'Payment details'
   if (pathname.startsWith('/dashboard/bookings/') && pathname !== '/dashboard/bookings') return 'Session'
   if (pathname === '/dashboard/bookings') return 'Bookings'
   if (pathname === '/dashboard/wallet') return 'Wallet'

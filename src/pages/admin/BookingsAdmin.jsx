@@ -10,7 +10,7 @@ import AdminBookingsFilterDrawer, {
   DEFAULT_ADMIN_BOOKING_FILTERS,
 } from '../../components/admin/AdminBookingsFilterDrawer'
 import SessionsCalendarView from '../../components/physio/SessionsCalendarView'
-import { bookingCodeBadge, bookingConditionLabel } from '../../utils/bookingDisplay'
+import { bookingCodeBadge, bookingConditionLabel, serviceTypeLabel } from '../../utils/bookingDisplay'
 
 function statusBadgeClass(status) {
   const map = {
@@ -21,6 +21,22 @@ function statusBadgeClass(status) {
     completed: 'bg-emerald-50 text-emerald-900 ring-emerald-200/80',
   }
   return map[status] || 'bg-slate-50 text-slate-700 ring-slate-200/80'
+}
+
+function serviceTypeBadgeClass(serviceType) {
+  const map = {
+    online: 'bg-violet-50 text-violet-900 ring-violet-200/80',
+    clinic: 'bg-orange-50 text-orange-900 ring-orange-200/80',
+    home: 'bg-slate-50 text-slate-700 ring-slate-200/80',
+  }
+  return map[serviceType] || map.home
+}
+
+function visitTypeLabel(b) {
+  const st = b.serviceType === 'online' || b.serviceType === 'clinic' ? b.serviceType : 'home'
+  if (st === 'online') return 'Online'
+  if (st === 'clinic') return 'Clinic'
+  return 'Home'
 }
 
 function visitSortKey(b) {
@@ -208,11 +224,19 @@ export default function BookingsAdmin() {
                       {physio}
                     </p>
                   </div>
-                  <span
-                    className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ring-1 ${statusBadgeClass(b.status)}`}
-                  >
-                    {b.status}
-                  </span>
+                  <div className="flex shrink-0 flex-col items-end gap-1 sm:flex-row sm:items-center">
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ring-1 ${serviceTypeBadgeClass(b.serviceType)}`}
+                      title={`Visit type: ${serviceTypeLabel(b.serviceType)}`}
+                    >
+                      {visitTypeLabel(b)}
+                    </span>
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ring-1 ${statusBadgeClass(b.status)}`}
+                    >
+                      {b.status}
+                    </span>
+                  </div>
                   <svg
                     className="h-4 w-4 shrink-0 text-slate-300"
                     fill="none"

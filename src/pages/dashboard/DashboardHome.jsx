@@ -10,6 +10,7 @@ import { bookingConditionLabel } from '../../utils/bookingDisplay'
 import { getTechniqueByIssue } from '../../constants/techniques'
 import { pickNextSession, todayYmd, normalizeSessionRows, listSameDaySiblings } from '../../components/physio/physioBookingHelpers'
 import ServicesSection from '../../components/dashboard/ServicesSection'
+import { isProfileIncompleteError } from '../../utils/apiErrors'
 
 function formatInr(n) {
   const v = Number(n)
@@ -173,11 +174,14 @@ export default function DashboardHome() {
       setDisputes(dRes.data?.data || [])
       const raw = profileWrap?.data?.name?.trim()
       setProfileFirstName(raw ? raw.split(/\s+/)[0] : null)
-    } catch {
-      toast.error('Could not load dashboard')
+    } catch (err) {
       setBookings([])
       setDisputes([])
       setProfileFirstName(null)
+      // Incomplete profile is handled by ProfileCompletionGate — not a dashboard failure.
+      if (!isProfileIncompleteError(err)) {
+        toast.error('Could not load dashboard')
+      }
     }
   }, [])
 

@@ -79,7 +79,10 @@ export function validateLiveField(name, value, ctx = {}) {
       return ''
     }
     case 'dob': {
-      if (!str || !String(str).trim()) return 'Date of birth is required'
+      if (!str || !String(str).trim()) {
+        // Physio registration/onboarding: DOB optional; patient profile completion still requires it
+        return ctx.mode === 'physio' || ctx.isPhysio || ctx.optionalDob ? '' : 'Date of birth is required'
+      }
       const d = new Date(str)
       if (Number.isNaN(d.getTime())) return 'Invalid date of birth'
       const now = new Date()

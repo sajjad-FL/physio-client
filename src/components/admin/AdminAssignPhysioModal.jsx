@@ -130,7 +130,7 @@ export default function AdminAssignPhysioModal({
 
     let rows = withMeta.filter(({ p, distKm }) => {
       if (q) {
-        const blob = [p.name, p.specialization, p.location, p.phone]
+        const blob = [p.name, p.specialization, p.location, p.phone, p.clinicName]
           .filter(Boolean)
           .join(' ')
           .toLowerCase()
@@ -379,7 +379,14 @@ export default function AdminAssignPhysioModal({
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
-                          <p className="text-sm font-semibold text-slate-900">{p.name || '—'}</p>
+                          <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                            <p className="text-sm font-semibold text-slate-900">{p.name || '—'}</p>
+                            {p.clinicName ? (
+                              <span className="shrink-0 rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold text-amber-900 ring-1 ring-amber-200">
+                                {p.clinicName}
+                              </span>
+                            ) : null}
+                          </div>
                           {distKm != null && (
                             <span className="shrink-0 rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-slate-700">
                               {distKm < 10 ? distKm.toFixed(1) : Math.round(distKm)} km

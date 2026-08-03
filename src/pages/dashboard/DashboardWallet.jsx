@@ -5,6 +5,7 @@ import toast from 'react-hot-toast'
 import Skeleton from '../../components/ui/Skeleton'
 import { formatBookingDateAndSlot } from '../../utils/date'
 import { paymentBadge } from './dashboardUtils'
+import { isProfileIncompleteError } from '../../utils/apiErrors'
 
 function formatInr(n) {
   const v = Number(n)
@@ -19,9 +20,11 @@ export default function DashboardWallet() {
     try {
       const res = await api.get('/profile/wallet-summary')
       setSummary(res.data || { walletBalance: 0, totalSpend: 0, heldTotal: 0, releasedTotal: 0, recentPayments: [] })
-    } catch {
-      toast.error('Could not load wallet summary')
+    } catch (err) {
       setSummary({ walletBalance: 0, totalSpend: 0, heldTotal: 0, releasedTotal: 0, recentPayments: [] })
+      if (!isProfileIncompleteError(err)) {
+        toast.error('Could not load wallet summary')
+      }
     }
   }, [])
 
@@ -88,7 +91,7 @@ export default function DashboardWallet() {
               return (
                 <li key={b._id}>
                   <Link
-                    to={`/dashboard/bookings/${b._id}`}
+                    to={`/dashboard/bookings/${b._id}/payment`}
                     className="tap-feedback flex min-h-[3.25rem] items-center justify-between gap-3 rounded-xl border border-slate-100 bg-white px-3 py-3 ring-1 ring-slate-100/60 transition active:bg-slate-50 sm:px-4"
                   >
                     <div className="min-w-0">

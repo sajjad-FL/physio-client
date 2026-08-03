@@ -84,7 +84,9 @@ function financeTab(location) {
 function titleForPath(pathname, search) {
   if (pathname.startsWith('/clinic/profile')) return 'Profile'
   if (pathname.startsWith('/clinic/patients')) return 'Patients'
-  if (pathname.startsWith('/clinic/staff')) return 'Clinic staff'
+  if (pathname.startsWith('/clinic/physios') || pathname.startsWith('/clinic/staff')) {
+    return 'Clinic physios'
+  }
   if (pathname.startsWith('/clinic/bookings/') && pathname !== '/clinic/bookings') return 'Case detail'
   if (pathname.startsWith('/clinic/bookings')) return 'Clinic cases'
   if (pathname.startsWith('/clinic/finance')) {
@@ -131,8 +133,8 @@ export default function ClinicLayout() {
       },
       {
         section: 'Operations',
-        to: '/clinic/staff',
-        label: 'Staff',
+        to: '/clinic/physios',
+        label: 'Physios',
         icon: iconStaff,
       },
       {

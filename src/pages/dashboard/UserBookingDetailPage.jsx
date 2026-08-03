@@ -188,14 +188,26 @@ export default function UserBookingDetailPage() {
     pageCtx.b.serviceType === 'home' && isPlanLive(pageCtx.b.planStatus)
   const clinicAwaitingFacility =
     pageCtx.b.serviceType === 'clinic' && !pageCtx.b.clinicId
+  // Online consults are paid + physio-selected at checkout — show WhatsApp confirmation,
+  // not the home-visit "awaiting care manager" screen.
+  const isOnlineConsult = pageCtx.b.serviceType === 'online'
+  const onlineConsultationReady =
+    isOnlineConsult &&
+    pageCtx.hasPhysio &&
+    (pageCtx.b.status === 'pending' ||
+      pageCtx.b.status === 'assigned' ||
+      pageCtx.b.status === 'accepted' ||
+      pageCtx.b.status === 'scheduled') &&
+    pageCtx.b.sessionStatus !== 'completed' &&
+    pageCtx.b.sessionStatus !== 'done'
+  const awaitingHomeCareTeam =
+    !isOnlineConsult &&
+    (pageCtx.b.status === 'pending' || pageCtx.b.status === 'assigned') &&
+    !planAwaitingConsent &&
+    !planLiveEarly &&
+    pageCtx.b.serviceType !== 'clinic'
 
-  if (
-    clinicAwaitingFacility ||
-    ((pageCtx.b.status === 'pending' || pageCtx.b.status === 'assigned') &&
-      !planAwaitingConsent &&
-      !planLiveEarly &&
-      pageCtx.b.serviceType !== 'clinic')
-  ) {
+  if (clinicAwaitingFacility || awaitingHomeCareTeam || onlineConsultationReady) {
     return <PendingBookingView booking={pageCtx.b} />
   }
 

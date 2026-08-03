@@ -12,7 +12,7 @@ import { setSession, getToken, getDefaultDashboardPath } from '../auth/session'
 import { validateIndianMobile } from '../utils/phoneIndia'
 import { validateLiveField } from '../utils/liveFieldValidation'
 import { absoluteUrl } from '../utils/siteMeta'
-import { OTP_LENGTH } from '../constants/otp.js'
+import { OTP_LENGTH, OTP_RESEND_COOLDOWN_SECONDS } from '../constants/otp.js'
 
 const STEP_PHONE = 1
 const STEP_OTP = 2
@@ -32,6 +32,7 @@ export default function RegisterPage() {
   const [otpSendBusy, setOtpSendBusy] = useState(false)
   const [loading, setLoading] = useState(false)
   const [fieldErrors, setFieldErrors] = useState({})
+  const [resendIn, setResendIn] = useState(0)
   const [referralCode, setReferralCode] = useState(() =>
     String(searchParams.get('ref') || '')
       .trim()
@@ -39,6 +40,12 @@ export default function RegisterPage() {
       .replace(/[^A-Z0-9]/g, ''),
   )
   const [friendSignupBonus, setFriendSignupBonus] = useState(100)
+
+  useEffect(() => {
+    if (resendIn <= 0) return undefined
+    const t = setTimeout(() => setResendIn((s) => Math.max(0, s - 1)), 1000)
+    return () => clearTimeout(t)
+  }, [resendIn])
 
   useEffect(() => {
     let cancelled = false
@@ -95,6 +102,7 @@ export default function RegisterPage() {
   }
 
   async function sendVerificationCode() {
+    if (step === STEP_OTP && resendIn > 0) return
     const pv = validateIndianMobile(phone)
     setFieldErrors((prev) => ({ ...prev, phone: pv.valid ? '' : pv.message }))
     if (!pv.valid) {
@@ -109,6 +117,7 @@ export default function RegisterPage() {
       setOtp('')
       toast.success(res.data?.message || 'Verification code sent.')
       setStep(STEP_OTP)
+      setResendIn(OTP_RESEND_COOLDOWN_SECONDS)
     } catch (err) {
       const msg = err.response?.data?.message || err.message || 'Could not send code'
       toast.error(msg)
@@ -165,7 +174,13 @@ export default function RegisterPage() {
       setSession(res.data.token, role, profileComplete)
       navigate(getDefaultDashboardPath())
     } catch (err) {
-      toast.error(err.response?.data?.message || err.message || 'Registration failed')
+      const msg = err.response?.data?.message || err.message || 'Registration failed'
+      const field = err.response?.data?.field
+      if (field === 'referralCode' || /referral code/i.test(msg)) {
+        setFieldErrors((prev) => ({ ...prev, referral: msg }))
+      } else {
+        toast.error(msg)
+      }
     } finally {
       setLoading(false)
     }
@@ -188,7 +203,7 @@ export default function RegisterPage() {
     step === STEP_PHONE
       ? 'We will send a one-time code on WhatsApp to verify this number.'
       : step === STEP_OTP
-        ? 'Enter the 4-digit code we sent on WhatsApp.'
+        ? 'A 4-digit verification code has been sent via WhatsApp.'
         : 'Your account is created with your name and password. Add date of birth, gender, and address in Profile whenever you like — you will need them before booking.'
 
   return (
@@ -310,11 +325,11 @@ export default function RegisterPage() {
                 type="button"
                 variant="outline"
                 className="h-10 w-full text-[13px]"
-                disabled={loading || otpSendBusy}
+                disabled={loading || otpSendBusy || resendIn > 0}
                 loading={otpSendBusy}
                 onClick={sendVerificationCode}
               >
-                Resend code
+                {resendIn > 0 ? `Resend in ${resendIn}s` : 'Resend code'}
               </Button>
               <Button type="button" variant="primary" className="h-11 w-full text-[15px]" onClick={continueFromOtp}>
                 Continue
@@ -375,29 +390,60 @@ export default function RegisterPage() {
                 {fieldErrors.password ? <p className="mt-1 text-xs text-red-600">{fieldErrors.password}</p> : null}
               </div>
 
-              <div>
-                <label htmlFor="reg-referral" className="mb-2 block text-sm font-medium text-slate-700">
-                  Have a referral code? <span className="font-normal text-slate-400">(optional)</span>
+              <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-4">
+                <label htmlFor="reg-referral" className="block text-sm font-medium text-slate-800">
+                  Referral code <span className="font-normal text-slate-400">(optional)</span>
                 </label>
+                <p className="mt-1 text-xs leading-relaxed text-slate-500">
+                  Have a code from a friend? Enter it for a welcome wallet credit.
+                </p>
                 <input
                   id="reg-referral"
                   value={referralCode}
-                  onChange={(e) =>
+                  onChange={(e) => {
                     setReferralCode(
                       e.target.value
                         .trim()
                         .toUpperCase()
                         .replace(/[^A-Z0-9]/g, ''),
                     )
-                  }
-                  className={inputCls}
-                  placeholder="Enter referral code"
+                    setFieldErrors((prev) => ({ ...prev, referral: '' }))
+                  }}
+                  className={[
+                    inputCls,
+                    'mt-3',
+                    fieldErrors.referral ? 'border-red-400 ring-1 ring-red-200' : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
+                  placeholder="6-character code"
                   disabled={loading}
                   maxLength={12}
+                  autoCapitalize="characters"
+                  spellCheck={false}
                 />
-                {referralCode && friendSignupBonus > 0 ? (
-                  <p className="mt-2 rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 text-xs text-violet-900">
-                    With this code you&apos;ll receive ₹{friendSignupBonus} wallet credit after signup.
+                {fieldErrors.referral ? (
+                  <>
+                    <p className="mt-2 text-xs font-medium text-red-600">{fieldErrors.referral}</p>
+                    <button
+                      type="button"
+                      className="mt-2 text-xs font-semibold text-slate-500 underline"
+                      onClick={() => {
+                        setReferralCode('')
+                        setFieldErrors((prev) => ({ ...prev, referral: '' }))
+                      }}
+                      disabled={loading}
+                    >
+                      Clear code and continue without referral
+                    </button>
+                  </>
+                ) : null}
+                {!fieldErrors.referral && referralCode && referralCode.length < 6 ? (
+                  <p className="mt-2 text-xs text-slate-400">Referral codes are usually 6 characters.</p>
+                ) : null}
+                {!fieldErrors.referral && referralCode.length === 6 && friendSignupBonus > 0 ? (
+                  <p className="mt-2 rounded-lg border border-teal-200/80 bg-teal-50 px-3 py-2 text-xs leading-relaxed text-teal-900">
+                    If this code is valid, you&apos;ll get ₹{friendSignupBonus} wallet credit after signup.
                   </p>
                 ) : null}
               </div>

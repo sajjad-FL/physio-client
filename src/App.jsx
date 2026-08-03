@@ -38,6 +38,7 @@ import ShopCartPage from './pages/dashboard/ShopCartPage'
 import ShopCheckoutPage from './pages/dashboard/ShopCheckoutPage'
 import ShopOrdersPage from './pages/dashboard/ShopOrdersPage'
 import ShopOrderDetailPage from './pages/dashboard/ShopOrderDetailPage'
+import PaymentDetailPage from './pages/dashboard/PaymentDetailPage'
 import DashboardReferrals from './pages/dashboard/DashboardReferrals'
 import ProfilePage from './pages/dashboard/ProfilePage'
 import AdminLayout from './pages/admin/AdminLayout'
@@ -62,7 +63,7 @@ import ClinicBookingsPage from './pages/clinic/ClinicBookingsPage'
 import ClinicBookingDetailPage from './pages/clinic/ClinicBookingDetailPage'
 import ClinicFinancePage from './pages/clinic/ClinicFinancePage'
 import ClinicPatientsPage from './pages/clinic/ClinicPatientsPage'
-import ClinicStaffPage from './pages/clinic/ClinicStaffPage'
+import ClinicPhysiosPage from './pages/clinic/ClinicPhysiosPage'
 import AdminZonesPage from './pages/admin/AdminZonesPage'
 import AdminSettlementsPage from './pages/admin/AdminSettlementsPage'
 import AdminClinicsPage from './pages/admin/AdminClinicsPage'
@@ -70,6 +71,7 @@ import { ShopCartProvider } from './hooks/useShopCart'
 import RoleProtectedRoute from './components/RoleProtectedRoute'
 import LegacyPhysioDashboardRedirect from './components/LegacyPhysioDashboardRedirect'
 import ProfileCompletionHost from './components/ProfileCompletionHost'
+import ProfileCompletionGate from './components/ProfileCompletionGate'
 import SessionRoleSync from './components/SessionRoleSync'
 
 function PublicPhysicianRoute() {
@@ -118,9 +120,11 @@ export default function App() {
           path="/dashboard"
           element={
             <RoleProtectedRoute allowedRoles={['user']}>
-              <ShopCartProvider>
-                <UserDashboardLayout />
-              </ShopCartProvider>
+              <ProfileCompletionGate>
+                <ShopCartProvider>
+                  <UserDashboardLayout />
+                </ShopCartProvider>
+              </ProfileCompletionGate>
             </RoleProtectedRoute>
           }
         >
@@ -128,6 +132,7 @@ export default function App() {
           <Route path="bookings" element={<DashboardBookings />} />
           <Route path="wallet" element={<DashboardWallet />} />
           <Route path="referrals" element={<DashboardReferrals />} />
+          <Route path="bookings/:id/payment" element={<PaymentDetailPage />} />
           <Route path="bookings/:id" element={<UserBookingDetailPage />} />
           <Route path="profile" element={<ProfilePage />} />
           <Route path="products" element={<ShopPage />} />
@@ -219,7 +224,8 @@ export default function App() {
           <Route path="bookings" element={<ClinicBookingsPage />} />
           <Route path="bookings/:id" element={<ClinicBookingDetailPage />} />
           <Route path="patients" element={<ClinicPatientsPage />} />
-          <Route path="staff" element={<ClinicStaffPage />} />
+          <Route path="physios" element={<ClinicPhysiosPage />} />
+          <Route path="staff" element={<Navigate to="/clinic/physios" replace />} />
           <Route path="finance" element={<ClinicFinancePage />} />
           <Route path="profile" element={<ProfilePage />} />
         </Route>

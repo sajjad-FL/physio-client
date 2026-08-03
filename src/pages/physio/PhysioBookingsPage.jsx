@@ -50,9 +50,15 @@ function patientInitial(name) {
 }
 
 function servicePillClass(serviceType) {
-  return serviceType === 'online'
-    ? 'bg-violet-50 text-violet-800 ring-violet-200/80'
-    : 'bg-teal-50 text-teal-800 ring-teal-200/80'
+  if (serviceType === 'online') return 'bg-violet-50 text-violet-900 ring-violet-200/80'
+  if (serviceType === 'clinic') return 'bg-orange-50 text-orange-900 ring-orange-200/80'
+  return 'bg-slate-50 text-slate-700 ring-slate-200/80'
+}
+
+function visitTypeLabel(serviceType) {
+  if (serviceType === 'online') return 'Online'
+  if (serviceType === 'clinic') return 'Clinic'
+  return 'Home'
 }
 
 export default function PhysioBookingsPage() {
@@ -223,8 +229,9 @@ export default function PhysioBookingsPage() {
                           className={`inline-flex rounded-md px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ring-1 ${servicePillClass(
                             b.serviceType,
                           )}`}
+                          title={`Visit type: ${visitTypeLabel(b.serviceType)}`}
                         >
-                          {b.serviceType === 'online' ? 'Online' : 'Home'}
+                          {visitTypeLabel(b.serviceType)}
                         </span>
                       </div>
                       <p className="mt-0.5 truncate text-xs text-gray-600">

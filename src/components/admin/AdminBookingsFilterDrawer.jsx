@@ -1,13 +1,5 @@
-import { useEffect, useState } from 'react'
-
-function useSheetEnter() {
-  const [entered, setEntered] = useState(false)
-  useEffect(() => {
-    const t = window.setTimeout(() => setEntered(true), 20)
-    return () => window.clearTimeout(t)
-  }, [])
-  return entered
-}
+import { useEffect, useMemo, useState } from 'react'
+import { useSheetEnter } from './AdminFilterSheet'
 
 export const DEFAULT_ADMIN_BOOKING_FILTERS = {
   status: 'all',
@@ -17,27 +9,109 @@ export const DEFAULT_ADMIN_BOOKING_FILTERS = {
   sessionStatus: 'all',
 }
 
-function OptionPill({ active, children, onClick }) {
+const STATUS_OPTIONS = [
+  { id: 'all', label: 'All' },
+  { id: 'pending', label: 'Pending' },
+  { id: 'assigned', label: 'Assigned' },
+  { id: 'accepted', label: 'Accepted' },
+  { id: 'scheduled', label: 'Scheduled' },
+  { id: 'completed', label: 'Completed' },
+]
+
+const PAYMENT_OPTIONS = [
+  { id: 'all', label: 'All' },
+  { id: 'pending', label: 'Pending' },
+  { id: 'held', label: 'Held' },
+  { id: 'released', label: 'Released' },
+  { id: 'refunded', label: 'Refunded' },
+]
+
+const ASSIGNMENT_OPTIONS = [
+  { id: 'all', label: 'All' },
+  { id: 'unassigned', label: 'Unassigned' },
+  { id: 'assigned', label: 'Assigned' },
+]
+
+const SERVICE_OPTIONS = [
+  { id: 'all', label: 'All' },
+  { id: 'home', label: 'Home' },
+  { id: 'online', label: 'Online' },
+  { id: 'clinic', label: 'Clinic' },
+]
+
+const SESSION_OPTIONS = [
+  { id: 'all', label: 'All' },
+  { id: 'scheduled', label: 'Scheduled' },
+  { id: 'completed', label: 'Completed' },
+  { id: 'not_set', label: 'Not set' },
+]
+
+function CheckIcon() {
+  return (
+    <svg className="h-3 w-3 shrink-0" viewBox="0 0 12 12" fill="none" aria-hidden>
+      <path
+        d="M2.5 6.2L4.8 8.5 9.5 3.5"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
+function Chip({ active, children, onClick }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`min-h-9 cursor-pointer rounded-full px-3 py-1.5 text-xs font-semibold transition-all duration-200 sm:text-sm ${
+      aria-pressed={active}
+      className={[
+        'inline-flex min-h-8 items-center gap-1.5 rounded-lg px-3 py-1.5 text-[13px] font-medium transition-colors duration-150',
         active
-          ? 'bg-teal-600 text-white shadow-sm ring-2 ring-teal-500/30'
-          : 'bg-slate-100 text-slate-700 ring-1 ring-slate-200/80 hover:bg-slate-200/80'
-      }`}
+          ? 'bg-slate-900 text-white'
+          : 'bg-transparent text-slate-600 ring-1 ring-inset ring-slate-200 hover:bg-slate-50 hover:text-slate-900',
+      ].join(' ')}
     >
+      {active ? <CheckIcon /> : null}
       {children}
     </button>
   )
 }
 
-function Section({ title, children }) {
+function Segmented({ value, options, onChange }) {
+  const cols =
+    options.length <= 2 ? 'grid-cols-2' : options.length === 3 ? 'grid-cols-3' : 'grid-cols-2 sm:grid-cols-4'
   return (
-    <div>
-      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">{title}</p>
-      <div className="flex flex-wrap gap-2">{children}</div>
+    <div className={`grid gap-1 rounded-xl bg-slate-100/90 p-1 ${cols}`}>
+      {options.map((o) => {
+        const on = value === o.id
+        return (
+          <button
+            key={o.id}
+            type="button"
+            onClick={() => onChange(o.id)}
+            aria-pressed={on}
+            className={[
+              'min-h-9 rounded-lg px-2 text-[13px] font-semibold transition-all duration-150',
+              on
+                ? 'bg-white text-slate-900 shadow-sm ring-1 ring-black/5'
+                : 'text-slate-500 hover:text-slate-800',
+            ].join(' ')}
+          >
+            {o.label}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+function Block({ label, children }) {
+  return (
+    <div className="space-y-2.5">
+      <p className="text-[13px] font-medium text-slate-900">{label}</p>
+      {children}
     </div>
   )
 }
@@ -58,12 +132,18 @@ export default function AdminBookingsFilterDrawer({ appliedFilters, onClose, onA
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
 
+  const activeCount = useMemo(
+    () => Object.values(draft).filter((v) => v !== 'all').length,
+    [draft],
+  )
+
   function handleApply() {
     onApply({ ...draft })
     onClose()
   }
 
   function handleReset() {
+    setDraft({ ...DEFAULT_ADMIN_BOOKING_FILTERS })
     onReset()
     onClose()
   }
@@ -72,132 +152,123 @@ export default function AdminBookingsFilterDrawer({ appliedFilters, onClose, onA
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center sm:items-end sm:justify-center sm:p-4 sm:pb-[max(1.5rem,env(safe-area-inset-bottom))]"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby="admin-booking-filters-title"
     >
       <button
         type="button"
-        className={`absolute inset-0 bg-slate-900/40 backdrop-blur-[2px] transition-opacity duration-300 ${
+        className={`absolute inset-0 bg-slate-950/45 transition-opacity duration-200 ${
           entered ? 'opacity-100' : 'opacity-0'
         }`}
         aria-label="Close filters"
         onClick={onClose}
       />
+
       <div
         className={[
-          'relative flex max-h-[min(88dvh,40rem)] w-full max-w-lg flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl ring-1 ring-slate-200/80 transition-transform duration-300 ease-out sm:rounded-2xl',
-          entered ? 'translate-y-0' : 'translate-y-full',
+          'relative flex max-h-[min(88dvh,36rem)] w-full max-w-md flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-slate-200/80 transition-all duration-200 ease-out',
+          entered ? 'scale-100 opacity-100' : 'scale-95 opacity-0',
         ].join(' ')}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex shrink-0 justify-center pt-2" aria-hidden>
-          <span className="h-1 w-10 rounded-full bg-slate-200" />
-        </div>
-        <div className="flex shrink-0 items-center justify-between border-b border-slate-100 px-4 pb-3 pt-1 sm:px-5">
-          <h2 id="admin-booking-filters-title" className="type-page-title text-slate-900">
-            Filters
-          </h2>
+        <header className="flex shrink-0 items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
+          <div>
+            <h2 id="admin-booking-filters-title" className="text-[17px] font-semibold tracking-tight text-slate-900">
+              Filters
+            </h2>
+            <p className="mt-0.5 text-[13px] text-slate-500">
+              {activeCount === 0 ? 'No filters applied' : `${activeCount} active`}
+            </p>
+          </div>
           <button
             type="button"
             onClick={onClose}
-            className="tap-feedback rounded-xl p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+            className="flex h-9 w-9 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
             aria-label="Close"
           >
-            <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
+        </header>
+
+        <div className="min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain px-5 py-5">
+          <Block label="Visit type">
+            <Segmented
+              value={draft.serviceType}
+              options={SERVICE_OPTIONS}
+              onChange={(id) => set('serviceType', id)}
+            />
+          </Block>
+
+          <Block label="Booking status">
+            <div className="flex flex-wrap gap-2">
+              {STATUS_OPTIONS.map((o) => (
+                <Chip key={o.id} active={draft.status === o.id} onClick={() => set('status', o.id)}>
+                  {o.label}
+                </Chip>
+              ))}
+            </div>
+          </Block>
+
+          <Block label="Payment">
+            <div className="flex flex-wrap gap-2">
+              {PAYMENT_OPTIONS.map((o) => (
+                <Chip
+                  key={o.id}
+                  active={draft.paymentStatus === o.id}
+                  onClick={() => set('paymentStatus', o.id)}
+                >
+                  {o.label}
+                </Chip>
+              ))}
+            </div>
+          </Block>
+
+          <Block label="Physiotherapist">
+            <Segmented
+              value={draft.assignment}
+              options={ASSIGNMENT_OPTIONS}
+              onChange={(id) => set('assignment', id)}
+            />
+          </Block>
+
+          <Block label="Session">
+            <div className="flex flex-wrap gap-2">
+              {SESSION_OPTIONS.map((o) => (
+                <Chip
+                  key={o.id}
+                  active={draft.sessionStatus === o.id}
+                  onClick={() => set('sessionStatus', o.id)}
+                >
+                  {o.label}
+                </Chip>
+              ))}
+            </div>
+          </Block>
         </div>
 
-        <div className="min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain px-4 py-4 sm:px-5">
-          <Section title="Booking status">
-            <OptionPill active={draft.status === 'all'} onClick={() => set('status', 'all')}>
-              All
-            </OptionPill>
-            {['pending', 'assigned', 'accepted', 'scheduled', 'completed'].map((s) => (
-              <OptionPill key={s} active={draft.status === s} onClick={() => set('status', s)}>
-                {s}
-              </OptionPill>
-            ))}
-          </Section>
-
-          <Section title="Payment status">
-            <OptionPill active={draft.paymentStatus === 'all'} onClick={() => set('paymentStatus', 'all')}>
-              All
-            </OptionPill>
-            {['pending', 'held', 'released', 'refunded'].map((s) => (
-              <OptionPill key={s} active={draft.paymentStatus === s} onClick={() => set('paymentStatus', s)}>
-                {s}
-              </OptionPill>
-            ))}
-          </Section>
-
-          <Section title="Physiotherapist">
-            <OptionPill active={draft.assignment === 'all'} onClick={() => set('assignment', 'all')}>
-              All
-            </OptionPill>
-            <OptionPill active={draft.assignment === 'unassigned'} onClick={() => set('assignment', 'unassigned')}>
-              Unassigned
-            </OptionPill>
-            <OptionPill active={draft.assignment === 'assigned'} onClick={() => set('assignment', 'assigned')}>
-              Assigned
-            </OptionPill>
-          </Section>
-
-          <Section title="Service">
-            <OptionPill active={draft.serviceType === 'all'} onClick={() => set('serviceType', 'all')}>
-              All
-            </OptionPill>
-            <OptionPill active={draft.serviceType === 'home'} onClick={() => set('serviceType', 'home')}>
-              Home
-            </OptionPill>
-            <OptionPill active={draft.serviceType === 'online'} onClick={() => set('serviceType', 'online')}>
-              Online
-            </OptionPill>
-            <OptionPill active={draft.serviceType === 'clinic'} onClick={() => set('serviceType', 'clinic')}>
-              Clinic
-            </OptionPill>
-          </Section>
-
-          <Section title="Session">
-            <OptionPill active={draft.sessionStatus === 'all'} onClick={() => set('sessionStatus', 'all')}>
-              All
-            </OptionPill>
-            <OptionPill active={draft.sessionStatus === 'scheduled'} onClick={() => set('sessionStatus', 'scheduled')}>
-              Scheduled
-            </OptionPill>
-            <OptionPill active={draft.sessionStatus === 'completed'} onClick={() => set('sessionStatus', 'completed')}>
-              Completed
-            </OptionPill>
-            <OptionPill active={draft.sessionStatus === 'not_set'} onClick={() => set('sessionStatus', 'not_set')}>
-              Not set
-            </OptionPill>
-          </Section>
-        </div>
-
-        <div
-          className="shrink-0 border-t border-slate-100 bg-slate-50/80 px-4 py-4 sm:px-5"
-          style={{ paddingBottom: 'max(1rem, calc(0.75rem + env(safe-area-inset-bottom)))' }}
-        >
-          <div className="flex flex-col gap-2">
-            <button
-              type="button"
-              onClick={handleApply}
-              className="tap-feedback min-h-11 w-full rounded-xl bg-teal-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-teal-700"
-            >
-              Apply filters
-            </button>
+        <footer className="shrink-0 border-t border-slate-100 px-5 py-4">
+          <div className="flex gap-2">
             <button
               type="button"
               onClick={handleReset}
-              className="tap-feedback min-h-11 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-800 hover:bg-slate-50"
+              disabled={activeCount === 0}
+              className="min-h-11 flex-1 rounded-xl text-[13px] font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
             >
-              Reset
+              Clear all
+            </button>
+            <button
+              type="button"
+              onClick={handleApply}
+              className="min-h-11 flex-[2] rounded-xl bg-slate-900 px-4 text-[13px] font-semibold text-white transition hover:bg-slate-800 active:scale-[0.99]"
+            >
+              Show results
             </button>
           </div>
-        </div>
+        </footer>
       </div>
     </div>
   )

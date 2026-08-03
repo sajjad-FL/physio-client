@@ -668,7 +668,14 @@ export default function ManagerBookingDetailPage() {
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-semibold text-slate-900">{selectedPhysioForAssign.name}</p>
-                      <p className="truncate text-xs text-slate-500">{selectedPhysioForAssign.specialization || '—'}</p>
+                      <p className="truncate text-xs text-slate-500">
+                        {selectedPhysioForAssign.specialization || '—'}
+                        {selectedPhysioForAssign.clinicName ? (
+                          <span className="ml-1.5 rounded bg-amber-50 px-1 py-0.5 text-[10px] font-semibold text-amber-900 ring-1 ring-amber-200">
+                            {selectedPhysioForAssign.clinicName}
+                          </span>
+                        ) : null}
+                      </p>
                     </div>
                     <button
                       type="button"

@@ -8,6 +8,7 @@ import usePagination from '../../hooks/usePagination'
 import { formatBookingTimeSlot } from '../../utils/date'
 import { bookingCodeBadge } from '../../utils/bookingDisplay'
 import ListSkeleton from '../../components/ui/skeletons/ListSkeleton'
+import { isProfileIncompleteError } from '../../utils/apiErrors'
 
 export default function DashboardDisputes() {
   const [list, setList] = useState(null)
@@ -18,10 +19,12 @@ export default function DashboardDisputes() {
       const res = await api.get('/disputes/my', { params: { page, limit: pageSize } })
       setList(res.data?.data || [])
       applyMeta(res.data)
-    } catch {
-      toast.error('Could not load disputes')
+    } catch (err) {
       setList([])
       clearMeta()
+      if (!isProfileIncompleteError(err)) {
+        toast.error('Could not load disputes')
+      }
     }
   }, [page, pageSize, applyMeta, clearMeta])
 

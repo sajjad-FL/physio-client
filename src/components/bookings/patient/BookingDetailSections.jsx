@@ -14,6 +14,7 @@ import Button from '../../ui/Button'
 import InstallmentsCard from '../../payments/InstallmentsCard'
 import RazorpayPayButton from '../../RazorpayPayButton'
 import PatientPhysioCard from './PatientPhysioCard'
+import { Link, useNavigate } from 'react-router-dom'
 
 export default function BookingDetailHeader({ booking: b, onRaiseDispute }) {
   const st = bookingStatusBadge(b.status, b.sessionStatus, b.paymentStatus)
@@ -80,6 +81,7 @@ export function PaymentsTabPanel({
   onPayInstallment,
   onPaid,
 }) {
+  const navigate = useNavigate()
   const pay = paymentBadge(b.paymentStatus)
   const paidLine = formatPaidAt(b)
   const totalAmount = Number(paymentSummary?.totalAmount ?? b.totalAmount ?? b.payment?.amount ?? 0)
@@ -162,6 +164,7 @@ export function PaymentsTabPanel({
           }
           summary={paymentSummary}
           payments={paymentsList}
+          onRowClick={(p) => navigate(`/dashboard/bookings/${b._id}/payment?paymentId=${p._id}`)}
           emptyMessage={
             isOfflinePlan
               ? 'No collections yet. Your physiotherapist records them after each cash/UPI hand-off.'
@@ -177,7 +180,15 @@ export function PaymentsTabPanel({
       ) : null}
 
       <Card hover={false} className="border-border-subtle p-5 sm:p-6">
-        <h2 className="text-sm font-semibold text-ink">Payment details</h2>
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <h2 className="text-sm font-semibold text-ink">Payment details</h2>
+          <Link
+            to={`/dashboard/bookings/${b._id}/payment`}
+            className="text-xs font-semibold text-teal-700 hover:underline"
+          >
+            Open full page
+          </Link>
+        </div>
         <dl className="mt-4 space-y-3 text-sm">
           <div className="flex justify-between gap-4">
             <dt className="text-ink-muted">Mode</dt>

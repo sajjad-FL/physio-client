@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api } from '../config/api'
 import { clearToken, getToken, setProfileCompleteStored } from '../auth/session'
-import { getProfileCached } from '../utils/profileCache'
+import { getProfileCached, invalidateProfileCache } from '../utils/profileCache'
 import AuthSpinner from './AuthSpinner'
 import ProfileCompletionModal from './ProfileCompletionModal'
 
@@ -88,7 +88,9 @@ export default function ProfileCompletionGate({ children }) {
       <ProfileCompletionModal
         initial={profileSnapshot}
         onComplete={() => {
+          invalidateProfileCache()
           setProfileCompleteStored(true)
+          setProfileSnapshot(null)
           setState('complete')
         }}
       />

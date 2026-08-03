@@ -7,7 +7,7 @@ import Button from '../components/ui/Button'
 import Input from '../components/ui/Input'
 import BookingSummaryBar from '../components/booking/BookingSummaryBar'
 import LocationAutocomplete from '../components/booking/LocationAutocomplete'
-import PhysioCard from '../components/booking/PhysioCard'
+import OnlinePhysioPickerModal from '../components/booking/OnlinePhysioPickerModal'
 import LocationPickerModal from '../components/location/LocationPickerModal'
 import { formatBookingTimeSlot } from '../utils/date'
 import { loadRazorpayCheckout } from '../utils/loadRazorpayCheckout'
@@ -17,7 +17,6 @@ import { getCurrentCoords } from '../utils/geolocation'
 import SeoNoIndex from '../components/seo/SeoNoIndex'
 import WhatsAppSupportFab from '../components/support/WhatsAppSupportFab'
 import FieldLabel, { RequiredMark } from '../components/ui/FieldLabel'
-import ListSkeleton from '../components/ui/skeletons/ListSkeleton'
 import { useReferralMyCode } from '../hooks/useReferral'
 import { todayISO, defaultBookableDate, filterSelectableSlots } from '../constants/slots'
 
@@ -613,8 +612,15 @@ export default function PhysioListPage() {
                 </p>
                 <p className="mt-1 text-xs text-blue-700">
                   {selectedPhysio
-                    ? `${selectedPhysio.specialization || 'Physiotherapy'}${selectedPhysio.location ? ` · ${selectedPhysio.location}` : ''}`
-                    : 'Open list and choose who you want to consult with.'}
+                    ? [
+                        selectedPhysio.specialization || 'Physiotherapy',
+                        Array.isArray(selectedPhysio.languages) && selectedPhysio.languages.length
+                          ? `Speaks ${selectedPhysio.languages.slice(0, 3).join(', ')}`
+                          : null,
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')
+                    : 'Open list — filter by language and specialty.'}
                 </p>
               </button>
               {!selectedPhysio && (
@@ -679,69 +685,14 @@ export default function PhysioListPage() {
         }}
       />
 
-      {physioPickerOpen && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4">
-          <button
-            type="button"
-            className="absolute inset-0"
-            aria-label="Close"
-            onClick={() => setPhysioPickerOpen(false)}
-          />
-          <div className="relative max-h-[90vh] w-full max-w-4xl overflow-hidden rounded-t-2xl bg-white shadow-2xl sm:rounded-2xl">
-            <div className="border-b border-gray-200 px-4 py-4 sm:px-6">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <h3 className="text-base font-semibold text-gray-900">Select physiotherapist</h3>
-                  <p className="mt-1 text-sm text-gray-500">Choose a registered physiotherapist for online consultation.</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setPhysioPickerOpen(false)}
-                  className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-800"
-                  aria-label="Close"
-                >
-                  ✕
-                </button>
-              </div>
-            </div>
-            <div className="max-h-[62vh] overflow-y-auto px-4 py-4 sm:px-6">
-              {physioLoading ? (
-                <ListSkeleton count={4} />
-              ) : availablePhysios.length === 0 ? (
-                <p className="py-8 text-center text-sm text-gray-500">
-                  No registered physiotherapists found for your location. Try changing location.
-                </p>
-              ) : (
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {availablePhysios.map((p) => (
-                    <PhysioCard
-                      key={p._id}
-                      physio={p}
-                      selected={String(selectedPhysioId) === String(p._id)}
-                      onSelect={() => setSelectedPhysioId(String(p._id))}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-            <div className="border-t border-gray-200 bg-gray-50 px-4 py-3 sm:px-6">
-              <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-                <Button type="button" variant="outline" onClick={() => setPhysioPickerOpen(false)} className="rounded-xl">
-                  Cancel
-                </Button>
-                <Button
-                  type="button"
-                  disabled={!selectedPhysioId}
-                  onClick={() => setPhysioPickerOpen(false)}
-                  className="rounded-xl"
-                >
-                  Use selected physiotherapist
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <OnlinePhysioPickerModal
+        open={physioPickerOpen}
+        onClose={() => setPhysioPickerOpen(false)}
+        physios={availablePhysios}
+        loading={physioLoading}
+        selectedId={selectedPhysioId}
+        onSelect={(id) => setSelectedPhysioId(String(id))}
+      />
       <WhatsAppSupportFab />
     </div>
     </>

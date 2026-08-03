@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { Link, useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
@@ -10,7 +10,7 @@ import PasswordInput from '../components/ui/PasswordInput'
 import { validateIndianMobile } from '../utils/phoneIndia'
 import { validateLiveField } from '../utils/liveFieldValidation'
 import { absoluteUrl } from '../utils/siteMeta'
-import { OTP_LENGTH } from '../constants/otp'
+import { OTP_LENGTH, OTP_RESEND_COOLDOWN_SECONDS } from '../constants/otp'
 
 export default function ForgotPasswordPage() {
   const navigate = useNavigate()
@@ -22,6 +22,7 @@ export default function ForgotPasswordPage() {
   const [error, setError] = useState('')
   const [debugOtp, setDebugOtp] = useState('')
   const [fieldErrors, setFieldErrors] = useState({})
+  const [resendIn, setResendIn] = useState(0)
 
   const inputCls =
     'h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-slate-900 shadow-sm outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20'
@@ -35,8 +36,19 @@ export default function ForgotPasswordPage() {
       .join(' ')
   }
 
-  async function sendCode(e) {
+  useEffect(() => {
+    if (resendIn <= 0) return undefined
+    const t = setTimeout(() => setResendIn((s) => Math.max(0, s - 1)), 1000)
+    return () => clearTimeout(t)
+  }, [resendIn])
+
+  function startResendCooldown() {
+    setResendIn(OTP_RESEND_COOLDOWN_SECONDS)
+  }
+
+  async function sendCode(e, { isResend = false } = {}) {
     e?.preventDefault()
+    if (isResend && resendIn > 0) return
     setError('')
     const pv = validateIndianMobile(phone)
     if (!pv.valid) {
@@ -47,8 +59,14 @@ export default function ForgotPasswordPage() {
     try {
       const res = await api.post('/auth/forgot-password', { phone: pv.normalized })
       if (res.data?.otp) setDebugOtp(res.data.otp)
-      toast.success(res.data?.message || 'Check your phone for the code')
+      toast.success(
+        isResend
+          ? 'If an account exists, a new code was sent on WhatsApp.'
+          : res.data?.message || 'If an account exists, a verification code was sent on WhatsApp.',
+      )
       setStep('otp')
+      startResendCooldown()
+      if (isResend) setOtp('')
     } catch (err) {
       setError(err.response?.data?.message || err.message || 'Could not send code')
     } finally {
@@ -115,19 +133,38 @@ export default function ForgotPasswordPage() {
   const ogImage = absoluteUrl('/og-default.png')
 
   const STEPS = [
-    { key: 'phone', n: 1, title: 'Enter your mobile', sub: "We'll send a verification code on WhatsApp to your registered number.", icon: (
-      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg>
-    )},
-    { key: 'otp', n: 2, title: 'Enter the code', sub: 'Check WhatsApp for the 4-digit verification code.', icon: (
-      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/><path d="M7 8h.01M12 8h.01M17 8h.01"/></svg>
-    )},
-    { key: 'password', n: 3, title: 'New password', sub: 'Choose a strong password with at least 6 characters.', icon: (
-      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-    )},
+    {
+      key: 'phone',
+      n: 1,
+      title: 'Enter your mobile',
+      sub: 'Enter your registered number. If it matches an account, we’ll send a WhatsApp code.',
+      icon: (
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg>
+      ),
+    },
+    {
+      key: 'otp',
+      n: 2,
+      title: 'Enter the code',
+      sub: 'If an account exists for this number, a verification code has been sent via WhatsApp.',
+      icon: (
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/><path d="M7 8h.01M12 8h.01M17 8h.01"/></svg>
+      ),
+    },
+    {
+      key: 'password',
+      n: 3,
+      title: 'New password',
+      sub: 'Choose a strong password with at least 6 characters.',
+      icon: (
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      ),
+    },
   ]
 
   const stepIdx = STEPS.findIndex((s) => s.key === step)
   const currentStep = STEPS[stepIdx]
+  const canResend = resendIn <= 0 && !loading
 
   return (
     <div className="relative min-h-screen bg-slate-50">
@@ -146,7 +183,6 @@ export default function ForgotPasswordPage() {
         <meta name="twitter:image" content={ogImage} />
       </Helmet>
 
-      {/* Ambient teal halo glows — matching mobile ForgotPasswordScreen */}
       <div className="pointer-events-none absolute inset-x-0 top-[-120px] h-[240px] sm:h-[380px] rounded-[190px] bg-[rgba(162,240,239,0.15)]" aria-hidden />
       <div className="pointer-events-none absolute left-[20%] top-[-50px] h-[140px] sm:h-[200px] w-[60%] rounded-[100px] bg-[rgba(13,107,107,0.04)]" aria-hidden />
 
@@ -168,8 +204,6 @@ export default function ForgotPasswordPage() {
       </header>
 
       <div className="relative z-10 mx-auto max-w-md px-4 py-8 sm:py-10">
-
-        {/* Step progress dots — matching mobile */}
         <div className="mb-8 flex items-center">
           {STEPS.map((s, idx) => {
             const isDone = idx < stepIdx
@@ -194,16 +228,14 @@ export default function ForgotPasswordPage() {
           })}
         </div>
 
-        {/* Per-step hero icon + heading */}
         <div className="mb-8 flex flex-col items-center gap-3 text-center">
           <div className="flex h-16 w-16 items-center justify-center rounded-[20px] border border-slate-100 bg-white text-teal-700 shadow-[0_4px_16px_rgba(13,148,136,0.08)]">
             {currentStep.icon}
           </div>
           <h1 className="type-hero">{currentStep.title}</h1>
-          <p className="text-sm leading-relaxed text-slate-500">{currentStep.sub}</p>
+          <p className="max-w-sm text-sm leading-relaxed text-slate-500">{currentStep.sub}</p>
         </div>
 
-        {/* Error banner */}
         {error && (
           <div className="mb-5 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900" role="alert">
             <svg className="mt-0.5 h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
@@ -211,10 +243,9 @@ export default function ForgotPasswordPage() {
           </div>
         )}
 
-        {/* Form card */}
         <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-md shadow-slate-900/5 sm:p-8">
           {step === 'phone' && (
-            <form onSubmit={sendCode} className="space-y-5">
+            <form onSubmit={(e) => sendCode(e)} className="space-y-5">
               <div>
                 <FieldLabel htmlFor="fp-phone" required className="mb-2 block text-sm font-medium text-slate-700">
                   Mobile number
@@ -264,13 +295,23 @@ export default function ForgotPasswordPage() {
                   </p>
                 ) : null}
               </div>
-              <button
-                type="button"
-                className="flex items-center gap-1 text-sm font-semibold text-teal-700 hover:opacity-80"
-                onClick={() => sendCode()}
-              >
-                Didn't receive it? <span className="underline underline-offset-2">Resend code</span>
-              </button>
+              <div className="text-sm text-slate-500">
+                {canResend ? (
+                  <button
+                    type="button"
+                    className="font-semibold text-teal-700 underline underline-offset-2 hover:opacity-80 disabled:opacity-50"
+                    onClick={() => sendCode(undefined, { isResend: true })}
+                    disabled={loading}
+                  >
+                    Didn&apos;t get it? Resend code
+                  </button>
+                ) : (
+                  <p className="font-medium text-slate-500">
+                    Resend available in{' '}
+                    <span className="tabular-nums text-teal-800">{resendIn}s</span>
+                  </p>
+                )}
+              </div>
               <Button type="submit" variant="primary" className="h-12 w-full gap-2 text-[15px]" loading={loading}>
                 {!loading && <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>}
                 Verify code
@@ -278,7 +319,13 @@ export default function ForgotPasswordPage() {
               <button
                 type="button"
                 className="w-full text-sm text-slate-500 hover:text-slate-800"
-                onClick={() => { setStep('phone'); setOtp(''); setDebugOtp(''); setError('') }}
+                onClick={() => {
+                  setStep('phone')
+                  setOtp('')
+                  setDebugOtp('')
+                  setError('')
+                  setResendIn(0)
+                }}
               >
                 Use a different number
               </button>

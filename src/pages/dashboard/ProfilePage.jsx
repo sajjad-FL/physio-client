@@ -18,6 +18,7 @@ import { validateAvatarFile } from '../../utils/onboardingValidation'
 import { MAX_UPLOAD_SIZE_LABEL } from '../../constants/uploadLimits.js'
 import { prepareUploadFile } from '../../utils/compressImage.js'
 import { useReferralMyCode } from '../../hooks/useReferral'
+import ClinicPortalStaffSection from '../../components/clinic/ClinicPortalStaffSection'
 
 const GENDERS = [
   { value: 'male', label: 'Male' },
@@ -134,6 +135,7 @@ export default function ProfilePage() {
   const isPhysio = role === 'physio'
   const isPatient = role === 'user'
   const isManager = role === 'care_manager'
+  const isClinicStaff = role === 'clinic_staff'
   const { referralRewardAmount, referralSignupBonusAmount } = useReferralMyCode(isPatient)
 
   const profileStrength = useMemo(() => {
@@ -636,6 +638,8 @@ export default function ProfilePage() {
             {saving ? 'Saving…' : 'Save changes'}
           </Button>
         </form>
+
+        {isClinicStaff ? <ClinicPortalStaffSection /> : null}
 
         {isPatient ? (
           <div className="mt-8 border-t border-gray-100 pt-6">

@@ -10,13 +10,14 @@ function normalizeIndiaPhone(phone) {
   return '91' + cleaned.slice(-10)
 }
 
-export function openWhatsApp(phone) {
+export function openWhatsApp(phone, message) {
   const number = normalizeIndiaPhone(phone)
   if (!number || number.length < 12) {
     toast.error('No valid phone number')
     return
   }
-  window.open(`https://wa.me/${number}`, '_blank', 'noopener,noreferrer')
+  const text = message != null && String(message).trim() ? `?text=${encodeURIComponent(String(message).trim())}` : ''
+  window.open(`https://wa.me/${number}${text}`, '_blank', 'noopener,noreferrer')
 }
 
 export function openSupportWhatsApp(message = SUPPORT_WHATSAPP_MESSAGE) {

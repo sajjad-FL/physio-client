@@ -12,6 +12,7 @@ import Pagination from '../../components/Pagination'
 import usePagination from '../../hooks/usePagination'
 import ListSkeleton from '../../components/ui/skeletons/ListSkeleton'
 import { ymdFromDate } from '../../components/physio/physioBookingHelpers'
+import { isProfileIncompleteError } from '../../utils/apiErrors'
 
 function physioInitial(name) {
   const s = (name || 'P').trim()
@@ -65,10 +66,12 @@ export default function DashboardBookings() {
       })
       setBookings(res.data?.data || [])
       applyMeta(res.data)
-    } catch {
-      toast.error('Could not load bookings')
+    } catch (err) {
       setBookings([])
       clearMeta()
+      if (!isProfileIncompleteError(err)) {
+        toast.error('Could not load bookings')
+      }
     }
   }, [page, pageSize, deferredSearch, filter, dateRange, applyMeta, clearMeta])
 

@@ -55,6 +55,7 @@ export default function InstallmentsCard({
   summary,
   payments,
   renderRowActions,
+  onRowClick,
   children,
   emptyMessage = 'No installments recorded yet.',
   balanceLabel = 'Pending',
@@ -145,8 +146,20 @@ export default function InstallmentsCard({
                 const chip = STATUS_CHIP[p.status] || 'bg-slate-100 text-slate-700 ring-slate-200'
                 const label = STATUS_LABEL[p.status] || p.status
                 const proofSrc = p.proofUrl ? assetUrl(p.proofUrl) : ''
+                const clickable = typeof onRowClick === 'function'
                 return (
-                  <tr key={p._id}>
+                  <tr
+                    key={p._id}
+                    className={clickable ? 'cursor-pointer transition hover:bg-slate-50/80' : undefined}
+                    onClick={
+                      clickable
+                        ? (e) => {
+                            if (e.target.closest('a,button')) return
+                            onRowClick(p)
+                          }
+                        : undefined
+                    }
+                  >
                     <td className="py-2 pr-3 align-top text-ink">
                       {formatDate(p.verifiedAt || p.collectedAt || p.createdAt)}
                     </td>

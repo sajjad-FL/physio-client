@@ -1,43 +1,76 @@
 import { Link } from 'react-router-dom'
-import { formatBookingVisitWithCondition, bookingCodeBadge } from '../../../utils/bookingDisplay'
-import { openSupportWhatsApp } from '../../../utils/physioContact'
+import {
+  formatBookingVisitWithCondition,
+  bookingCodeBadge,
+} from '../../../utils/bookingDisplay'
+import { formatBookingDateAndSlot } from '../../../utils/date'
+import { openSupportWhatsApp, openWhatsApp } from '../../../utils/physioContact'
 
 export default function PendingBookingView({ booking: b }) {
   const directTechnique = b.carePath === 'technique_direct'
   const managedTechnique = b.carePath === 'technique_managed'
   const isTechnique = directTechnique || managedTechnique
   const isClinic = b.serviceType === 'clinic'
+  const isOnline = b.serviceType === 'online'
   const clinicName = b.clinicId && typeof b.clinicId === 'object' ? b.clinicId.name : null
+  const physio = b.physioId && typeof b.physioId === 'object' ? b.physioId : null
+  const physioName = physio?.name || null
+  const physioPhone = physio?.phone || null
+  const whenLabel = formatBookingDateAndSlot(b.date, b.timeSlot)
   const serviceLabel = isTechnique
     ? isClinic
       ? 'Technique Clinic Visit'
       : 'Technique Home Visit'
     : isClinic
       ? 'Clinic Visit'
-      : b.serviceType === 'online'
+      : isOnline
         ? 'Online Consultation'
         : 'Home Visit'
   const bookingRef = bookingCodeBadge(b) || '—'
   const managerName =
     b.managerId && typeof b.managerId === 'object' ? b.managerId.name : null
-  const heading = isClinic
-    ? clinicName
-      ? 'Your clinic visit is confirmed'
-      : isTechnique
-        ? 'Technique clinic visit requested'
-        : 'Clinic visit requested'
-    : managerName
-      ? 'Your Care Manager is on it'
-      : 'We received your booking'
-  const subcopy = isClinic
-    ? clinicName
-      ? `Please visit ${clinicName} at your scheduled time. Our clinic team will guide you.`
-      : 'Our admin team is assigning a clinic for your appointment. You will be notified once it is confirmed.'
-    : managerName
-      ? `${managerName} will visit, prepare your plan, and coordinate your physiotherapist.`
-      : directTechnique
-        ? 'Our team is assigning a physiotherapist for your technique visit. You can pay online after assignment.'
-        : 'Our team is assigning a care manager for your home visit. You will be notified when your plan is ready.'
+  const heading = isOnline
+    ? physioName
+      ? 'Your online consultation is booked'
+      : 'We received your online booking'
+    : isClinic
+      ? clinicName
+        ? 'Your clinic visit is confirmed'
+        : isTechnique
+          ? 'Technique clinic visit requested'
+          : 'Clinic visit requested'
+      : managerName
+        ? 'Your Care Manager is on it'
+        : 'We received your booking'
+  const subcopy = isOnline
+    ? physioName
+      ? `${physioName} will call you on WhatsApp at your selected time${whenLabel && whenLabel !== '—' ? ` (${whenLabel})` : ''}. Please keep WhatsApp free.`
+      : 'We are confirming your physiotherapist for this online consultation. They will call you on WhatsApp at the scheduled time.'
+    : isClinic
+      ? clinicName
+        ? `Please visit ${clinicName} at your scheduled time. Our clinic team will guide you.`
+        : 'Our admin team is assigning a clinic for your appointment. You will be notified once it is confirmed.'
+      : managerName
+        ? `${managerName} will visit, prepare your plan, and coordinate your physiotherapist.`
+        : directTechnique
+          ? 'Our team is assigning a physiotherapist for your technique visit. You can pay online after assignment.'
+          : 'Our team is assigning a care manager for your home visit. You will be notified when your plan is ready.'
+  const statusLine = isOnline
+    ? physioName
+      ? 'Your physiotherapist will WhatsApp you at the selected time'
+      : 'Confirming your physiotherapist'
+    : 'Our team is reviewing your request'
+
+  function handleWhatsApp() {
+    if (isOnline && physioPhone) {
+      openWhatsApp(
+        physioPhone,
+        `Hi ${physioName || 'Doctor'}, I have an online consultation booked on PhysiOkhom for ${whenLabel || 'the scheduled slot'} (Booking ${bookingRef}).`,
+      )
+      return
+    }
+    openSupportWhatsApp()
+  }
 
   return (
     <div className="mx-auto max-w-lg space-y-6 py-2">
@@ -73,10 +106,22 @@ export default function PendingBookingView({ booking: b }) {
               <dd className="font-medium text-slate-900">{managerName}</dd>
             </div>
           ) : null}
+          {physioName ? (
+            <div className="flex justify-between gap-4 py-3">
+              <dt className="text-slate-500">Physiotherapist</dt>
+              <dd className="font-medium text-slate-900">{physioName}</dd>
+            </div>
+          ) : null}
           <div className="flex justify-between gap-4 py-3">
             <dt className="text-slate-500">Service</dt>
             <dd className="font-medium text-slate-900">{serviceLabel}</dd>
           </div>
+          {isOnline ? (
+            <div className="flex justify-between gap-4 py-3">
+              <dt className="text-slate-500">How you connect</dt>
+              <dd className="text-right font-medium text-slate-900">WhatsApp call from physio</dd>
+            </div>
+          ) : null}
         </dl>
       </div>
 
@@ -88,19 +133,26 @@ export default function PendingBookingView({ booking: b }) {
 
       <div className="flex items-center justify-center gap-2 text-sm text-slate-600">
         <span className="h-2 w-2 animate-pulse rounded-full bg-teal-500" />
-        Our team is reviewing your request
+        {statusLine}
       </div>
 
       <button
         type="button"
-        onClick={() => openSupportWhatsApp()}
+        onClick={handleWhatsApp}
         className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#25D366]/30 bg-[#25D366]/10 py-3 text-sm font-semibold text-[#128C7E] transition hover:bg-[#25D366]/15"
       >
         <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
           <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.435 9.884-9.883 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
         </svg>
-        Chat on WhatsApp
+        {isOnline && physioPhone
+          ? 'Message physiotherapist on WhatsApp'
+          : 'Chat on WhatsApp'}
       </button>
+      {isOnline ? (
+        <p className="text-center text-xs text-slate-500">
+          You do not need to start the call — your physiotherapist will WhatsApp you at the selected time.
+        </p>
+      ) : null}
     </div>
   )
 }

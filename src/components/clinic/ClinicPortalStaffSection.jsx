@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import { api } from '../../config/api'
-import ListSkeleton from '../../components/ui/skeletons/ListSkeleton'
-import Button from '../../components/ui/Button'
-import Modal from '../../components/ui/Modal'
-import CreateClinicStaffModal from '../../components/staff/CreateClinicStaffModal'
+import ListSkeleton from '../ui/skeletons/ListSkeleton'
+import Button from '../ui/Button'
+import Modal from '../ui/Modal'
+import CreateClinicStaffModal from '../staff/CreateClinicStaffModal'
 import { toastApiError } from '../../utils/formToast'
 
-export default function ClinicStaffPage() {
+/** Portal login management for clinic_staff (moved from /clinic/staff). */
+export default function ClinicPortalStaffSection() {
   const [items, setItems] = useState([])
   const [clinicName, setClinicName] = useState('')
   const [loading, setLoading] = useState(true)
@@ -51,10 +52,10 @@ export default function ClinicStaffPage() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="mt-8 border-t border-gray-100 pt-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-lg font-semibold text-slate-900">Clinic staff</h1>
+          <h2 className="text-base font-semibold text-slate-900">Portal access</h2>
           <p className="mt-1 text-sm text-slate-500">
             People who can open the clinic portal for{clinicName ? ` ${clinicName}` : ' your clinic'}.
           </p>
@@ -93,49 +94,51 @@ export default function ClinicStaffPage() {
         </div>
       </Modal>
 
-      {loading ? (
-        <ListSkeleton count={4} />
-      ) : (
-        <>
-          {error ? <p className="text-sm text-rose-600">{error}</p> : null}
-          {!items.length ? (
-            <p className="rounded-2xl border border-dashed border-slate-200 bg-white px-6 py-12 text-center text-sm text-slate-500">
-              No staff listed yet. Add someone who will help run the clinic.
-            </p>
-          ) : (
-            <ul className="divide-y divide-slate-100 overflow-hidden rounded-2xl border border-slate-200 bg-white">
-              {items.map((u) => (
-                <li key={u._id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-5">
-                  <div className="min-w-0">
-                    <p className="font-semibold text-slate-900">
-                      {u.name || 'No name'}
-                      {u.isSelf ? <span className="ml-2 text-xs font-medium text-slate-500">(you)</span> : null}
-                    </p>
-                    <p className="mt-0.5 text-sm tabular-nums text-slate-600">{u.phone || '—'}</p>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    {u.isWalletOwner ? (
-                      <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-900 ring-1 ring-amber-200">
-                        Wallet owner
-                      </span>
-                    ) : null}
-                    {!u.isSelf && !u.isWalletOwner ? (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="px-3 py-1.5 text-xs text-rose-700"
-                        onClick={() => setRemoveTarget(u)}
-                      >
-                        Remove
-                      </Button>
-                    ) : null}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </>
-      )}
+      <div className="mt-4">
+        {loading ? (
+          <ListSkeleton count={3} />
+        ) : (
+          <>
+            {error ? <p className="text-sm text-rose-600">{error}</p> : null}
+            {!items.length ? (
+              <p className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
+                No staff listed yet. Add someone who will help run the clinic.
+              </p>
+            ) : (
+              <ul className="divide-y divide-slate-100 overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                {items.map((u) => (
+                  <li key={u._id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-5">
+                    <div className="min-w-0">
+                      <p className="font-semibold text-slate-900">
+                        {u.name || 'No name'}
+                        {u.isSelf ? <span className="ml-2 text-xs font-medium text-slate-500">(you)</span> : null}
+                      </p>
+                      <p className="mt-0.5 text-sm tabular-nums text-slate-600">{u.phone || '—'}</p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {u.isWalletOwner ? (
+                        <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-900 ring-1 ring-amber-200">
+                          Wallet owner
+                        </span>
+                      ) : null}
+                      {!u.isSelf && !u.isWalletOwner ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="px-3 py-1.5 text-xs text-rose-700"
+                          onClick={() => setRemoveTarget(u)}
+                        >
+                          Remove
+                        </Button>
+                      ) : null}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </>
+        )}
+      </div>
     </div>
   )
 }

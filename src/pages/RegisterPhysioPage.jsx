@@ -24,6 +24,7 @@ import { normalizeIndianPhone } from '../utils/phoneIndia'
 import { validateLiveField } from '../utils/liveFieldValidation'
 import { PHYSIO_DEGREE_OPTIONS, isPhysioDegreeOption } from '../constants/physioQualification.js'
 import { ID_PROOF_TYPE_OPTIONS } from '../constants/idProofTypes.js'
+import { PHYSIO_LANGUAGE_VALUES } from '../constants/physioLanguages.js'
 import { absoluteUrl } from '../utils/siteMeta'
 import { MAX_UPLOAD_SIZE_LABEL } from '../constants/uploadLimits.js'
 import { formatPhysioDisplayName } from '../utils/physioDisplayName.js'
@@ -101,6 +102,7 @@ export default function RegisterPhysioPage() {
   const [specialization, setSpecialization] = useState('')
   const [serviceType, setServiceType] = useState('both')
   const [areas, setAreas] = useState('')
+  const [languages, setLanguages] = useState([])
 
   const [fCertificate, setFCertificate] = useState(null)
   const [fIdProof, setFIdProof] = useState(null)
@@ -316,6 +318,9 @@ export default function RegisterPhysioPage() {
           },
           { specializationOptional: true },
         )
+        if (!languages.length) {
+          errors.languages = 'Select at least one language'
+        }
         if (Object.keys(errors).length) {
           setFieldErrors(errors)
           const summary = firstValidationMessage(errors, 'Please complete your practice details.')
@@ -415,6 +420,7 @@ export default function RegisterPhysioPage() {
       fd.append('specialization', specialization.trim())
       fd.append('serviceType', serviceType)
       fd.append('areas', areas)
+      fd.append('languages', JSON.stringify(languages))
 
       fd.append('avatar', avatarFile)
       if (fCertificate) fd.append('certificate', fCertificate)
@@ -626,9 +632,7 @@ export default function RegisterPhysioPage() {
                 {fieldErrors.email ? <p className="mt-1 text-xs text-red-600">{fieldErrors.email}</p> : null}
               </div>
               <div>
-                <FieldLabel htmlFor="reg-dob" required>
-                  Date of birth
-                </FieldLabel>
+                <FieldLabel htmlFor="reg-dob">Date of birth</FieldLabel>
                 <input
                   id="reg-dob"
                   type="date"
@@ -926,6 +930,47 @@ export default function RegisterPhysioPage() {
                   <p className="mt-1 text-xs text-red-600">{fieldErrors.specialization}</p>
                 ) : null}
               </div>
+              <div className="sm:col-span-2">
+                <FieldLabel required>Languages spoken</FieldLabel>
+                <p className="mb-2 text-xs text-ink-muted">Select all languages you can use with patients.</p>
+                <div
+                  className={`grid grid-cols-2 gap-2 rounded-xl border p-3 sm:grid-cols-3 ${
+                    fieldErrors.languages ? 'border-red-300 bg-red-50/40' : 'border-slate-200 bg-slate-50/50'
+                  }`}
+                  role="group"
+                  aria-label="Languages spoken"
+                >
+                  {PHYSIO_LANGUAGE_VALUES.map((lang) => {
+                    const checked = languages.includes(lang)
+                    return (
+                      <label
+                        key={lang}
+                        className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-slate-800 hover:bg-white"
+                      >
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                          checked={checked}
+                          onChange={() => {
+                            setLanguages((prev) => {
+                              const next = checked ? prev.filter((l) => l !== lang) : [...prev, lang]
+                              setFieldErrors((errs) => ({
+                                ...errs,
+                                languages: next.length ? '' : 'Select at least one language',
+                              }))
+                              return next
+                            })
+                          }}
+                        />
+                        <span>{lang}</span>
+                      </label>
+                    )
+                  })}
+                </div>
+                {fieldErrors.languages ? (
+                  <p className="mt-1 text-xs text-red-600">{fieldErrors.languages}</p>
+                ) : null}
+              </div>
             </div>
           </section>
         )}
@@ -1080,6 +1125,12 @@ export default function RegisterPhysioPage() {
               <div className="flex justify-between gap-4 border-b border-border-subtle py-2">
                 <dt className="text-ink-muted">Specialization</dt>
                 <dd className="text-right font-medium text-ink">{specialization || '—'}</dd>
+              </div>
+              <div className="flex justify-between gap-4 border-b border-border-subtle py-2">
+                <dt className="text-ink-muted">Languages</dt>
+                <dd className="text-right font-medium text-ink">
+                  {languages.length ? languages.join(', ') : '—'}
+                </dd>
               </div>
               <div className="flex justify-between gap-4 border-b border-border-subtle py-2">
                 <dt className="text-ink-muted">Experience</dt>
