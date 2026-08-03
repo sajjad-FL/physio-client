@@ -167,7 +167,7 @@ function homeStructuredData({ siteBase, ogImage, areas }) {
       name: 'PhysiOkhom',
       alternateName: ['physiokhom'],
       url: `${siteBase}/`,
-      logo: `${siteBase}/physiokhom-logo.svg`,
+      logo: `${siteBase}/logo.png`,
       description: HOME_DESCRIPTION,
       image: ogImage,
       medicalSpecialty: 'Physiotherapy',

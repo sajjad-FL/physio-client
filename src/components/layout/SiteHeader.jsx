@@ -25,11 +25,11 @@ export default function SiteHeader() {
           onClick={() => setMobileOpen(false)}
         >
           <img
-            src="/logo.svg"
-            alt="PhysiOkhom Logo"
-            className="h-9 w-9 shrink-0 object-contain transition-transform duration-200 motion-safe:hover:scale-105 sm:h-12 sm:w-12"
+            src="/logo.png"
+            alt="PhysiOkhom"
+            className="h-10 w-10 shrink-0 object-contain transition-transform duration-200 motion-safe:hover:scale-105 sm:h-12 sm:w-12"
           />
-          <span className="truncate">PhysiOkhom</span>
+          <span className="sr-only">PhysiOkhom</span>
         </Link>
 
         <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">

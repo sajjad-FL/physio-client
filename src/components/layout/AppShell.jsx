@@ -68,11 +68,11 @@ export default function AppShell({
       <div className="flex h-16 shrink-0 items-center gap-2 border-b border-slate-100 px-4 lg:h-[4.25rem]">
         <Link to="/" className="flex min-w-0 items-center gap-2" onClick={() => setMobileOpen(false)}>
           <img
-            src="/logo.svg"
-            alt="PhysiOkhom Logo"
-            className="h-12 w-12 shrink-0 object-contain transition-transform duration-200 motion-safe:group-hover:scale-105"
+            src="/logo.png"
+            alt="PhysiOkhom"
+            className="h-11 w-11 shrink-0 object-contain transition-transform duration-200 motion-safe:group-hover:scale-105"
           />
-          <span className="truncate text-[15px] font-semibold text-slate-900">{brand}</span>
+          <span className="sr-only">{brand || 'PhysiOkhom'}</span>
         </Link>
         {badge && (
           <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
