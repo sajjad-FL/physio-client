@@ -43,27 +43,22 @@ import { absoluteUrl, primaryServiceAreas, primaryServiceAreasSentence, siteOrig
 import { getToken } from '../auth/session'
 import { api } from '../config/api'
 
-// Import newly copied assets
-import specialtyOrthopedic from '../assets/specialty_orthopedic.png'
-import specialtyNeuro from '../assets/specialty_neuro.png'
-import specialtyKnee from '../assets/specialty_knee.png'
-import specialtyPostOp from '../assets/specialty_post_op.png'
-import specialtyNeck from '../assets/specialty_neck.png'
-import specialtyOther from '../assets/specialty_other.png'
-
-import techniqueCupping   from '../assets/technique_cupping.png'
-import techniqueNeedling  from '../assets/technique_needling.png'
-import techniquePediatric from '../assets/technique_pediatric.png'
-import techniqueElderly   from '../assets/technique_elderly.png'
-import techniqueKinesio   from '../assets/technique_kinesio.png'
-import techniqueIastm     from '../assets/technique_iastm.png'
-
-import illustrationOther  from '../assets/illustration_other.png'
-
-import illustrationBackPain from '../assets/illustration_back_pain.png'
-import illustrationKneePain from '../assets/illustration_knee_pain.png'
-import illustrationNeckPain from '../assets/illustration_neck_pain.png'
-import illustrationNeuroRehab from '../assets/illustration_neuro_rehab.png'
+// Stable public URLs (not Vite-hashed) so prod nginx always finds them next to logo.png
+const specialtyOrthopedic = '/images/specialty_orthopedic.png'
+const specialtyNeuro = '/images/specialty_neuro.png'
+const specialtyPostOp = '/images/specialty_post_op.png'
+const specialtyOther = '/images/specialty_other.png'
+const techniqueCupping = '/images/technique_cupping.png'
+const techniqueNeedling = '/images/technique_needling.png'
+const techniquePediatric = '/images/technique_pediatric.png'
+const techniqueElderly = '/images/technique_elderly.png'
+const techniqueKinesio = '/images/technique_kinesio.png'
+const techniqueIastm = '/images/technique_iastm.png'
+const illustrationOther = '/images/illustration_other.png'
+const illustrationBackPain = '/images/illustration_back_pain.png'
+const illustrationKneePain = '/images/illustration_knee_pain.png'
+const illustrationNeckPain = '/images/illustration_neck_pain.png'
+const illustrationNeuroRehab = '/images/illustration_neuro_rehab.png'
 
 /* ─── SEO ──────────────────────────────────────────────────────────────── */
 

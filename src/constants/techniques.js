@@ -1,12 +1,13 @@
-import imgCupping from '../assets/technique_cupping.png'
-import imgNeedling from '../assets/technique_needling.png'
-import imgKinesio from '../assets/technique_kinesio.png'
-import imgIastm from '../assets/technique_iastm.png'
-
 /**
  * Treatment techniques for Book-by-Need detail pages and direct home or clinic booking.
  * `bookingIssue` must match ISSUE_OPTIONS / server TECHNIQUE_ISSUES.
+ * Images live in `public/images/` (stable URLs for production).
  */
+const imgCupping = '/images/technique_cupping.png'
+const imgNeedling = '/images/technique_needling.png'
+const imgKinesio = '/images/technique_kinesio.png'
+const imgIastm = '/images/technique_iastm.png'
+
 export const TECHNIQUES = [
   {
     slug: 'cupping-therapy',
@@ -29,8 +30,8 @@ export const TECHNIQUES = [
         a: 'Light circular marks are common and usually fade in a few days. Your physiotherapist explains what to expect before starting.',
       },
       {
-        q: 'Is this a clinic visit or at home?',
-        a: 'You can book either a home visit or a clinic visit. If you already have an active recovery plan with a care manager, they handle physio assignment. Otherwise our team assigns a physiotherapist directly.',
+        q: 'Is it painful?',
+        a: 'Most people feel pressure or warmth, not sharp pain. Intensity is adjusted to your comfort.',
       },
     ],
   },
@@ -43,24 +44,20 @@ export const TECHNIQUES = [
     bg: '#f5f3ff',
     border: '#ddd6fe',
     intro:
-      'Dry needling targets tight muscle trigger points with fine sterile needles to reduce pain and restore movement.',
+      'Dry needling uses fine sterile needles to release tight muscle trigger points and reduce referred pain — often for neck, back, and shoulder tightness.',
     expect: [
-      'Discussion of your symptoms and any needle concerns',
-      'Precise needling of selected muscle points',
-      'Gentle movement advice afterwards',
+      'Consent and a clear explanation of the technique',
+      'Brief needle insertion into targeted trigger points',
+      'Gentle movement or stretch advice afterward',
     ],
     faq: [
       {
         q: 'Is dry needling the same as acupuncture?',
-        a: 'They use similar needles but different clinical goals. Dry needling focuses on muscle trigger points based on physiotherapy assessment.',
+        a: 'No. Dry needling is based on Western anatomy and trigger-point theory; acupuncture follows traditional Chinese medicine meridians.',
       },
       {
-        q: 'Will it hurt?',
-        a: 'You may feel a brief twitch or ache. Most people find it tolerable; tell your physiotherapist if anything feels too sharp.',
-      },
-      {
-        q: 'Is this a clinic visit or at home?',
-        a: 'You can book either a home visit or a clinic visit. If you already have an active recovery plan with a care manager, they handle physio assignment. Otherwise our team assigns a physiotherapist directly.',
+        q: 'Will I be sore afterward?',
+        a: 'Mild muscle ache for a day is common. Your physio will advise ice, heat, or light activity as needed.',
       },
     ],
   },
@@ -75,22 +72,18 @@ export const TECHNIQUES = [
     intro:
       'Kinesiology tape supports muscles and joints while you move — useful for sports, posture strain, and mild swelling.',
     expect: [
-      'Assessment of the area that needs support',
-      'Skin-safe tape applied in a specific pattern',
-      'Guidance on wear time and activity',
+      'Skin prep and placement mapped to your injury or goal',
+      'Tape applied so you can still move freely',
+      'Wear-time guidance (often 2–5 days)',
     ],
     faq: [
       {
-        q: 'How long does the tape stay on?',
-        a: 'Often 3–5 days depending on activity and skin sensitivity. Your physiotherapist will advise for your case.',
+        q: 'Can I shower with the tape on?',
+        a: 'Usually yes — pat dry afterward. Your physiotherapist will confirm based on the tape used.',
       },
       {
-        q: 'Can I shower with it on?',
-        a: 'Yes, with care — pat dry rather than rub. Avoid oils and lotions on the taped skin.',
-      },
-      {
-        q: 'Is this a clinic visit or at home?',
-        a: 'You can book either a home visit or a clinic visit. If you already have an active recovery plan with a care manager, they handle physio assignment. Otherwise our team assigns a physiotherapist directly.',
+        q: 'Does the tape replace exercises?',
+        a: 'No. Tape supports recovery; exercises and load management remain the core of rehab.',
       },
     ],
   },
@@ -105,28 +98,29 @@ export const TECHNIQUES = [
     intro:
       'IASTM (Instrument Assisted Soft Tissue Mobilization) uses specialized tools to break down scar tissue, ease fascial restrictions, and improve mobility in tight or overused areas.',
     expect: [
-      'Assessment of the restricted or painful soft tissue',
-      'Tool-assisted strokes along the muscle and fascia (often with redness)',
-      'After-care tips for soreness and activity the same day',
+      'Assessment of restricted soft tissue',
+      'Tool-assisted strokes over the affected area',
+      'Follow-up mobility drills or stretching',
     ],
     faq: [
       {
-        q: 'Will my skin look red afterwards?',
-        a: 'Mild redness is common and usually settles within a day or two. Your physiotherapist adjusts pressure to your comfort.',
+        q: 'Will my skin get red?',
+        a: 'Temporary redness is common. Significant bruising should be rare when pressure is controlled.',
       },
       {
-        q: 'Is this a clinic visit or at home?',
-        a: 'You can book either a home visit or a clinic visit. If you already have an active recovery plan with a care manager, they handle physio assignment. Otherwise our team assigns a physiotherapist directly.',
+        q: 'Who is IASTM for?',
+        a: 'People with chronic tightness, tendon irritation, or post-injury scar restrictions often benefit — your physio decides if it fits your case.',
       },
     ],
   },
 ]
 
 export function getTechniqueBySlug(slug) {
-  return TECHNIQUES.find((t) => t.slug === String(slug || '').trim()) || null
+  return TECHNIQUES.find((t) => t.slug === slug) || null
 }
 
 export function getTechniqueByIssue(issue) {
-  const key = String(issue || '').trim()
-  return TECHNIQUES.find((t) => t.bookingIssue === key) || null
+  const key = String(issue || '').trim().toLowerCase()
+  if (!key) return null
+  return TECHNIQUES.find((t) => String(t.bookingIssue).toLowerCase() === key) || null
 }
