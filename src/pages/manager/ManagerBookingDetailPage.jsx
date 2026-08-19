@@ -14,6 +14,7 @@ import { hasComplimentaryAssessmentVisit } from '../../components/physio/physioB
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import { resolveFileUrl } from '../../utils/serverOrigin'
+import { distanceKm, parseLatLng } from '../../utils/geoDistance'
 import { buildSessionPaymentMap } from '../../utils/sessionPaymentMap'
 import { billingTypeLabel, paymentAmountLabel, bookingCodeBadge } from '../../utils/bookingDisplay'
 import { managerWorkflowMeta } from '../../utils/managerWorkflow'
@@ -337,6 +338,34 @@ export default function ManagerBookingDetailPage() {
     () => physios.find((p) => String(p._id) === String(assignPhysioId)),
     [physios, assignPhysioId],
   )
+
+  const clinicsByDistance = useMemo(() => {
+    const patient = parseLatLng(booking?.userId?.coordinates)
+    const rows = (clinics || []).map((c) => {
+      const cc = parseLatLng(c.coordinates)
+      let distKm = null
+      if (patient && cc) distKm = distanceKm(patient.lat, patient.lng, cc.lat, cc.lng)
+      return { c, distKm }
+    })
+    rows.sort((a, bRow) => {
+      if (a.distKm == null && bRow.distKm == null) {
+        return String(a.c.name || '').localeCompare(String(bRow.c.name || ''))
+      }
+      if (a.distKm == null) return 1
+      if (bRow.distKm == null) return -1
+      return a.distKm - bRow.distKm
+    })
+    return rows
+  }, [clinics, booking?.userId?.coordinates])
+
+  const assignedClinicDistanceKm = useMemo(() => {
+    const clinic = typeof booking?.clinicId === 'object' ? booking.clinicId : null
+    if (!clinic) return null
+    const patient = parseLatLng(booking?.userId?.coordinates)
+    const cc = parseLatLng(clinic.coordinates)
+    if (!patient || !cc) return null
+    return distanceKm(patient.lat, patient.lng, cc.lat, cc.lng)
+  }, [booking?.clinicId, booking?.userId?.coordinates])
 
   async function saveAssessment() {
     const err = validateAssessmentData(assessmentData)
@@ -721,8 +750,21 @@ export default function ManagerBookingDetailPage() {
                 {b.clinicId ? (
                   <p className="text-sm text-slate-700">
                     Assigned: {typeof b.clinicId === 'object' ? b.clinicId.name : 'Clinic'}
+                    {assignedClinicDistanceKm != null
+                      ? ` · ${assignedClinicDistanceKm.toFixed(1)} km from patient`
+                      : ''}
                   </p>
                 ) : null}
+                {!parseLatLng(b?.userId?.coordinates) ? (
+                  <p className="text-xs text-slate-500">
+                    Patient location missing — distances unavailable until the patient has coordinates.
+                  </p>
+                ) : (
+                  <p className="text-xs text-slate-500">
+                    Clinics sorted nearest to patient first
+                    {b.userId?.location ? ` (${b.userId.location})` : ''}.
+                  </p>
+                )}
                 <div className="flex flex-col gap-2 sm:flex-row">
                   <select
                     value={assignClinicId}
@@ -730,9 +772,11 @@ export default function ManagerBookingDetailPage() {
                     className="h-11 flex-1 rounded-xl border border-slate-200 bg-white px-3 text-sm"
                   >
                     <option value="">Choose clinic…</option>
-                    {clinics.map((c) => (
+                    {clinicsByDistance.map(({ c, distKm }) => (
                       <option key={c._id} value={c._id}>
-                        {c.name}
+                        {distKm != null
+                          ? `${c.name} · ${distKm.toFixed(1)} km`
+                          : `${c.name} · distance unknown`}
                       </option>
                     ))}
                   </select>

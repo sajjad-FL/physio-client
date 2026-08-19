@@ -777,7 +777,7 @@ export default function HomePage() {
                       3
                     </div>
                     <div>
-                      <h4 className="font-bold text-sm text-slate-900 group-hover:text-teal-700 transition-colors">Book a home visit</h4>
+                      <h4 className="font-bold text-sm text-slate-900 group-hover:text-teal-700 transition-colors">Book an appointment</h4>
                       <p className="text-xs text-slate-500 mt-1">Pick a date and slot — we assign your Care Manager, then a physiotherapist after plan consent.</p>
                     </div>
                     <ChevronRight size={14} className="text-slate-400 group-hover:translate-x-0.5 transition-transform ml-auto shrink-0 self-center" />
@@ -1093,7 +1093,7 @@ export default function HomePage() {
                 {
                   n: 1,
                   Icon: Calendar,
-                  title: 'Book a home visit',
+                  title: 'Book an appointment',
                   body: 'Pick a date and time slot, share your concern and location. No online payment needed to reserve the slot.',
                   badge: 'Slot reserved',
                   badgeCls: 'text-teal-700 bg-teal-50',
@@ -1623,7 +1623,7 @@ export default function HomePage() {
                 to="/book"
                 className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-teal-600 px-8 text-base font-semibold text-white shadow-lg hover:bg-teal-700"
               >
-                Book a home visit
+                Book an appointment
                 <ArrowRight size={16} />
               </Link>
               <Link

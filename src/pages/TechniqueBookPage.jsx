@@ -328,22 +328,20 @@ export default function TechniqueBookPage() {
           <FieldLabel required={true} className={`${labelCls} mt-4`}>
             Time slot
           </FieldLabel>
-          <div className="flex flex-wrap gap-2">
+          <select
+            id="technique-time-slot"
+            value={timeSlot}
+            onChange={(e) => setTimeSlot(e.target.value)}
+            required
+            className="h-11 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm text-gray-900 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20"
+          >
+            <option value="">Select a time</option>
             {selectableSlots.map((s) => (
-                <button
-                  key={s.timeSlot}
-                  type="button"
-                  onClick={() => setTimeSlot(s.timeSlot)}
-                  className={`rounded-xl px-3 py-2 text-sm font-medium ring-1 transition ${
-                    timeSlot === s.timeSlot
-                      ? 'bg-teal-600 text-white ring-teal-600'
-                      : 'bg-white text-slate-700 ring-slate-200 hover:bg-slate-50'
-                  }`}
-                >
-                  {formatBookingTimeSlot(s.timeSlot)}
-                </button>
-              ))}
-          </div>
+              <option key={s.timeSlot} value={s.timeSlot}>
+                {formatBookingTimeSlot(s.timeSlot)}
+              </option>
+            ))}
+          </select>
           {selectableSlots.length === 0 ? (
             <p className="mt-2 text-xs text-slate-500">
               {date === todayISO()

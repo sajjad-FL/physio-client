@@ -463,7 +463,7 @@ export default function DashboardHome() {
                 </svg>
               </div>
               <div className="flex-1">
-                <p className="text-[15px] font-bold text-teal-700">Book a home visit</p>
+                <p className="text-[15px] font-bold text-teal-700">Book an appointment</p>
                 <p className="text-xs text-slate-500">Help is one tap away — verified physiotherapists near you</p>
               </div>
               <svg
