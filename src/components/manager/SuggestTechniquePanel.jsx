@@ -148,6 +148,15 @@ export default function SuggestTechniquePanel({ sourceBookingId, disabled = fals
       toast.error('Pick a time for every session')
       return
     }
+    const seenSlots = new Set()
+    for (let i = 0; i < sessionCount; i++) {
+      const key = `${visitDates[i]}|${visitTimes[i]}`
+      if (seenSlots.has(key)) {
+        toast.error('Each visit needs a unique date and time — duplicates are not allowed')
+        return
+      }
+      seenSlots.add(key)
+    }
     setBusy(true)
     try {
       const res = await api.post(`/manager/bookings/${sourceBookingId}/suggest-technique`, {

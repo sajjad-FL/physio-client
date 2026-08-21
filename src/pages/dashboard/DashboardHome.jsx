@@ -6,7 +6,7 @@ import toast from 'react-hot-toast'
 import Skeleton from '../../components/ui/Skeleton'
 import { bookingStatusBadge } from './dashboardUtils'
 import { formatBookingDateAndSlot } from '../../utils/date'
-import { bookingConditionLabel } from '../../utils/bookingDisplay'
+import { bookingConditionLabel, resolveBookingDisplayVisit } from '../../utils/bookingDisplay'
 import { getTechniqueByIssue } from '../../constants/techniques'
 import { pickNextSession, todayYmd, normalizeSessionRows, listSameDaySiblings } from '../../components/physio/physioBookingHelpers'
 import ServicesSection from '../../components/dashboard/ServicesSection'
@@ -129,7 +129,10 @@ function CareList({ bookings, emptyTitle, emptyHint }) {
                     {technique ? 'Technique' : 'Care plan'}
                   </span>
                   <p className="text-[13px] font-bold leading-snug text-slate-900">
-                    {formatBookingDateAndSlot(b.date, b.timeSlot)}
+                    {(() => {
+                      const slot = resolveBookingDisplayVisit(b)
+                      return formatBookingDateAndSlot(slot.date, slot.time)
+                    })()}
                     {condition ? <span className="font-normal text-slate-500"> ({condition})</span> : null}
                   </p>
                 </div>

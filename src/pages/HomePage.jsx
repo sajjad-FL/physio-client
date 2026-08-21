@@ -33,6 +33,11 @@ import {
 } from 'lucide-react'
 import { ISSUE_OPTIONS, ISSUE_OTHER_SENTINEL } from '../constants/issues'
 import { SERVICE_CITIES } from '../constants/serviceCities'
+import {
+  SUPPORT_PHONE,
+  SUPPORT_WHATSAPP_MESSAGE,
+  SUPPORT_WHATSAPP_NUMBER,
+} from '../constants/supportContact'
 import SiteHeader from '../components/layout/SiteHeader'
 import { usePricingSettings, FALLBACK_PRICING_SETTINGS } from '../hooks/usePricingSettings'
 import { buildPlanTierCards } from '../utils/planTierDisplay'
@@ -847,7 +852,7 @@ export default function HomePage() {
 
                         <div className="flex sm:flex-col gap-2 shrink-0">
                           <a
-                            href="tel:+918453580556"
+                            href={`tel:${SUPPORT_PHONE}`}
                             className="flex-1 sm:flex-initial inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 text-xs font-bold text-slate-700 hover:bg-slate-50"
                           >
                             <PhoneCall size={11} />
@@ -1305,7 +1310,7 @@ export default function HomePage() {
         <section className="py-8 bg-slate-50 border-b border-slate-200">
           <div className="max-w-4xl mx-auto px-4">
             <a
-              href="https://wa.me/918453580556?text=Hello%20PhysiOkhom%2C%20I%20need%20assistance%20with%20booking%20a%20physiotherapist%20session."
+              href={`https://wa.me/${SUPPORT_WHATSAPP_NUMBER}?text=${encodeURIComponent(SUPPORT_WHATSAPP_MESSAGE)}`}
               target="_blank"
               rel="noopener noreferrer"
               className="flex flex-col sm:flex-row items-center justify-between p-6 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-3xl shadow-sm border border-emerald-500/30 hover:shadow-md transition-all group"

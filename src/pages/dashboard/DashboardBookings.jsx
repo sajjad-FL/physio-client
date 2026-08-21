@@ -5,7 +5,7 @@ import toast from 'react-hot-toast'
 import { bookingStatusBadge, paymentBadge } from './dashboardUtils'
 import EmptyState from '../../components/ui/EmptyState'
 import { formatBookingDateAndSlot } from '../../utils/date'
-import { bookingConditionLabel, bookingCodeBadge, serviceTypeLabel } from '../../utils/bookingDisplay'
+import { bookingConditionLabel, bookingCodeBadge, serviceTypeLabel, resolveBookingDisplayVisit } from '../../utils/bookingDisplay'
 import PatientBookingsFilterDrawer from '../../components/dashboard/PatientBookingsFilterDrawer'
 import PatientBookingsToolbar from '../../components/dashboard/PatientBookingsToolbar'
 import Pagination from '../../components/Pagination'
@@ -184,7 +184,8 @@ export default function DashboardBookings() {
               {rows.map((b) => {
                 const st = bookingStatusBadge(b.status, b.sessionStatus, b.paymentStatus, b.planStatus)
                 const pay = paymentBadge(b.paymentStatus)
-                const visit = formatBookingDateAndSlot(b.date, b.timeSlot)
+                const visitSlot = resolveBookingDisplayVisit(b)
+                const visit = formatBookingDateAndSlot(visitSlot.date, visitSlot.time)
                 const condition = bookingConditionLabel(b)
                 const physioName = b.physioId?.name ?? 'Physiotherapist'
 

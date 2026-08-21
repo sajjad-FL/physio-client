@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import {
   formatBookingVisitWithCondition,
   bookingCodeBadge,
+  resolveBookingDisplayVisit,
 } from '../../../utils/bookingDisplay'
 import { formatBookingDateAndSlot } from '../../../utils/date'
 import { openSupportWhatsApp, openWhatsApp } from '../../../utils/physioContact'
@@ -16,7 +17,10 @@ export default function PendingBookingView({ booking: b }) {
   const physio = b.physioId && typeof b.physioId === 'object' ? b.physioId : null
   const physioName = physio?.name || null
   const physioPhone = physio?.phone || null
-  const whenLabel = formatBookingDateAndSlot(b.date, b.timeSlot)
+  const whenLabel = (() => {
+    const slot = resolveBookingDisplayVisit(b)
+    return formatBookingDateAndSlot(slot.date, slot.time)
+  })()
   const serviceLabel = isTechnique
     ? isClinic
       ? 'Technique Clinic Visit'
