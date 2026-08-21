@@ -5,6 +5,7 @@ import CityLandingPage from './pages/CityLandingPage'
 import ConditionCityLandingPage from './pages/ConditionCityLandingPage'
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage'
 import NearMeHubPage from './pages/NearMeHubPage'
+import SeoKeywordLandingPage from './pages/SeoKeywordLandingPage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
@@ -101,6 +102,10 @@ export default function App() {
         <Route path="/near-me-physio" element={<NearMeHubPage />} />
         <Route path="/near-me-physio/:city" element={<NearMeHubPage />} />
         <Route path="/near-me-physio/:city/:locality" element={<NearMeHubPage />} />
+        <Route path="/physio-home" element={<SeoKeywordLandingPage />} />
+        <Route path="/physio-home-assam" element={<SeoKeywordLandingPage />} />
+        <Route path="/physio-home-kokrajhar" element={<SeoKeywordLandingPage />} />
+        <Route path="/physio-in-kokrajhar" element={<Navigate to="/physio-in/kokrajhar" replace />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />

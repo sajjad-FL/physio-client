@@ -58,29 +58,26 @@ export default function PhysioDisputesPage() {
             return (
               <li
                 key={d._id}
-                className="surface-card rounded-2xl p-5 shadow-sm ring-1 ring-border-subtle/80"
+                className="surface-card rounded-2xl p-4 shadow-sm ring-1 ring-border-subtle/80 sm:p-5"
               >
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <p className="font-semibold text-ink">{d.reason}</p>
-                    <p className="mt-1 text-sm text-ink-muted">
-                      {b?.date} {formatBookingTimeSlot(b?.timeSlot)} · {b?.userId?.name} ·{' '}
-                      {d.raisedBy === 'physio' ? 'You raised' : 'Patient raised'}
-                    </p>
-                    <p className="mt-3 text-sm leading-relaxed text-ink">{d.description}</p>
-                    {d.resolution ? (
-                      <p className="mt-3 rounded-lg bg-canvas px-3 py-2 text-sm text-ink-muted">
-                        <span className="font-medium text-ink">Resolution: </span>
-                        {d.resolution}
-                      </p>
-                    ) : null}
-                  </div>
-                  <span
-                    className={`rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ${disputeBadge(d.status)}`}
-                  >
-                    {d.status.replace(/_/g, ' ')}
-                  </span>
-                </div>
+                <span
+                  className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ${disputeBadge(d.status)}`}
+                >
+                  {d.status.replace(/_/g, ' ')}
+                </span>
+
+                <p className="mt-3 font-semibold text-ink">{d.reason}</p>
+                <p className="mt-1 text-sm text-ink-muted">
+                  {b?.date} {formatBookingTimeSlot(b?.timeSlot)} · {b?.userId?.name} ·{' '}
+                  {d.raisedBy === 'physio' ? 'You raised' : 'Patient raised'}
+                </p>
+                <p className="mt-3 text-sm leading-relaxed text-ink">{d.description}</p>
+                {d.resolution ? (
+                  <p className="mt-3 rounded-lg bg-canvas px-3 py-2 text-sm text-ink-muted">
+                    <span className="font-medium text-ink">Resolution: </span>
+                    {d.resolution}
+                  </p>
+                ) : null}
               </li>
             )
           })}

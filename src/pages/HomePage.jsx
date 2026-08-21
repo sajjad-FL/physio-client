@@ -475,7 +475,7 @@ export default function HomePage() {
         <meta property="og:type" content="website" />
         <meta property="og:site_name" content="PhysiOkhom" />
         <meta name="application-name" content="PhysiOkhom" />
-        <meta name="keywords" content="PhysiOkhom, physiokhom, home visit physiotherapy, clinic physiotherapy, online physiotherapy consultation, physiotherapist near me, physiotherapist at home Assam, back pain physiotherapy, knee pain physiotherapy" />
+        <meta name="keywords" content="PhysiOkhom, physiokhom, home visit physiotherapy, clinic physiotherapy, online physiotherapy consultation, physiotherapist near me, physiotherapist at home Assam, back pain physiotherapy, knee pain physiotherapy, physio home, physio home Assam, physio home Kokrajhar, physio in Kokrajhar, physiotherapist in Kokrajhar" />
         <meta property="og:title" content={HOME_TITLE} />
         <meta property="og:description" content={HOME_DESCRIPTION} />
         <meta property="og:url" content={canonical} />

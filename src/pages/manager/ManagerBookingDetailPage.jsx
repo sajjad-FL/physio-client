@@ -685,7 +685,7 @@ export default function ManagerBookingDetailPage() {
               <div className="space-y-3">
                 <p className="text-sm text-slate-600">Pick a verified therapist in the patient&apos;s zone.</p>
                 {selectedPhysioForAssign ? (
-                  <div className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 p-3">
+                  <div className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
                     <div className="h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-slate-100">
                       {resolveFileUrl(selectedPhysioForAssign.avatar) ? (
                         <img src={resolveFileUrl(selectedPhysioForAssign.avatar)} alt="" className="h-full w-full object-cover" />
@@ -710,21 +710,12 @@ export default function ManagerBookingDetailPage() {
                       type="button"
                       disabled={busy}
                       onClick={() => setAssignModalOpen(true)}
-                      className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-800 hover:bg-slate-50"
+                      className="h-9 shrink-0 rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-800 hover:bg-slate-50"
                     >
                       Change
                     </button>
                   </div>
-                ) : (
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() => setAssignModalOpen(true)}
-                    className="w-full rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-4 text-left text-sm font-medium hover:border-teal-300 hover:bg-teal-50/40 sm:w-auto sm:min-w-[260px]"
-                  >
-                    Choose physiotherapist…
-                  </button>
-                )}
+                ) : null}
                 <AdminAssignPhysioModal
                   key={b?._id ? `mgr-assign-${b._id}` : `mgr-assign-${id}`}
                   open={assignModalOpen}
@@ -735,9 +726,26 @@ export default function ManagerBookingDetailPage() {
                   onConfirmSelect={(physioId) => setAssignPhysioId(physioId)}
                   profileTo={(physioId) => `/physician/${physioId}`}
                 />
-                <Button type="button" disabled={busy || !assignPhysioId} onClick={assignPhysio}>
-                  Assign physio
-                </Button>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-stretch">
+                  {!selectedPhysioForAssign ? (
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => setAssignModalOpen(true)}
+                      className="flex h-11 min-h-11 flex-1 items-center rounded-xl border border-slate-200 bg-white px-3 text-left text-sm text-slate-500 shadow-sm transition hover:border-teal-300 hover:bg-teal-50/40"
+                    >
+                      Choose physiotherapist…
+                    </button>
+                  ) : null}
+                  <Button
+                    type="button"
+                    disabled={busy || !assignPhysioId}
+                    onClick={assignPhysio}
+                    className={`h-11 min-h-11 w-full shrink-0 px-5 sm:w-auto ${selectedPhysioForAssign ? 'sm:ml-auto' : ''}`}
+                  >
+                    Assign physio
+                  </Button>
+                </div>
               </div>
             ) : null}
 
@@ -780,7 +788,12 @@ export default function ManagerBookingDetailPage() {
                       </option>
                     ))}
                   </select>
-                  <Button type="button" disabled={busy || !assignClinicId} onClick={assignClinic}>
+                  <Button
+                    type="button"
+                    disabled={busy || !assignClinicId}
+                    onClick={assignClinic}
+                    className="h-11 min-h-11 w-full shrink-0 px-5 sm:w-auto"
+                  >
                     Assign clinic
                   </Button>
                 </div>

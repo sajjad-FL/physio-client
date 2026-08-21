@@ -5,6 +5,7 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { SERVICE_CITIES } from './src/constants/serviceCities.js'
 import { CONDITION_SLUGS } from './src/constants/conditions.js'
+import { SEO_KEYWORD_PATHS } from './src/constants/seoKeywordPages.js'
 
 /**
  * Writes dist/robots.txt and dist/sitemap.xml after build.
@@ -56,7 +57,15 @@ Sitemap: ${base}/sitemap.xml
 
       fs.writeFileSync(path.join(distDir, 'robots.txt'), robotsBody + robotsExtra, 'utf8')
 
-      const staticPaths = ['/', '/login', '/register', '/forgot-password', '/register-physio', '/near-me-physio']
+      const staticPaths = [
+        '/',
+        '/login',
+        '/register',
+        '/forgot-password',
+        '/register-physio',
+        '/near-me-physio',
+        ...SEO_KEYWORD_PATHS,
+      ]
       const cityPaths = SERVICE_CITIES.map((c) => `/physio-in/${c.slug}`)
       const conditionCityPaths = SERVICE_CITIES.flatMap((c) =>
         CONDITION_SLUGS.map((cond) => `/physio-in/${c.slug}/${cond}`),

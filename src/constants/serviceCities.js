@@ -23,6 +23,12 @@ export const SERVICE_CITIES = [
       'physiotherapist in Kokrajhar',
       'physiotherapist in Kokrajhar Assam',
       'home physiotherapy near me in Kokrajhar district',
+      'physio in Kokrajhar',
+      'physio home Kokrajhar',
+      'physio home Assam',
+      'physio home',
+      'home visit physiotherapist Kokrajhar',
+      'physiotherapist at home Kokrajhar',
     ],
     seoIntro:
       'Across Kokrajhar and nearby neighborhoods, PhysiOkhom helps patients access verified home physiotherapy with convenient booking and clear pricing.',

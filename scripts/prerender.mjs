@@ -90,6 +90,11 @@ async function loadConditionSlugs() {
   return mod.CONDITION_SLUGS || []
 }
 
+async function loadSeoKeywordPaths() {
+  const mod = await import(url.pathToFileURL(path.join(clientRoot, 'src/constants/seoKeywordPages.js')).href)
+  return mod.SEO_KEYWORD_PATHS || []
+}
+
 const MIME = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
@@ -209,10 +214,18 @@ async function main() {
     conditionSlugs.map((cond) => `/physio-in/${slug}/${cond}`),
   )
   const nearMeCityRoutes = citySlugs.map((slug) => `/near-me-physio/${slug}`)
+  const keywordRoutes = await loadSeoKeywordPaths()
 
   // SEO pages only — skip auth and near-me locality fan-out (CSR still works).
   const routes = Array.from(
-    new Set(['/', '/near-me-physio', ...cityRoutes, ...conditionCityRoutes, ...nearMeCityRoutes]),
+    new Set([
+      '/',
+      '/near-me-physio',
+      ...cityRoutes,
+      ...conditionCityRoutes,
+      ...nearMeCityRoutes,
+      ...keywordRoutes,
+    ]),
   )
 
   // Cache the original, un-prerendered root HTML and serve it for every SPA

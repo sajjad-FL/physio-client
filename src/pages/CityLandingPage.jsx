@@ -133,6 +133,9 @@ export default function CityLandingPage() {
       <Helmet>
         <title>{title}</title>
         <meta name="description" content={description} />
+        {seoHighlights.length ? (
+          <meta name="keywords" content={seoHighlights.join(', ')} />
+        ) : null}
         <link rel="canonical" href={canonical} />
         <meta name="robots" content="index, follow, max-image-preview:large" />
         <meta property="og:type" content="website" />
