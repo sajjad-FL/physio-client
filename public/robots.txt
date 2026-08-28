@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+
+Disallow: /dashboard
+Disallow: /book
+Disallow: /physio/
+Disallow: /admin
+Disallow: /profile
+Disallow: /unauthorized
+Disallow: /physio-dashboard
+
+Sitemap: https://physiokhom.com/sitemap.xml

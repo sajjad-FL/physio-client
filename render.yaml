@@ -1,0 +1,25 @@
+# Static build: sitemap/robots use VITE_PUBLIC_SITE_URL (see vite.config.js). Committed .env.production sets it;
+# these envVars override for staging or if you remove .env.production from the repo.
+services:
+  - type: web
+    name: physio-client
+    env: static
+    # Install Chrome only when missing (warm node_modules cache skips the ~170MB download).
+    # Set SKIP_PRERENDER=1 here to disable prerendering without a code change.
+    buildCommand: >
+      (npx puppeteer browsers list 2>/dev/null | grep -qi chrome
+      || npx puppeteer browsers install chrome)
+      && npm run build
+    envVars:
+      - key: VITE_PUBLIC_SITE_URL
+        value: https://physiokhom.com
+      # Ensure devDependencies (vite, puppeteer) install even if NODE_ENV=production.
+      - key: NPM_CONFIG_PRODUCTION
+        value: "false"
+      - key: PRERENDER_CONCURRENCY
+        value: "6"
+    staticPublishPath: dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html

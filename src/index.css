@@ -1,0 +1,540 @@
+@import 'tailwindcss';
+
+/* SaaS palette: slate neutrals + teal primary (health-tech) */
+@theme {
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+
+  --color-canvas: #f8fafc;
+  --color-ink: #0f172a;
+  --color-ink-muted: #64748b;
+  --color-border-subtle: #e2e8f0;
+  --color-brand: #0d9488;
+  --color-brand-hover: #0f766e;
+  --color-brand-soft: #ccfbf1;
+
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(0.875rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes subtle-scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes shake-soft {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20%,
+  60% {
+    transform: translateX(-4px);
+  }
+  40%,
+  80% {
+    transform: translateX(4px);
+  }
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply font-sans bg-slate-50 text-slate-900 antialiased;
+  }
+
+  @media (max-width: 639px) {
+    html {
+      font-size: 13px;
+    }
+
+    body {
+      font-size: 13px;
+      line-height: 19px;
+    }
+  }
+
+  @media (min-width: 640px) and (max-width: 767px) {
+    html {
+      font-size: 13px;
+    }
+
+    body {
+      font-size: 13px;
+      line-height: 19px;
+    }
+  }
+
+  /* Prevent iOS Safari/Chrome from zooming on input focus (requires >= 16px) */
+  @media (max-width: 767px) {
+    input,
+    select,
+    textarea {
+      font-size: 16px;
+      line-height: 1.25;
+    }
+  }
+}
+
+@layer utilities {
+  .bg-grid-saas {
+    background-color: var(--color-canvas);
+    background-image:
+      linear-gradient(to right, rgba(10, 37, 64, 0.04) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(10, 37, 64, 0.04) 1px, transparent 1px);
+    background-size: 48px 48px;
+    background-position: center top;
+  }
+
+  .bg-mesh-hero {
+    background:
+      radial-gradient(ellipse 80% 60% at 50% -30%, rgba(13, 148, 136, 0.14), transparent),
+      radial-gradient(ellipse 50% 40% at 100% 0%, rgba(15, 23, 42, 0.05), transparent),
+      radial-gradient(ellipse 40% 35% at 0% 20%, rgba(13, 148, 136, 0.07), transparent),
+      #f8fafc;
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  /* Mobile-first typography — mirrors mobile/src/theme/typography.js
+     Scale up at md (768px+) so phones keep native-app sizes in portrait & landscape. */
+  .type-hero {
+    @apply text-[19px] leading-[27px] font-bold tracking-tight md:text-3xl md:leading-tight;
+  }
+
+  .type-page-title {
+    @apply text-[17px] leading-[25px] font-bold tracking-tight md:text-2xl md:leading-snug;
+  }
+
+  .type-section-title {
+    @apply text-[11px] font-semibold uppercase tracking-wide text-slate-500 md:text-base md:normal-case md:tracking-tight md:text-slate-900 md:font-bold;
+  }
+
+  .type-body {
+    @apply text-[13px] leading-[19px] md:text-base md:leading-normal;
+  }
+
+  .type-label {
+    @apply text-[13px] font-medium md:text-sm;
+  }
+
+  .type-caption {
+    @apply text-[11px] leading-[16px] text-slate-500 md:text-xs md:leading-normal;
+  }
+
+  .type-stat {
+    @apply text-[19px] font-bold tabular-nums md:text-3xl;
+  }
+
+  .type-button {
+    @apply text-[14px] font-semibold md:text-sm;
+  }
+
+  .type-micro {
+    /* Floor 11px — ui-ux-pro-max: no patient-facing copy below 11px */
+    @apply text-[11px] font-bold uppercase tracking-wider leading-[14px];
+  }
+
+  /* Phone / small tablet — lock Tailwind text utilities to native-app scale (matches Expo) */
+  @media (max-width: 767px) {
+    .text-sm {
+      font-size: 13px;
+      line-height: 19px;
+    }
+
+    .text-xs {
+      font-size: 11px;
+      line-height: 16px;
+    }
+
+    .text-base {
+      font-size: 13px;
+      line-height: 19px;
+    }
+
+    .text-lg {
+      font-size: 15px;
+      line-height: 23px;
+    }
+
+    .text-xl {
+      font-size: 17px;
+      line-height: 25px;
+    }
+
+    .text-2xl {
+      font-size: 19px;
+      line-height: 27px;
+    }
+
+    .text-3xl {
+      font-size: 22px;
+      line-height: 30px;
+    }
+  }
+
+  /* Patient dashboard — same scale (explicit scope for nested overrides) */
+  @media (max-width: 767px) {
+    .patient-app-mobile .text-sm {
+      font-size: 13px;
+      line-height: 19px;
+    }
+
+    .patient-app-mobile .text-xs {
+      font-size: 11px;
+      line-height: 16px;
+    }
+
+    .patient-app-mobile .text-base {
+      font-size: 13px;
+      line-height: 19px;
+    }
+
+    .patient-app-mobile .text-lg {
+      font-size: 15px;
+      line-height: 23px;
+    }
+
+    .patient-app-mobile .text-xl {
+      font-size: 17px;
+      line-height: 25px;
+    }
+
+    .patient-app-mobile .text-2xl {
+      font-size: 19px;
+      line-height: 27px;
+    }
+  }
+
+  /* Entrance animations — use with motion-safe: */
+  .animate-enter-up {
+    animation: fade-in-up 0.65s var(--ease-out-expo) both;
+  }
+
+  .animate-enter {
+    animation: fade-in 0.45s ease-out both;
+  }
+
+  .animate-enter-scale {
+    animation: subtle-scale-in 0.45s var(--ease-out-expo) both;
+  }
+
+  .animate-shake-soft {
+    animation: shake-soft 0.45s ease-in-out both;
+  }
+
+  /* Stagger delays for list / grid children */
+  .animate-delay-1 {
+    animation-delay: 60ms;
+  }
+  .animate-delay-2 {
+    animation-delay: 120ms;
+  }
+  .animate-delay-3 {
+    animation-delay: 180ms;
+  }
+  .animate-delay-4 {
+    animation-delay: 240ms;
+  }
+  .animate-delay-5 {
+    animation-delay: 300ms;
+  }
+  .animate-delay-6 {
+    animation-delay: 360ms;
+  }
+
+  /* Interactive surfaces (respects reduced motion via media queries) */
+  .interactive-lift {
+    transition:
+      transform 0.3s var(--ease-out-expo),
+      box-shadow 0.3s ease-out,
+      border-color 0.3s ease,
+      background-color 0.3s ease;
+  }
+
+  .interactive-press {
+    transition: transform 0.2s ease-out;
+  }
+
+  /** Tappable controls: quick press feedback on touch devices */
+  .tap-feedback {
+    @apply transition-[transform,colors,opacity,background-color] duration-200 ease-out;
+  }
+
+  .surface-card {
+    @apply rounded-2xl border border-slate-100 bg-white shadow-sm;
+    transition:
+      box-shadow 0.35s ease-out,
+      transform 0.3s var(--ease-out-expo);
+  }
+
+  .glass-card {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.45);
+    box-shadow: 0 10px 40px -10px rgba(13, 148, 136, 0.08);
+    transition:
+      box-shadow 0.35s ease-out,
+      transform 0.3s var(--ease-out-expo),
+      border-color 0.3s ease;
+  }
+
+  .glass-card-dark {
+    background: rgba(15, 23, 42, 0.65);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.25);
+  }
+
+  .glow-orb {
+    filter: blur(80px);
+    opacity: 0.15;
+    pointer-events: none;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .glass-card:hover {
+      box-shadow: 0 20px 50px -15px rgba(13, 148, 136, 0.12);
+      transform: translateY(-2px);
+    }
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .interactive-lift:hover {
+      transform: translateY(-2px);
+    }
+
+    .interactive-press:active {
+      transform: scale(0.985);
+    }
+
+    .tap-feedback:active {
+      transform: scale(0.98);
+    }
+
+    .surface-card:hover {
+      box-shadow: 0 12px 40px -20px rgba(10, 37, 64, 0.12);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animate-enter-up,
+    .animate-enter,
+    .animate-enter-scale,
+    .animate-shake-soft {
+      animation: none !important;
+      opacity: 1 !important;
+      transform: none !important;
+    }
+
+    .interactive-lift:hover {
+      transform: none !important;
+    }
+
+    .interactive-press:active {
+      transform: none !important;
+    }
+
+    .tap-feedback:active {
+      transform: none !important;
+    }
+  }
+}
+
+/* react-datepicker — home plan (rounded cells, hover, selected) */
+.home-plan-calendar.react-datepicker {
+  border: none;
+  font-family: inherit;
+  width: 100%;
+}
+
+.home-plan-calendar .react-datepicker__month-container {
+  width: 100%;
+  padding: 0.25rem 0.15rem 0.5rem;
+}
+
+.home-plan-calendar .react-datepicker__month {
+  margin: 0.25rem 0;
+}
+
+.home-plan-calendar .react-datepicker__header {
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+  border-radius: 0.75rem 0.75rem 0 0;
+  padding-top: 0.65rem;
+}
+
+.home-plan-calendar .react-datepicker__current-month {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #111827;
+  padding-bottom: 0.35rem;
+}
+
+.home-plan-calendar .react-datepicker__day-names {
+  margin-top: 0.35rem;
+}
+
+.home-plan-calendar .react-datepicker__day-name {
+  color: #6b7280;
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.home-plan-calendar .react-datepicker__week {
+  display: flex;
+  justify-content: space-between;
+}
+
+.home-plan-calendar .react-datepicker__day {
+  border-radius: 0.625rem;
+  margin: 0.15rem 0.05rem;
+  line-height: 2.35rem;
+  width: 2.45rem;
+  flex: 0 0 auto;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+  cursor: pointer;
+}
+
+.home-plan-calendar .react-datepicker__day:hover:not(.react-datepicker__day--disabled):not(.react-datepicker__day--selected) {
+  background-color: #ccfbf1 !important;
+  color: #0f766e !important;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .home-plan-calendar .react-datepicker__day:hover:not(.react-datepicker__day--disabled):not(.react-datepicker__day--selected) {
+    transform: scale(1.05);
+  }
+}
+
+.home-plan-calendar .react-datepicker__day--selected,
+.home-plan-calendar .react-datepicker__day--selected:hover {
+  background-color: #0d9488 !important;
+  color: #fff !important;
+  font-weight: 600;
+  box-shadow: 0 2px 10px rgba(13, 148, 136, 0.35);
+}
+
+.home-plan-calendar .react-datepicker__day--keyboard-selected:not(.react-datepicker__day--selected) {
+  background-color: #99f6e4 !important;
+  color: #115e59 !important;
+}
+
+.home-plan-calendar .react-datepicker__day--disabled {
+  opacity: 0.32;
+  cursor: not-allowed;
+}
+
+.home-plan-calendar .react-datepicker__day--outside-month {
+  opacity: 0.4;
+}
+
+.home-plan-calendar .react-datepicker__navigation {
+  top: 0.85rem;
+}
+
+.home-plan-calendar .react-datepicker__navigation-icon::before {
+  border-color: #6b7280;
+}
+
+/* Physio dashboard — react-calendar (sessions) */
+.physio-calendar-shell .react-calendar {
+  width: 100%;
+  font-family: inherit;
+  border: none;
+}
+
+.physio-calendar-shell .react-calendar__navigation {
+  margin-bottom: 0.5rem;
+}
+
+.physio-calendar-shell .react-calendar__navigation button {
+  border-radius: 0.5rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.physio-calendar-shell .react-calendar__month-view__weekdays {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #6b7280;
+}
+
+.physio-calendar-shell .react-calendar__tile {
+  border-radius: 0.5rem;
+  padding: 0.65rem 0.2rem;
+  font-size: 0.875rem;
+}
+
+.physio-calendar-shell .react-calendar__tile--active {
+  background: #0d9488 !important;
+  color: #fff !important;
+  font-weight: 600;
+}
+
+.physio-calendar-shell .react-calendar__tile--now {
+  background: #ccfbf1;
+  color: #0f766e;
+  font-weight: 600;
+}
+
+.physio-calendar-shell .react-calendar__tile.physio-cal-tile--busy:not(.react-calendar__tile--active) {
+  background: #99f6e4;
+  color: #134e4a;
+  font-weight: 600;
+}
+
+.physio-calendar-shell .react-calendar__tile:enabled:hover {
+  background: #ccfbf1;
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hide scrollbar for IE, Edge and Firefox */
+.no-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}

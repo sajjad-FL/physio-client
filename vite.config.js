@@ -1,0 +1,118 @@
+import fs from 'node:fs'
+import path from 'node:path'
+import { defineConfig, loadEnv } from 'vite'
+import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
+import { SERVICE_CITIES } from './src/constants/serviceCities.js'
+import { CONDITION_SLUGS } from './src/constants/conditions.js'
+import { SEO_KEYWORD_PATHS } from './src/constants/seoKeywordPages.js'
+
+/**
+ * Writes dist/robots.txt and dist/sitemap.xml after build.
+ * @param {{ siteUrl: string | undefined, mode: string, apiPublicOrigin: string | undefined }} opts
+ */
+function seoDistFilesPlugin({ siteUrl, mode, apiPublicOrigin }) {
+  return {
+    name: 'seo-dist-files',
+    closeBundle() {
+      const distDir = path.resolve(process.cwd(), 'dist')
+      if (!fs.existsSync(distDir)) return
+
+      const base = String(siteUrl || 'http://localhost:5173')
+        .trim()
+        .replace(/\/$/, '')
+
+      if (
+        mode === 'production' &&
+        (base.includes('localhost') || base.includes('127.0.0.1'))
+      ) {
+        throw new Error(
+          'seo-dist-files: Set VITE_PUBLIC_SITE_URL to your public HTTPS origin for production builds (e.g. https://physiokhom.com). See client/.env.production or your host build environment.',
+        )
+      }
+
+      // NOTE: trailing slash on /physio/ is deliberate. `Disallow: /physio` (no
+      // slash) matches by prefix and would also block the public SEO pages
+      // /physio-in/* and /physician/*. `/physio/` blocks only the physio
+      // dashboard while leaving landing pages crawlable.
+      const robotsBody = `User-agent: *
+Allow: /
+
+Disallow: /dashboard
+Disallow: /book
+Disallow: /physio/
+Disallow: /admin
+Disallow: /profile
+Disallow: /unauthorized
+Disallow: /physio-dashboard
+
+Sitemap: ${base}/sitemap.xml
+`
+
+      const apiOrigin = String(apiPublicOrigin || '')
+        .trim()
+        .replace(/\/$/, '')
+      const robotsExtra =
+        apiOrigin.length > 0 ? `Sitemap: ${apiOrigin}/api/seo/physio-sitemap.xml\n` : ''
+
+      fs.writeFileSync(path.join(distDir, 'robots.txt'), robotsBody + robotsExtra, 'utf8')
+
+      const staticPaths = [
+        '/',
+        '/login',
+        '/register',
+        '/forgot-password',
+        '/register-physio',
+        '/near-me-physio',
+        ...SEO_KEYWORD_PATHS,
+      ]
+      const cityPaths = SERVICE_CITIES.map((c) => `/physio-in/${c.slug}`)
+      const conditionCityPaths = SERVICE_CITIES.flatMap((c) =>
+        CONDITION_SLUGS.map((cond) => `/physio-in/${c.slug}/${cond}`),
+      )
+      const nearMeCityPaths = SERVICE_CITIES.map((c) => `/near-me-physio/${c.slug}`)
+
+      const buildUrlBlock = (loc, priority, changefreq, lastmod) =>
+        `  <url>\n    <loc>${loc}</loc>\n    <lastmod>${lastmod}</lastmod>\n    <changefreq>${changefreq}</changefreq>\n    <priority>${priority}</priority>\n  </url>`
+
+      const lastmod = new Date().toISOString().slice(0, 10)
+
+      const urlBlocks = [
+        ...staticPaths.map((p) => {
+          const loc = p === '/' ? `${base}/` : `${base}${p}`
+          const priority = p === '/' ? '1.0' : '0.7'
+          return buildUrlBlock(loc, priority, 'weekly', lastmod)
+        }),
+        ...cityPaths.map((p) => buildUrlBlock(`${base}${p}`, '0.8', 'monthly', lastmod)),
+        ...conditionCityPaths.map((p) => buildUrlBlock(`${base}${p}`, '0.8', 'monthly', lastmod)),
+        ...nearMeCityPaths.map((p) => buildUrlBlock(`${base}${p}`, '0.75', 'monthly', lastmod)),
+      ]
+      const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${urlBlocks.join('\n')}
+</urlset>
+`
+      fs.writeFileSync(path.join(distDir, 'sitemap.xml'), sitemap, 'utf8')
+    },
+  }
+}
+
+// https://vite.dev/config/
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '')
+  // Shell / CI overrides committed .env.production
+  const siteUrl = process.env.VITE_PUBLIC_SITE_URL || env.VITE_PUBLIC_SITE_URL
+  const apiPublicOrigin = process.env.VITE_API_PUBLIC_ORIGIN || env.VITE_API_PUBLIC_ORIGIN
+
+  return {
+    plugins: [
+      react(),
+      tailwindcss(),
+      seoDistFilesPlugin({ siteUrl, mode, apiPublicOrigin }),
+    ],
+    server: {
+      host: '127.0.0.1',
+      port: 5173,
+    },
+  }
+})

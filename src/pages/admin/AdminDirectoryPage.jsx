@@ -1,0 +1,321 @@
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Link, Navigate, useSearchParams } from 'react-router-dom'
+import toast from 'react-hot-toast'
+import { api } from '../../config/api'
+import AdminPageHeader, { AdminLink } from '../../components/admin/AdminPageHeader'
+import Card from '../../components/ui/Card'
+import Button from '../../components/ui/Button'
+import Input from '../../components/ui/Input'
+import Pagination from '../../components/Pagination'
+import usePagination from '../../hooks/usePagination'
+import { toastApiError } from '../../utils/formToast'
+import TableSkeleton from '../../components/ui/skeletons/TableSkeleton'
+import CreatePatientModal from '../../components/staff/CreatePatientModal'
+import ConfirmDeleteUserModal from '../../components/staff/ConfirmDeleteUserModal'
+
+function roleLabel(role) {
+  if (role === 'physio') return 'Physiotherapist'
+  if (role === 'admin') return 'Admin'
+  if (role === 'care_manager') return 'Care Manager'
+  if (role === 'clinic_staff') return 'Clinic Staff'
+  return role || 'User'
+}
+
+function formatDate(value) {
+  if (!value) return '-'
+  try {
+    return new Date(value).toLocaleDateString('en-IN', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    })
+  } catch {
+    return '-'
+  }
+}
+
+function Badge({ children, tone = 'slate' }) {
+  const tones = {
+    slate: 'bg-slate-100 text-slate-700 ring-slate-200',
+    green: 'bg-emerald-50 text-emerald-900 ring-emerald-200',
+    amber: 'bg-amber-50 text-amber-900 ring-amber-200',
+    red: 'bg-rose-50 text-rose-900 ring-rose-200',
+    blue: 'bg-sky-50 text-sky-900 ring-sky-200',
+  }
+  return (
+    <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${tones[tone] || tones.slate}`}>
+      {children}
+    </span>
+  )
+}
+
+function Select({ value, onChange, children, className = '' }) {
+  return (
+    <select
+      value={value}
+      onChange={onChange}
+      className={[
+        'w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-500/25',
+        className,
+      ].join(' ')}
+    >
+      {children}
+    </select>
+  )
+}
+
+export default function AdminDirectoryPage() {
+  const [searchParams] = useSearchParams()
+
+  const [userSearch, setUserSearch] = useState('')
+  const [userRole, setUserRole] = useState('')
+  const [userLinked, setUserLinked] = useState('')
+  const [appliedUsers, setAppliedUsers] = useState({ search: '', role: '', linkedPhysio: '' })
+  const { page, pageSize, applyMeta, clearMeta, resetPage, paginationProps } = usePagination()
+  const [usersPayload, setUsersPayload] = useState(null)
+  const [usersLoading, setUsersLoading] = useState(true)
+  const [createOpen, setCreateOpen] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState(null)
+  const [deletingUserId, setDeletingUserId] = useState('')
+
+  const loadUsers = useCallback(async () => {
+    setUsersLoading(true)
+    try {
+      const { data } = await api.get('/admin/users', {
+        params: {
+          page,
+          limit: pageSize,
+          search: appliedUsers.search || undefined,
+          role: appliedUsers.role || undefined,
+          linkedPhysio: appliedUsers.linkedPhysio || undefined,
+        },
+      })
+      setUsersPayload(data)
+      applyMeta(data)
+    } catch (err) {
+      setUsersPayload(null)
+      clearMeta()
+      toastApiError(err, 'Failed to load users')
+    } finally {
+      setUsersLoading(false)
+    }
+  }, [page, pageSize, appliedUsers, applyMeta, clearMeta])
+
+  useEffect(() => {
+    loadUsers()
+  }, [loadUsers])
+
+  const users = usersPayload?.data || []
+
+  const userFiltersActive = useMemo(
+    () => Object.values(appliedUsers).some(Boolean),
+    [appliedUsers],
+  )
+
+  function applyUserFilters() {
+    setAppliedUsers({
+      search: userSearch.trim(),
+      role: userRole,
+      linkedPhysio: userLinked,
+    })
+    resetPage()
+  }
+
+  function resetUserFilters() {
+    setUserSearch('')
+    setUserRole('')
+    setUserLinked('')
+    setAppliedUsers({ search: '', role: '', linkedPhysio: '' })
+    resetPage()
+  }
+
+  async function promoteToCareManager(user) {
+    const ok = window.confirm(`Promote ${user.name || user.phone} to Care Manager?`)
+    if (!ok) return
+    try {
+      await api.post('/admin/care-managers/promote', { userId: user._id })
+      toast.success('User promoted to Care Manager')
+      await loadUsers()
+    } catch (err) {
+      toastApiError(err, 'Promote failed')
+    }
+  }
+
+  async function confirmDeleteUser() {
+    if (!deleteTarget?._id) return
+    setDeletingUserId(deleteTarget._id)
+    try {
+      await api.delete(`/admin/users/${deleteTarget._id}`)
+      toast.success('User deleted')
+      setDeleteTarget(null)
+      await loadUsers()
+    } catch (err) {
+      toastApiError(err, 'Delete failed')
+    } finally {
+      setDeletingUserId('')
+    }
+  }
+
+  if (searchParams.get('tab') === 'physios') {
+    return <Navigate to="/admin/physios" replace />
+  }
+
+  return (
+    <div className="space-y-6">
+      <AdminPageHeader
+        title="Users"
+        subtitle="Browse registered patient and physiotherapist accounts. To manage physiotherapist profiles, verification, or payouts, use the links below."
+        breadcrumbs={[{ label: 'Admin', to: '/admin' }, { label: 'Users' }]}
+        actions={
+          <>
+            <Button type="button" onClick={() => setCreateOpen(true)}>
+              Add patient
+            </Button>
+            <AdminLink to="/admin/physios">Physiotherapists →</AdminLink>
+            <AdminLink to="/admin/physios?tab=queue">Verification queue →</AdminLink>
+          </>
+        }
+      />
+
+      <CreatePatientModal
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        apiPath="/admin/users"
+        onCreated={() => loadUsers()}
+      />
+      <ConfirmDeleteUserModal
+        open={Boolean(deleteTarget)}
+        user={deleteTarget}
+        busy={Boolean(deletingUserId)}
+        onClose={() => {
+          if (!deletingUserId) setDeleteTarget(null)
+        }}
+        onConfirm={confirmDeleteUser}
+      />
+
+      <Card hover={false} className="p-4 sm:p-5">
+        <div className="grid gap-3 lg:grid-cols-[minmax(220px,1fr)_160px_180px_auto] lg:items-end">
+          <div>
+            <label className="text-xs font-medium text-slate-500">Search</label>
+            <Input
+              className="mt-1"
+              value={userSearch}
+              onChange={(e) => setUserSearch(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && applyUserFilters()}
+              placeholder="Name, phone, email, location"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-slate-500">Role</label>
+            <Select className="mt-1" value={userRole} onChange={(e) => setUserRole(e.target.value)}>
+              <option value="">All roles</option>
+              <option value="user">User</option>
+              <option value="physio">Physiotherapist</option>
+              <option value="admin">Admin</option>
+              <option value="care_manager">Care Manager</option>
+              <option value="clinic_staff">Clinic Staff</option>
+            </Select>
+          </div>
+          <div>
+            <label className="text-xs font-medium text-slate-500">Physiotherapist link</label>
+            <Select className="mt-1" value={userLinked} onChange={(e) => setUserLinked(e.target.value)}>
+              <option value="">All</option>
+              <option value="true">Linked to physiotherapist profile</option>
+              <option value="false">Not linked</option>
+            </Select>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={applyUserFilters}>Apply</Button>
+            <Button variant="ghost" onClick={resetUserFilters}>Reset</Button>
+          </div>
+        </div>
+      </Card>
+
+      <Card hover={false} className="overflow-hidden p-0">
+        <div className="border-b border-slate-100 px-4 py-3 sm:px-5">
+          <p className="text-sm font-semibold text-slate-900">
+            {usersPayload?.total ?? 0} user{usersPayload?.total === 1 ? '' : 's'}
+            {userFiltersActive ? ' (filtered)' : ''}
+          </p>
+        </div>
+        {usersLoading ? (
+          <div className="p-4">
+            <TableSkeleton rows={8} />
+          </div>
+        ) : users.length === 0 ? (
+          <div className="p-12 text-center text-sm text-slate-500">No users match these filters.</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[920px] text-left text-sm">
+              <thead className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                <tr>
+                  <th className="px-4 py-3">User</th>
+                  <th className="px-4 py-3">Phone</th>
+                  <th className="px-4 py-3">Role</th>
+                  <th className="px-4 py-3">Location</th>
+                  <th className="px-4 py-3">Profile</th>
+                  <th className="px-4 py-3">Joined</th>
+                  <th className="px-4 py-3 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {users.map((u) => (
+                  <tr key={u._id} className="hover:bg-slate-50/80">
+                    <td className="px-4 py-3">
+                      <div className="font-medium text-slate-900">{u.name || 'No name'}</div>
+                      <div className="text-xs text-slate-500">{u.email || u._id}</div>
+                      {u.isLinkedPhysio && (
+                        <Link to="/admin/physios" className="mt-1 inline-block text-xs font-medium text-teal-700 hover:underline">
+                          Has physiotherapist profile
+                        </Link>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-slate-700">{u.phone || '-'}</td>
+                    <td className="px-4 py-3">
+                      <Badge tone={u.role === 'admin' ? 'blue' : u.role === 'physio' ? 'green' : u.role === 'care_manager' ? 'amber' : 'slate'}>
+                        {roleLabel(u.role)}
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-3 text-slate-600">{u.location || '-'}</td>
+                    <td className="px-4 py-3">
+                      <Badge tone={u.isProfileComplete ? 'green' : 'amber'}>
+                        {u.isProfileComplete ? 'Complete' : 'Incomplete'}
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-slate-600">{formatDate(u.createdAt)}</td>
+                    <td className="px-4 py-3 text-right">
+                      <div className="flex justify-end gap-2">
+                        {u.role === 'user' ? (
+                          <Button
+                            variant="outline"
+                            className="px-3 py-1.5 text-xs"
+                            onClick={() => promoteToCareManager(u)}
+                          >
+                            Make manager
+                          </Button>
+                        ) : null}
+                        <Button
+                          variant="outline"
+                          className="px-3 py-1.5 text-xs text-rose-700"
+                          disabled={deletingUserId === u._id || u.role === 'admin'}
+                          onClick={() => setDeleteTarget(u)}
+                        >
+                          {deletingUserId === u._id ? 'Deleting...' : 'Delete'}
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {!usersLoading && (
+          <div className="border-t border-slate-100 px-4 py-3">
+            <Pagination {...paginationProps} />
+          </div>
+        )}
+      </Card>
+    </div>
+  )
+}

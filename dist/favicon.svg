@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="PhysiOkhom">
+  <!-- Rounded teal badge background -->
+  <rect width="64" height="64" rx="14" fill="#0d9488"/>
+  <!-- Head / person dot -->
+  <circle cx="32" cy="18" r="6" fill="#99f6e4"/>
+  <!-- Body arc — motion mark -->
+  <path d="M16 46c4-10 11-15 21-15 9 0 16 4 21 12" fill="none" stroke="#ffffff" stroke-width="5" stroke-linecap="round"/>
+  <!-- Shoulder arc -->
+  <path d="M20 30c6 4 12 5 19 5 6 0 12-1 18-4" fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round"/>
+  <!-- Healing cross — top right -->
+  <rect x="46" y="11" width="10" height="4" rx="2" fill="#ffffff"/>
+  <rect x="49" y="8" width="4" height="10" rx="2" fill="#ffffff"/>
+</svg>
