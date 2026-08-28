@@ -1,4 +1,5 @@
 import { formatBookingDateAndSlot } from './date'
+import { hasComplimentaryAssessmentVisit, toBookingYmd } from '../components/physio/physioBookingHelpers'
 
 /** Patient-facing label for what they booked (stroke, knee pain, etc.). */
 export function bookingConditionLabel(b) {
@@ -27,6 +28,65 @@ export function resolveBookingDisplayVisit(b) {
     }
   }
   return { date: b.date, time: b.timeSlot }
+}
+
+/**
+ * Next visit for physio headers: first incomplete schedule session
+ * (skip completed / no-show). If all are done, falls back to the last schedule
+ * date, then booking.date.
+ */
+export function resolveBookingUpcomingVisit(b) {
+  if (!b || typeof b !== 'object') return { date: undefined, time: undefined }
+
+  if (Array.isArray(b.schedule) && b.schedule.length > 0) {
+    const pending = b.schedule
+      .filter((s) => s && s.status !== 'completed' && s.status !== 'no_show' && s.date)
+      .sort((a, c) => {
+        const byDate = String(a.date || '').localeCompare(String(c.date || ''))
+        if (byDate !== 0) return byDate
+        return String(a.time || '').localeCompare(String(c.time || ''))
+      })
+    if (pending.length > 0) {
+      return { date: pending[0].date, time: pending[0].time || b.timeSlot }
+    }
+    const last = [...b.schedule]
+      .filter((s) => s?.date)
+      .sort((a, c) => String(a.date || '').localeCompare(String(c.date || '')))
+      .at(-1)
+    if (last) return { date: last.date, time: last.time || b.timeSlot }
+  }
+
+  return { date: b.date, time: b.timeSlot }
+}
+
+/**
+ * Manager case header: complimentary assessment lives on booking.date / timeSlot
+ * (separate from treatment schedule[]). Always prefer that assessment slot.
+ * If a past treatment reschedule overwrote booking.date, recover from previousDate
+ * when it still sits before the treatment plan.
+ */
+export function resolveBookingAssessmentVisit(b) {
+  if (!b || typeof b !== 'object') return { date: undefined, time: undefined }
+
+  let date = b.date
+  let time = b.timeSlot
+
+  if (hasComplimentaryAssessmentVisit(b) && Array.isArray(b.schedule) && b.schedule.length > 0) {
+    const scheduleYmds = b.schedule
+      .map((s) => toBookingYmd(s?.date))
+      .filter(Boolean)
+      .sort()
+    const dateYmd = toBookingYmd(date)
+    if (dateYmd && scheduleYmds.includes(dateYmd) && b.previousDate) {
+      const prev = toBookingYmd(b.previousDate)
+      if (prev && prev < scheduleYmds[0]) {
+        date = b.previousDate
+        time = b.previousTimeSlot || time
+      }
+    }
+  }
+
+  return { date, time }
 }
 
 /** e.g. "8 Jul, 6:00 PM – 7:00 PM (Stroke / Paralysis)" */

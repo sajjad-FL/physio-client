@@ -7,6 +7,23 @@ export function todayYmd() {
   return ymdFromDate(new Date())
 }
 
+/**
+ * Normalize booking/API dates to YYYY-MM-DD.
+ * Pure calendar strings are kept as-is; ISO datetimes use local timezone.
+ */
+export function toBookingYmd(value) {
+  if (value == null || value === '') return ''
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return ymdFromDate(value)
+  }
+  const s = String(value).trim()
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s
+  const asDate = new Date(s)
+  if (!Number.isNaN(asDate.getTime())) return ymdFromDate(asDate)
+  const prefix = /^(\d{4}-\d{2}-\d{2})/.exec(s)
+  return prefix ? prefix[1] : ''
+}
+
 /** Manager-led home bookings include a complimentary assessment on booking.date. */
 export function hasComplimentaryAssessmentVisit(b) {
   if (b?.carePath === 'technique_managed' || b?.carePath === 'technique_direct') return false
@@ -20,10 +37,11 @@ export function hasComplimentaryAssessmentVisit(b) {
 
 function buildComplimentaryAssessmentRow(b) {
   if (!hasComplimentaryAssessmentVisit(b)) return null
-  const assessmentDate = String(b.date || '').trim()
+  const assessmentDate = toBookingYmd(b.date)
   if (!assessmentDate) return null
   const scheduleHasAssessmentDate =
-    Array.isArray(b.schedule) && b.schedule.some((s) => String(s?.date || '').trim() === assessmentDate)
+    Array.isArray(b.schedule) &&
+    b.schedule.some((s) => toBookingYmd(s?.date) === assessmentDate)
   if (scheduleHasAssessmentDate) return null
   return {
     key: `${b._id}-assessment`,
@@ -71,7 +89,7 @@ export function normalizeSessionRows(b) {
       .map((s, i) => ({
         key: `${b._id}-s-${i}`,
         sessionId: s._id != null ? String(s._id) : null,
-        date: s.date,
+        date: toBookingYmd(s.date) || s.date,
         time: s.time,
         n: 0,
         notes: s.notes || null,
@@ -106,7 +124,7 @@ export function normalizeSessionRows(b) {
        * treat this as the primary visit and omit sessionId on the wire.
        */
       sessionId: null,
-      date: b.date,
+      date: toBookingYmd(b.date) || b.date,
       time: b.timeSlot,
       n: 1,
       notes: b.primarySessionNotes || null,
@@ -119,6 +137,74 @@ export function normalizeSessionRows(b) {
       complimentary: false,
     },
   ]
+}
+
+/**
+ * Every visit calendar day on a booking (assessment + schedule).
+ * @returns {Set<string>}
+ */
+export function collectBookingVisitDates(booking) {
+  const occupied = new Set()
+  if (!booking) return occupied
+  const add = (v) => {
+    const ymd = toBookingYmd(v)
+    if (ymd) occupied.add(ymd)
+  }
+  add(booking.date)
+  add(booking.previousDate)
+  if (Array.isArray(booking.schedule)) {
+    for (const s of booking.schedule) {
+      add(s?.date)
+      add(s?.sessionDate)
+    }
+  }
+  for (const row of normalizeSessionRows(booking)) {
+    add(row.date)
+  }
+  return occupied
+}
+
+function visitRowKey(key) {
+  return String(key || '').replace(/-reschedule$/, '')
+}
+
+function isSameVisitRow(row, sessionRow) {
+  if (!row || !sessionRow) return false
+  if (sessionRow.sessionId && row.sessionId && String(sessionRow.sessionId) === String(row.sessionId)) {
+    return true
+  }
+  if (Boolean(sessionRow.complimentary) && Boolean(row.complimentary)) return true
+  if (sessionRow.key && row.key && visitRowKey(sessionRow.key) === visitRowKey(row.key)) {
+    return true
+  }
+  if (
+    !sessionRow.sessionId &&
+    !sessionRow.complimentary &&
+    !row.sessionId &&
+    !row.complimentary &&
+    toBookingYmd(sessionRow.date) === toBookingYmd(row.date)
+  ) {
+    return true
+  }
+  return false
+}
+
+/**
+ * Dates already used by other visits on this booking (time ignored).
+ * Excludes the session being edited so a time-only change on its own day is allowed.
+ * @returns {Set<string>}
+ */
+export function occupiedRescheduleDates(booking, sessionRow) {
+  const occupied = new Set()
+  if (!booking) return occupied
+
+  for (const row of normalizeSessionRows(booking)) {
+    if (isSameVisitRow(row, sessionRow)) continue
+    const ymd = toBookingYmd(row.date)
+    if (ymd) occupied.add(ymd)
+  }
+
+  return occupied
 }
 
 export function matchesFilters(b, filters) {

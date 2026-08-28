@@ -72,9 +72,8 @@ export default function BookingSessionTimeline({
 
   return (
     <div
-      className={`rounded-xl border px-3 py-3 ${
-        bookingRescheduled ? 'border-amber-200/90 bg-amber-50/50' : 'border-gray-100 bg-gray-50/60'
-      }`}
+      className={`rounded-xl border px-3 py-3 ${bookingRescheduled ? 'border-amber-200/90 bg-amber-50/50' : 'border-gray-100 bg-gray-50/60'
+        }`}
     >
       {progressLine ? (
         <div className="mb-3 rounded-lg border border-teal-100 bg-teal-50/70 px-3 py-2 text-xs font-medium text-teal-950">
@@ -100,16 +99,16 @@ export default function BookingSessionTimeline({
             r.status === 'completed' || r.status === 'no_show'
               ? r.status
               : bookingRescheduled && r.date !== tday
-              ? 'rescheduled'
-              : 'scheduled'
+                ? 'rescheduled'
+                : 'scheduled'
           const rowDone = r.status === 'completed'
           const rowNoShow = r.status === 'no_show'
           const showReschedule = Boolean(
             reschedule?.enabled &&
-              reschedule?.onReschedule &&
-              !rowDone &&
-              !rowNoShow &&
-              (!isComplimentary || reschedule?.includeComplimentary),
+            reschedule?.onReschedule &&
+            !rowDone &&
+            !rowNoShow &&
+            (!isComplimentary || reschedule?.includeComplimentary),
           )
 
           let rowCls =
@@ -132,11 +131,11 @@ export default function BookingSessionTimeline({
 
           const allowDelete = Boolean(
             adminSessions?.enabled &&
-              adminSessions?.onDelete &&
-              !rowDone &&
-              !rowNoShow &&
-              !isComplimentary &&
-              (adminSessions?.canDelete ? adminSessions.canDelete(r, rows) : rows.length > 1),
+            adminSessions?.onDelete &&
+            !rowDone &&
+            !rowNoShow &&
+            !isComplimentary &&
+            (adminSessions?.canDelete ? adminSessions.canDelete(r, rows) : rows.length > 1),
           )
           const deleting = String(adminSessions?.deletingSessionId || '') === String(r.sessionId || '')
           const busyKey = String(r.sessionId || r.key)
@@ -160,11 +159,11 @@ export default function BookingSessionTimeline({
           const blockedReason = !isTodayOrPast
             ? 'You can mark this session once its scheduled day arrives'
             : perRowReason
-            ? perRowReason
-            : physioActions?.canAct === false
-            ? physioActions?.blockedReason ||
-              'Payment must be confirmed before you can complete this session'
-            : ''
+              ? perRowReason
+              : physioActions?.canAct === false
+                ? physioActions?.blockedReason ||
+                'Payment must be confirmed before you can complete this session'
+                : ''
           const canActOnRow = showPhysioButtons && !blockedReason
 
           const reviewed =
@@ -186,9 +185,9 @@ export default function BookingSessionTimeline({
           const hasPaymentInfo = Boolean(sessionPayments) && !isComplimentary
           const hasAssessmentNotes = Boolean(
             r.notes?.text?.trim() ||
-              booking?.assessmentData ||
-              r.notes?.painNow != null ||
-              r.notes?.functionNow != null,
+            booking?.assessmentData ||
+            r.notes?.painNow != null ||
+            r.notes?.functionNow != null,
           )
           // Complimentary assessment notes: patient, physio, manager/admin can view
           const showViewNotesBtn = isComplimentary
@@ -201,149 +200,147 @@ export default function BookingSessionTimeline({
           return (
             <li key={r.key} className={`${rowCls} !flex-col !items-stretch`}>
               <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                  <div className="min-w-0">
-                    {isComplimentary ? (
-                      <>
-                        <span className="font-medium">{r.label || 'Assessment'}</span>
-                        <span className="ml-2 inline-flex rounded-md bg-teal-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-teal-800 ring-1 ring-teal-200">
-                          Complimentary
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <div className="min-w-0">
+                      {isComplimentary ? (
+                        <>
+                          <span className="font-medium">{r.label || 'Assessment'}</span>
+                          <span className="ml-2 inline-flex rounded-md bg-teal-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-teal-800 ring-1 ring-teal-200">
+                            Complimentary
+                          </span>
+                        </>
+                      ) : (
+                        <span className="font-medium">#{r.n}</span>
+                      )}
+                      <span className="text-gray-500"> · </span>
+                      {formatBookingDateAndSlot(r.date, r.time)}
+                      {rowDone && <span className="ml-2 text-xs font-semibold text-emerald-800">Done</span>}
+                      {rowNoShow && (
+                        <span className="ml-2 text-xs font-semibold text-rose-800">No-show</span>
+                      )}
+                      {!rowDone && !rowNoShow && r.date === tday && !isComplimentary && (
+                        <span className="ml-2 text-xs font-semibold text-blue-800">Today</span>
+                      )}
+                      {!rowDone && !rowNoShow && lockBadgeReason && !isComplimentary && (
+                        <span
+                          title={lockBadgeReason}
+                          className="ml-2 inline-flex items-center gap-1 rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-700 ring-1 ring-slate-200"
+                        >
+                          <svg className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75M5.25 10.5h13.5A1.5 1.5 0 0120.25 12v7.5a1.5 1.5 0 01-1.5 1.5H5.25a1.5 1.5 0 01-1.5-1.5V12a1.5 1.5 0 011.5-1.5z" />
+                          </svg>
+                          Locked
                         </span>
-                      </>
-                    ) : (
-                      <span className="font-medium">#{r.n}</span>
-                    )}
-                    <span className="text-gray-500"> · </span>
-                    {formatBookingDateAndSlot(r.date, r.time)}
-                    {rowDone && <span className="ml-2 text-xs font-semibold text-emerald-800">Done</span>}
-                    {rowNoShow && (
-                      <span className="ml-2 text-xs font-semibold text-rose-800">No-show</span>
-                    )}
-                    {!rowDone && !rowNoShow && r.date === tday && !isComplimentary && (
-                      <span className="ml-2 text-xs font-semibold text-blue-800">Today</span>
-                    )}
-                    {!rowDone && !rowNoShow && lockBadgeReason && !isComplimentary && (
-                      <span
-                        title={lockBadgeReason}
-                        className="ml-2 inline-flex items-center gap-1 rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-700 ring-1 ring-slate-200"
+                      )}
+                    </div>
+                    {showReschedule && (
+                      <button
+                        type="button"
+                        onClick={() => reschedule.onReschedule(r)}
+                        className="tap-feedback shrink-0 rounded-lg border border-blue-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-blue-800 hover:bg-blue-50"
                       >
-                        <svg className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75M5.25 10.5h13.5A1.5 1.5 0 0120.25 12v7.5a1.5 1.5 0 01-1.5 1.5H5.25a1.5 1.5 0 01-1.5-1.5V12a1.5 1.5 0 011.5-1.5z" />
-                        </svg>
-                        Locked
+                        Reschedule
+                      </button>
+                    )}
+                    {showPhysioButtons && (
+                      <button
+                        type="button"
+                        disabled={actBusy || !canActOnRow}
+                        onClick={canActOnRow ? () => physioActions.onComplete(r) : undefined}
+                        title={blockedReason || undefined}
+                        className="tap-feedback shrink-0 rounded-lg border border-emerald-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-emerald-800 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {actBusy ? 'Saving…' : 'Mark complete'}
+                      </button>
+                    )}
+                    {showPhysioButtons && physioActions?.onNoShow && r.perSession && (
+                      <button
+                        type="button"
+                        disabled={actBusy || !canActOnRow}
+                        onClick={canActOnRow ? () => physioActions.onNoShow(r) : undefined}
+                        title={blockedReason || undefined}
+                        className="tap-feedback shrink-0 rounded-lg border border-rose-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-rose-800 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        No-show
+                      </button>
+                    )}
+                    {showRateBtn && (
+                      <button
+                        type="button"
+                        onClick={() => patientActions.onRate(r)}
+                        className="tap-feedback shrink-0 rounded-lg border border-amber-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-amber-800 hover:bg-amber-50"
+                      >
+                        Rate session
+                      </button>
+                    )}
+                    {showPhysioNotesBtn && (
+                      <button
+                        type="button"
+                        onClick={() => physioActions.onNotes(r)}
+                        className={`tap-feedback shrink-0 rounded-lg border px-2.5 py-1 text-[11px] font-semibold transition-colors ${physioHasNotes
+                            ? 'border-indigo-300 bg-indigo-100 text-indigo-900 hover:bg-indigo-200/80'
+                            : 'border-indigo-200 bg-indigo-50 text-indigo-800 hover:border-indigo-300 hover:bg-indigo-100'
+                          }`}
+                      >
+                        {physioHasNotes ? 'Edit progress' : 'Log progress'}
+                      </button>
+                    )}
+                    {showViewNotesBtn && (
+                      <button
+                        type="button"
+                        onClick={() => setNotesModalRow(r)}
+                        className={`tap-feedback shrink-0 rounded-lg border px-2.5 py-1 text-[11px] font-semibold transition-all ${isComplimentary
+                            ? hasAssessmentNotes
+                              ? 'border-teal-600/60 bg-teal-700/95 text-teal-50 shadow-sm hover:border-teal-600 hover:bg-teal-800'
+                              : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                            : 'border-teal-600/60 bg-teal-700/95 text-teal-50 shadow-sm hover:border-teal-600 hover:bg-teal-800 hover:text-white'
+                          }`}
+                      >
+                        {viewNotesLabel}
+                      </button>
+                    )}
+                    {showRatedBadge && submittedRating && (
+                      <span className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-900 ring-1 ring-amber-200">
+                        <StarRatingDisplay value={Number(submittedRating.rating) || 0} size="sm" />
+                        <span>Rated</span>
                       </span>
+                    )}
+                    {allowDelete && (
+                      <button
+                        type="button"
+                        onClick={() => adminSessions.onDelete(r)}
+                        className="tap-feedback shrink-0 rounded-lg border border-rose-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-rose-800 hover:bg-rose-50"
+                      >
+                        {deleting ? 'Deleting…' : 'Delete'}
+                      </button>
                     )}
                   </div>
-                  {showReschedule && (
-                    <button
-                      type="button"
-                      onClick={() => reschedule.onReschedule(r)}
-                      className="tap-feedback shrink-0 rounded-lg border border-blue-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-blue-800 hover:bg-blue-50"
-                    >
-                      Reschedule
-                    </button>
+                  {rowNoShow && r.noShowReason && (
+                    <p className="mt-1 text-xs text-rose-900/80">Reason: {r.noShowReason}</p>
                   )}
-                  {showPhysioButtons && (
-                    <button
-                      type="button"
-                      disabled={actBusy || !canActOnRow}
-                      onClick={canActOnRow ? () => physioActions.onComplete(r) : undefined}
-                      title={blockedReason || undefined}
-                      className="tap-feedback shrink-0 rounded-lg border border-emerald-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-emerald-800 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      {actBusy ? 'Saving…' : 'Mark complete'}
-                    </button>
-                  )}
-                  {showPhysioButtons && physioActions?.onNoShow && r.perSession && (
-                    <button
-                      type="button"
-                      disabled={actBusy || !canActOnRow}
-                      onClick={canActOnRow ? () => physioActions.onNoShow(r) : undefined}
-                      title={blockedReason || undefined}
-                      className="tap-feedback shrink-0 rounded-lg border border-rose-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-rose-800 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      No-show
-                    </button>
-                  )}
-                  {showRateBtn && (
-                    <button
-                      type="button"
-                      onClick={() => patientActions.onRate(r)}
-                      className="tap-feedback shrink-0 rounded-lg border border-amber-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-amber-800 hover:bg-amber-50"
-                    >
-                      Rate session
-                    </button>
-                  )}
-                  {showPhysioNotesBtn && (
-                    <button
-                      type="button"
-                      onClick={() => physioActions.onNotes(r)}
-                      className={`tap-feedback shrink-0 rounded-lg border px-2.5 py-1 text-[11px] font-semibold transition-colors ${
-                        physioHasNotes
-                          ? 'border-indigo-300 bg-indigo-100 text-indigo-900 hover:bg-indigo-200/80'
-                          : 'border-indigo-200 bg-indigo-50 text-indigo-800 hover:border-indigo-300 hover:bg-indigo-100'
-                      }`}
-                    >
-                      {physioHasNotes ? 'Edit progress' : 'Log progress'}
-                    </button>
-                  )}
-                  {showViewNotesBtn && (
-                    <button
-                      type="button"
-                      onClick={() => setNotesModalRow(r)}
-                      className={`tap-feedback shrink-0 rounded-lg border px-2.5 py-1 text-[11px] font-semibold transition-all ${
-                        isComplimentary
-                          ? hasAssessmentNotes
-                            ? 'border-teal-600/60 bg-teal-700/95 text-teal-50 shadow-sm hover:border-teal-600 hover:bg-teal-800'
-                            : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-                          : 'border-teal-600/60 bg-teal-700/95 text-teal-50 shadow-sm hover:border-teal-600 hover:bg-teal-800 hover:text-white'
-                      }`}
-                    >
-                      {viewNotesLabel}
-                    </button>
-                  )}
-                  {showRatedBadge && submittedRating && (
-                    <span className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-900 ring-1 ring-amber-200">
-                      <StarRatingDisplay value={Number(submittedRating.rating) || 0} size="sm" />
-                      <span>Rated</span>
-                    </span>
-                  )}
-                  {allowDelete && (
-                    <button
-                      type="button"
-                      onClick={() => adminSessions.onDelete(r)}
-                      className="tap-feedback shrink-0 rounded-lg border border-rose-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-rose-800 hover:bg-rose-50"
-                    >
-                      {deleting ? 'Deleting…' : 'Delete'}
-                    </button>
-                  )}
+                  {hasPaymentInfo ? (
+                    <p className="mt-1 text-xs">
+                      {payEntry?.recorded > 0.009 ? (
+                        <span className="font-semibold text-teal-800">
+                          ₹{Number(payEntry.recorded).toFixed(2)} recorded
+                          {payEntry.items?.some((i) => i.explicit === false) ? (
+                            <span className="ml-1 font-normal text-slate-500">(allocated)</span>
+                          ) : null}
+                        </span>
+                      ) : (
+                        <span className="text-slate-500">No payment recorded yet</span>
+                      )}
+                    </p>
+                  ) : null}
                 </div>
-                {rowNoShow && r.noShowReason && (
-                  <p className="mt-1 text-xs text-rose-900/80">Reason: {r.noShowReason}</p>
-                )}
-                {hasPaymentInfo ? (
-                  <p className="mt-1 text-xs">
-                    {payEntry?.recorded > 0.009 ? (
-                      <span className="font-semibold text-teal-800">
-                        ₹{Number(payEntry.recorded).toFixed(2)} recorded
-                        {payEntry.items?.some((i) => i.explicit === false) ? (
-                          <span className="ml-1 font-normal text-slate-500">(allocated)</span>
-                        ) : null}
-                      </span>
-                    ) : (
-                      <span className="text-slate-500">No payment recorded yet</span>
-                    )}
-                  </p>
-                ) : null}
-              </div>
-              <span
-                className={`inline-flex shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ${statusBadgeClass(
-                  rowStatus,
-                )}`}
-              >
-                {statusLabel(rowStatus)}
-              </span>
+                <span
+                  className={`inline-flex shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ${statusBadgeClass(
+                    rowStatus,
+                  )}`}
+                >
+                  {statusLabel(rowStatus)}
+                </span>
               </div>
             </li>
           )

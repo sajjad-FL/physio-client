@@ -4,14 +4,25 @@ import toast from 'react-hot-toast'
 import { DAILY_SLOTS } from '../../constants/slots'
 import { formatBookingDateAndSlot, formatBookingTimeSlot } from '../../utils/date'
 import FieldLabel from '../ui/FieldLabel'
+import { occupiedRescheduleDates, toBookingYmd } from './physioBookingHelpers'
 
 function todayInputValue() {
   const t = new Date()
   return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`
 }
 
-function RescheduleModal({ booking, sessionRow, patchReschedule, onClose, onUpdated, title }) {
-  const initialDate = sessionRow?.date || booking?.date || todayInputValue()
+function RescheduleModal({
+  booking,
+  sessionRow,
+  patchReschedule,
+  onClose,
+  onUpdated,
+  title,
+  /** When true (default), block picking a date already used by another visit (time ignored). */
+  requireUniqueDate = true,
+}) {
+  const initialDate =
+    toBookingYmd(sessionRow?.date) || toBookingYmd(booking?.date) || todayInputValue()
   const initialSlot = sessionRow?.time || booking?.timeSlot || DAILY_SLOTS[0]
   const [date, setDate] = useState(initialDate)
   const [timeSlot, setTimeSlot] = useState(initialSlot)
@@ -27,11 +38,25 @@ function RescheduleModal({ booking, sessionRow, patchReschedule, onClose, onUpda
         ? 'This session'
         : 'Visit'
 
+  const occupiedDates = requireUniqueDate
+    ? occupiedRescheduleDates(booking, sessionRow)
+    : null
+  const chosenYmd = toBookingYmd(date)
+  const dateTaken = Boolean(occupiedDates?.has(chosenYmd))
+
   async function submit(e) {
     e.preventDefault()
+    const blockedDates = requireUniqueDate
+      ? occupiedRescheduleDates(booking, sessionRow)
+      : null
+    const nextYmd = toBookingYmd(date)
+    if (requireUniqueDate && nextYmd && blockedDates?.has(nextYmd)) {
+      toast.error('That date is already used by another visit on this booking')
+      return
+    }
     setBusy(true)
     try {
-      const payload = { date, timeSlot }
+      const payload = { date: nextYmd || date, timeSlot }
       if (sessionRow?.complimentary) {
         payload.assessmentVisit = true
       } else if (sessionRow?.sessionId && String(sessionRow.sessionId) !== String(booking._id)) {
@@ -95,8 +120,19 @@ function RescheduleModal({ booking, sessionRow, patchReschedule, onClose, onUpda
               required
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+              aria-invalid={dateTaken || undefined}
+              className={`w-full rounded-xl border bg-white px-3 py-2.5 text-sm shadow-sm focus:outline-none focus:ring-2 ${
+                dateTaken
+                  ? 'border-rose-300 focus:border-rose-500 focus:ring-rose-500/30'
+                  : 'border-gray-200 focus:border-blue-500 focus:ring-blue-500/30'
+              }`}
             />
+            {dateTaken ? (
+              <p className="mt-1.5 text-xs font-medium text-rose-700">
+                This date is already used by another visit on this booking. Choose a different date
+                (time slot does not matter).
+              </p>
+            ) : null}
           </div>
           <div>
             <FieldLabel
@@ -129,7 +165,7 @@ function RescheduleModal({ booking, sessionRow, patchReschedule, onClose, onUpda
             </button>
             <button
               type="submit"
-              disabled={busy}
+              disabled={busy || dateTaken}
               className="cursor-pointer rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-blue-700 disabled:opacity-50"
             >
               {busy ? 'Saving…' : 'Save new time'}

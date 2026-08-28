@@ -199,11 +199,10 @@ export default function SuggestTechniquePanel({ sourceBookingId, disabled = fals
           type="button"
           disabled={disabled || busy}
           onClick={() => setOpen((v) => !v)}
-          className={`shrink-0 rounded-xl px-3.5 py-2 text-sm font-semibold transition ${
-            open
+          className={`shrink-0 rounded-xl px-3.5 py-2 text-sm font-semibold transition ${open
               ? 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
               : 'bg-teal-600 text-white hover:bg-teal-700'
-          } disabled:opacity-50`}
+            } disabled:opacity-50`}
         >
           {open ? 'Close' : 'Book technique'}
         </button>
@@ -225,11 +224,10 @@ export default function SuggestTechniquePanel({ sourceBookingId, disabled = fals
                   type="button"
                   disabled={busy}
                   onClick={() => setServiceType(opt.id)}
-                  className={`flex-1 rounded-xl border px-3 py-2.5 text-sm font-semibold transition ${
-                    serviceType === opt.id
+                  className={`flex-1 rounded-xl border px-3 py-2.5 text-sm font-semibold transition ${serviceType === opt.id
                       ? 'border-teal-500 bg-teal-50 text-teal-900 ring-1 ring-teal-500/25'
                       : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
-                  }`}
+                    }`}
                 >
                   {opt.label}
                 </button>
@@ -255,11 +253,10 @@ export default function SuggestTechniquePanel({ sourceBookingId, disabled = fals
                     type="button"
                     disabled={busy}
                     onClick={() => selectIssue(o.issue)}
-                    className={`flex items-center justify-between gap-3 rounded-xl border px-3.5 py-3 text-left transition ${
-                      selected
+                    className={`flex items-center justify-between gap-3 rounded-xl border px-3.5 py-3 text-left transition ${selected
                         ? 'border-teal-500 bg-teal-50 ring-1 ring-teal-500/25'
                         : 'border-slate-200 bg-white hover:border-slate-300'
-                    }`}
+                      }`}
                   >
                     <span
                       className={`text-sm font-semibold ${selected ? 'text-teal-900' : 'text-slate-900'}`}
@@ -267,9 +264,8 @@ export default function SuggestTechniquePanel({ sourceBookingId, disabled = fals
                       {o.label}
                     </span>
                     <span
-                      className={`shrink-0 text-sm tabular-nums ${
-                        selected ? 'font-semibold text-teal-800' : 'text-slate-500'
-                      }`}
+                      className={`shrink-0 text-sm tabular-nums ${selected ? 'font-semibold text-teal-800' : 'text-slate-500'
+                        }`}
                     >
                       {o.priceLabel || '—'}
                     </span>

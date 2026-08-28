@@ -9,6 +9,7 @@ import {
   billingTypeLabel,
   paymentStatusLabel,
   bookingCodeBadge,
+  resolveBookingUpcomingVisit,
 } from '../../utils/bookingDisplay'
 import toast from 'react-hot-toast'
 import HomePlanForm from '../../components/physio/HomePlanForm'
@@ -270,6 +271,7 @@ export default function PhysioBookingDetailPage() {
   const canStartNavigation = Boolean(b.userId?.coordinates || String(b.userId?.location || '').trim())
   const activeStepMeta = steps.find((s) => s.id === openStep)
   const stepColumns = isOnline ? 3 : 4
+  const upcomingVisit = resolveBookingUpcomingVisit(b)
 
   return (
     <div className="min-w-0 max-w-full space-y-3 overflow-x-hidden sm:space-y-4">
@@ -286,7 +288,7 @@ export default function PhysioBookingDetailPage() {
             ) : null}
             <p className="mt-0.5 text-sm text-slate-600">{b.issue || '—'}</p>
             <p className="mt-2 text-sm text-slate-500">
-              {formatBookingDateAndSlot(b.date, b.timeSlot)}
+              {formatBookingDateAndSlot(upcomingVisit.date || b.date, upcomingVisit.time || b.timeSlot)}
               {b.userId?.location ? ` · ${b.userId.location}` : ''}
             </p>
           </div>
@@ -426,7 +428,7 @@ export default function PhysioBookingDetailPage() {
                   sessionPayments={sessionPaymentMap}
                   reschedule={{
                     enabled: true,
-                    onReschedule: (row) => setRescheduleRow(row),
+                    onReschedule: (row) => setRescheduleRow({ ...row }),
                   }}
                   physioActions={{
                     enabled: true,
@@ -556,6 +558,7 @@ export default function PhysioBookingDetailPage() {
           key={rescheduleRow.key}
           booking={b}
           sessionRow={rescheduleRow}
+          requireUniqueDate
           patchReschedule={(body) => api.patch(`/bookings/${b._id}/reschedule`, body)}
           onClose={() => setRescheduleRow(null)}
           onUpdated={load}

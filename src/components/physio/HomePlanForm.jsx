@@ -159,15 +159,15 @@ export default function HomePlanForm({
     : hasPhysioRate
   const managerCommission = allowCustomFee
     ? Number(
-        pricingSettings.defaultSessionPricing?.withManager?.manager ??
-          pricingSettings.managerCommissionPerSessionRupees,
-      ) || 0
+      pricingSettings.defaultSessionPricing?.withManager?.manager ??
+      pricingSettings.managerCommissionPerSessionRupees,
+    ) || 0
     : 0
   const adminPhysioShare = allowCustomFee
     ? Number(
-        pricingSettings.defaultSessionPricing?.withManager?.physio ??
-          pricingSettings.defaultPhysioPricePerSession,
-      ) || 0
+      pricingSettings.defaultSessionPricing?.withManager?.physio ??
+      pricingSettings.defaultPhysioPricePerSession,
+    ) || 0
     : 0
   const minFee = null
   const defaultAmount = allowCustomFee
@@ -285,9 +285,9 @@ export default function HomePlanForm({
 
   const showAssignmentPricing = Boolean(
     booking &&
-      (booking.totalAmount != null ||
-        booking.distanceKmAtAssign != null ||
-        Number(booking.distanceSurchargeAmount) > 0),
+    (booking.totalAmount != null ||
+      booking.distanceKmAtAssign != null ||
+      Number(booking.distanceSurchargeAmount) > 0),
   )
 
   const dateMismatch = selectedDates.length !== Number(sessions)
@@ -445,8 +445,8 @@ export default function HomePlanForm({
                     Set by admin (Pricing → Defaults) — ₹{adminSessionTotal}/session
                     {adminPhysioShare > 0 || managerCommission > 0
                       ? ` (physio ₹${adminPhysioShare}` +
-                        (managerCommission > 0 ? ` · manager ₹${managerCommission}` : '') +
-                        ')'
+                      (managerCommission > 0 ? ` · manager ₹${managerCommission}` : '') +
+                      ')'
                       : ''}
                     . Managers cannot change the patient price.
                   </p>

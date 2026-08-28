@@ -16,7 +16,12 @@ import Button from '../../components/ui/Button'
 import { resolveFileUrl } from '../../utils/serverOrigin'
 import { distanceKm, parseLatLng } from '../../utils/geoDistance'
 import { buildSessionPaymentMap } from '../../utils/sessionPaymentMap'
-import { billingTypeLabel, paymentAmountLabel, bookingCodeBadge } from '../../utils/bookingDisplay'
+import {
+  billingTypeLabel,
+  paymentAmountLabel,
+  bookingCodeBadge,
+  resolveBookingAssessmentVisit,
+} from '../../utils/bookingDisplay'
 import { managerWorkflowMeta } from '../../utils/managerWorkflow'
 import StructuredAssessmentForm from '../../components/manager/StructuredAssessmentForm'
 import SuggestTechniquePanel from '../../components/manager/SuggestTechniquePanel'
@@ -75,15 +80,15 @@ function buildWorkflowSteps(ctx) {
           outstanding > 0.009
             ? `₹${Math.round(outstanding)} due`
             : totalPaid > 0
-            ? 'Fully paid'
-            : 'Record cash / UPI',
+              ? 'Fully paid'
+              : 'Record cash / UPI',
         state: !hasPhysio
           ? 'upcoming'
           : outstanding > 0.009
-          ? 'current'
-          : totalPaid > 0
-          ? 'done'
-          : 'current',
+            ? 'current'
+            : totalPaid > 0
+              ? 'done'
+              : 'current',
       },
     ]
   }
@@ -104,19 +109,19 @@ function buildWorkflowSteps(ctx) {
       hint: awaitingConsent
         ? 'Patient must consent'
         : planLive
-        ? `${b.sessions || '—'} sessions · ${paymentAmountLabel(b)}`
-        : canCreatePlan
-        ? 'Set price & dates'
-        : 'After assessment',
+          ? `${b.sessions || '—'} sessions · ${paymentAmountLabel(b)}`
+          : canCreatePlan
+            ? 'Set price & dates'
+            : 'After assessment',
       state: needsAssessment
         ? 'upcoming'
         : awaitingConsent
-        ? 'waiting'
-        : canCreatePlan
-        ? 'current'
-        : hasPlan || planLive
-        ? 'done'
-        : 'upcoming',
+          ? 'waiting'
+          : canCreatePlan
+            ? 'current'
+            : hasPlan || planLive
+              ? 'done'
+              : 'upcoming',
     },
     {
       id: 'physio',
@@ -133,17 +138,17 @@ function buildWorkflowSteps(ctx) {
         outstanding > 0.009
           ? `₹${Math.round(outstanding)} due`
           : totalPaid > 0
-          ? 'Fully paid'
-          : 'Record cash / UPI',
+            ? 'Fully paid'
+            : 'Record cash / UPI',
       state: !planLive
         ? 'upcoming'
         : outstanding > 0.009
-        ? 'current'
-        : totalPaid > 0
-        ? 'done'
-        : hasPhysio
-        ? 'current'
-        : 'upcoming',
+          ? 'current'
+          : totalPaid > 0
+            ? 'done'
+            : hasPhysio
+              ? 'current'
+              : 'upcoming',
     },
   ]
   return steps
@@ -177,9 +182,8 @@ function StepRail({ steps, openStep, onSelect }) {
             <button
               type="button"
               onClick={() => onSelect(step.id)}
-              className={`tap-feedback flex w-full flex-col items-center gap-1.5 rounded-xl px-1 py-2 text-center transition sm:px-2 ${
-                isOpen ? 'bg-teal-50 ring-1 ring-teal-200/80' : 'hover:bg-slate-50'
-              }`}
+              className={`tap-feedback flex w-full flex-col items-center gap-1.5 rounded-xl px-1 py-2 text-center transition sm:px-2 ${isOpen ? 'bg-teal-50 ring-1 ring-teal-200/80' : 'hover:bg-slate-50'
+                }`}
             >
               <span className={circleCls}>{done ? '✓' : step.num}</span>
               <span className={`w-full truncate text-[11px] font-semibold sm:text-xs ${isOpen ? 'text-teal-900' : 'text-slate-700'}`}>
@@ -255,9 +259,9 @@ export default function ManagerBookingDetailPage() {
         bRes.data?.assessmentData && typeof bRes.data.assessmentData === 'object'
           ? { ...EMPTY_ASSESSMENT_DATA, ...bRes.data.assessmentData }
           : {
-              ...EMPTY_ASSESSMENT_DATA,
-              extraNotes: bRes.data?.assessmentNotes || '',
-            },
+            ...EMPTY_ASSESSMENT_DATA,
+            extraNotes: bRes.data?.assessmentNotes || '',
+          },
       )
       setPhysios(pRes.data?.physios || [])
       setClinics(cRes.data?.clinics || [])
@@ -483,51 +487,36 @@ export default function ManagerBookingDetailPage() {
   } = pageCtx
 
   const activeStepMeta = steps.find((s) => s.id === openStep)
-  const canRescheduleBooking =
-    Boolean(b) && b.sessionStatus !== 'completed' && Boolean(b.date) && Boolean(b.timeSlot)
   const assessmentStillOpen =
     hasComplimentaryAssessmentVisit(b) && !b.assessmentCompletedAt
+  // Header Reschedule is only for the assessment visit (next to booking.date).
+  // After assessment is completed, hide it — treatment sessions use the timeline.
+  const canRescheduleBooking =
+    Boolean(b) &&
+    b.sessionStatus !== 'completed' &&
+    Boolean(b.date) &&
+    Boolean(b.timeSlot) &&
+    assessmentStillOpen
 
   function openPrimaryReschedule() {
-    const hasSchedule = Array.isArray(b.schedule) && b.schedule.length > 0
-    if (assessmentStillOpen) {
-      setRescheduleRow({
-        key: `${b._id}-assessment-reschedule`,
-        sessionId: null,
-        date: b.date,
-        time: b.timeSlot,
-        n: null,
-        label: 'Assessment visit',
-        complimentary: true,
-      })
-      return
-    }
-    if (hasSchedule) {
-      const idx = b.schedule.findIndex(
-        (s) => s.status !== 'completed' && s.status !== 'no_show',
-      )
-      const i = idx >= 0 ? idx : 0
-      const next = b.schedule[i]
-      setRescheduleRow({
-        key: `${b._id}-s-${i}-reschedule`,
-        sessionId: next?._id != null ? String(next._id) : null,
-        date: next?.date || b.date,
-        time: next?.time || b.timeSlot,
-        n: i + 1,
-        complimentary: false,
-      })
-      return
-    }
+    if (!assessmentStillOpen) return
     setRescheduleRow({
-      key: `${b._id}-primary-reschedule`,
+      key: `${b._id}-assessment-reschedule`,
       sessionId: null,
       date: b.date,
       time: b.timeSlot,
-      n: 1,
-      label: 'Visit',
-      complimentary: false,
+      n: null,
+      label: 'Assessment visit',
+      complimentary: true,
     })
   }
+
+  const assessmentVisit = resolveBookingAssessmentVisit(b)
+  const headerDateLabel = formatBookingDateAndSlot(
+    assessmentVisit.date || b.date,
+    assessmentVisit.time || b.timeSlot,
+  )
+  const showAssessmentPrefix = hasComplimentaryAssessmentVisit(b)
 
   return (
     <div className="min-w-0 max-w-full space-y-3 overflow-x-hidden sm:space-y-4">
@@ -545,7 +534,7 @@ export default function ManagerBookingDetailPage() {
             <p className="mt-0.5 text-sm text-slate-600">{b.issue}</p>
             <div className="mt-2 flex flex-wrap items-center gap-2">
               <p className="text-sm text-slate-500">
-                {formatBookingDateAndSlot(b.date, b.timeSlot)}
+                {showAssessmentPrefix && headerDateLabel ? `Assessment · ${headerDateLabel}` : headerDateLabel}
                 {b.userId?.location ? ` · ${b.userId.location}` : ''}
               </p>
               {canRescheduleBooking ? (
@@ -597,7 +586,7 @@ export default function ManagerBookingDetailPage() {
         {openStep === 'assessment' && !pageCtx.techniqueManaged && (
           <div className="space-y-4">
             <p className="text-sm text-slate-600">
-              Visit on <span className="font-medium">{formatBookingDateAndSlot(b.date, b.timeSlot)}</span> is
+              Visit on <span className="font-medium">{headerDateLabel}</span> is
               complimentary. Capture baseline scores, then move to step 2.
             </p>
             <div className="rounded-xl border border-slate-200 bg-slate-50/40 p-4">
@@ -881,6 +870,7 @@ export default function ManagerBookingDetailPage() {
           booking={b}
           sessionRow={rescheduleRow}
           title="Reschedule session"
+          requireUniqueDate
           patchReschedule={(body) => api.patch(`/manager/bookings/${b._id}/reschedule`, body)}
           onClose={() => setRescheduleRow(null)}
           onUpdated={load}
