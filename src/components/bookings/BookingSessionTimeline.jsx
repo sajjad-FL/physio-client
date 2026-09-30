@@ -104,11 +104,13 @@ export default function BookingSessionTimeline({
               : 'scheduled'
           const rowDone = r.status === 'completed'
           const rowNoShow = r.status === 'no_show'
+          // Physio can correct a missed visit: reschedule (server re-opens it) or mark it complete.
+          const physioCanFixNoShow = Boolean(physioActions?.enabled) && rowNoShow && !isComplimentary
           const showReschedule = Boolean(
             reschedule?.enabled &&
               reschedule?.onReschedule &&
               !rowDone &&
-              !rowNoShow &&
+              (!rowNoShow || physioCanFixNoShow) &&
               (!isComplimentary || reschedule?.includeComplimentary),
           )
 
@@ -147,7 +149,7 @@ export default function BookingSessionTimeline({
            * physio always sees them; disable (with tooltip) when payment
            * coverage isn't sufficient or the date is in the future. */
           const showPhysioButtons =
-            Boolean(physioActions?.enabled) && !rowDone && !rowNoShow && !isComplimentary
+            Boolean(physioActions?.enabled) && !rowDone && !isComplimentary
           const perRowReason =
             typeof physioActions?.rowBlockedReason === 'function'
               ? physioActions.rowBlockedReason(r) || ''
@@ -255,7 +257,7 @@ export default function BookingSessionTimeline({
                       {actBusy ? 'Saving…' : 'Mark complete'}
                     </button>
                   )}
-                  {showPhysioButtons && physioActions?.onNoShow && r.perSession && (
+                  {showPhysioButtons && !rowNoShow && physioActions?.onNoShow && r.perSession && (
                     <button
                       type="button"
                       disabled={actBusy || !canActOnRow}
