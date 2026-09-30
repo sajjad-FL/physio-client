@@ -21,6 +21,7 @@ import InstallmentsCard from '../../components/payments/InstallmentsCard'
 import RecordCollectionModal from '../../components/payments/RecordCollectionModal'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
+import Modal from '../../components/ui/Modal'
 import DetailSkeleton from '../../components/ui/skeletons/DetailSkeleton'
 import { openGoogleMapsDestination } from '../../utils/googleMaps'
 import { isPlanLive } from '../../utils/planStatus'
@@ -92,6 +93,7 @@ export default function PhysioBookingDetailPage() {
   const [noShowReason, setNoShowReason] = useState('')
   const [recordCollectionOpen, setRecordCollectionOpen] = useState(false)
   const [notesRow, setNotesRow] = useState(null)
+  const [confirmCompleteRow, setConfirmCompleteRow] = useState(null)
   const [openStep, setOpenStep] = useState('patient')
   const [stepReady, setStepReady] = useState(false)
 
@@ -450,8 +452,7 @@ export default function PhysioBookingDetailPage() {
                         toast.error(paymentBlockReason)
                         return
                       }
-                      if (row.perSession) completeOneSession(row)
-                      else completeSession(b._id)
+                      setConfirmCompleteRow(row)
                     },
                     onNoShow: (row) => {
                       if (paymentBlockReason) {
@@ -474,7 +475,7 @@ export default function PhysioBookingDetailPage() {
                 type="button"
                 disabled={busy || !canMarkComplete}
                 title={!canMarkComplete ? paymentBlockReason : undefined}
-                onClick={() => completeSession(b._id)}
+                onClick={() => setConfirmCompleteRow({ perSession: false })}
               >
                 {busy ? 'Saving…' : 'Mark visit complete'}
               </Button>
@@ -604,6 +605,38 @@ export default function PhysioBookingDetailPage() {
           </Card>
         </div>
       ) : null}
+
+      <Modal
+        open={confirmCompleteRow != null}
+        onClose={() => setConfirmCompleteRow(null)}
+        centered
+        title="Mark session as complete?"
+        description={
+          confirmCompleteRow?.perSession
+            ? `Session #${confirmCompleteRow.n} · ${formatBookingDateAndSlot(confirmCompleteRow.date, confirmCompleteRow.time)}`
+            : formatBookingDateAndSlot(b.date, b.timeSlot)
+        }
+      >
+        <p className="text-sm text-slate-600">
+          Only mark it complete after the visit has taken place.
+        </p>
+        <div className="mt-5 flex justify-end gap-2">
+          <Button type="button" variant="outline" onClick={() => setConfirmCompleteRow(null)}>
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            onClick={() => {
+              const row = confirmCompleteRow
+              setConfirmCompleteRow(null)
+              if (row?.perSession) completeOneSession(row)
+              else completeSession(b._id)
+            }}
+          >
+            Yes, mark complete
+          </Button>
+        </div>
+      </Modal>
 
       <RecordCollectionModal
         open={recordCollectionOpen}
