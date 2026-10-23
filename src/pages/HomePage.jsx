@@ -20,7 +20,7 @@ import {
   HeartPulse,
   Sparkles,
   BadgeCheck,
-  XCircle,
+  Building2,
   Calendar,
   Clock,
   Shield,
@@ -1230,42 +1230,44 @@ export default function HomePage() {
         <FeaturedPhysiosSection />
 
         {/* ══════════════════════════════════════════════════════════════
-            CARE COMPARISON (Commute vs. Comfort)
+            CARE OPTIONS (Clinic or Home)
         ══════════════════════════════════════════════════════════════ */}
         <section className="bg-white py-12 md:py-20 lg:py-24 border-b border-slate-200">
           <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
             <SectionHeading
               labelIcon={Star}
-              label="Care Comparison"
-              title="Commute vs. Comfort"
-              subtitle="See how PhysiOkhom transforms your rehabilitation experience compared to traditional clinic commuting."
+              label="Care Options"
+              title="Clinic or Home — Your Choice"
+              subtitle="Get the same vetted physiotherapists and Care Manager–led plans, at a partner clinic or in the comfort of your home."
               center
             />
 
             <div className="mt-10 md:mt-16 grid grid-cols-1 gap-8 lg:grid-cols-2 w-full">
-              {/* Clinic Commute */}
-              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5 sm:p-8 shadow-sm">
+              {/* PhysiOkhom Clinic Care */}
+              <div className="rounded-3xl border border-blue-500/30 bg-blue-50/20 p-5 sm:p-8 shadow-md relative overflow-hidden">
+                <div className="absolute -top-10 -right-10 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl pointer-events-none" />
+
                 <div className="flex items-center gap-3 mb-6">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-50 border border-rose-100 shrink-0">
-                    <XCircle className="text-rose-600" size={20} />
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-100 border border-blue-200 shadow-sm shrink-0">
+                    <Building2 className="text-blue-600" size={20} />
                   </div>
                   <div>
-                    <h3 className="type-page-title text-slate-900">Traditional Clinic Visits</h3>
-                    <p className="text-xs text-slate-500 font-medium">Standard outpatient commutes</p>
+                    <h3 className="type-page-title text-slate-900">PhysiOkhom Clinic Visits</h3>
+                    <p className="text-xs text-blue-700 font-bold uppercase tracking-wider">Partner clinics</p>
                   </div>
                 </div>
 
                 <ul className="space-y-4">
                   {[
-                    'Painful traveling when injured or in recovery',
-                    'Wasted time sitting in noisy waiting rooms',
-                    'Commute delays & transport costs',
-                    'Shared clinical environment (less privacy)',
-                    'Rigid timing slots with little flexibility'
+                    'Equipment-supported therapy in a fully set-up clinic',
+                    'Partner facility assigned for you after booking',
+                    'Booked time slots — less waiting at the clinic',
+                    'Pre-screened & highly vetted professional practitioners',
+                    'Ideal if you can travel comfortably'
                   ].map((item, idx) => (
                     <li key={idx} className="flex items-start gap-3">
-                      <span className="h-5 w-5 shrink-0 rounded-full bg-rose-100 text-rose-700 flex items-center justify-center text-[10px] font-bold mt-0.5">✕</span>
-                      <span className="text-sm font-medium text-slate-600">{item}</span>
+                      <span className="h-5 w-5 shrink-0 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-[10px] font-bold mt-0.5">✓</span>
+                      <span className="text-sm font-semibold text-slate-800">{item}</span>
                     </li>
                   ))}
                 </ul>
@@ -1277,20 +1279,20 @@ export default function HomePage() {
                 
                 <div className="flex items-center gap-3 mb-6">
                   <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-100 border border-teal-200 shadow-sm shrink-0">
-                    <CheckCircle2 className="text-teal-600" size={20} />
+                    <Home className="text-teal-600" size={20} />
                   </div>
                   <div>
                     <h3 className="type-page-title text-slate-900">PhysiOkhom Home Visits</h3>
-                    <p className="text-xs text-teal-700 font-bold uppercase tracking-wider">Premium standard</p>
+                    <p className="text-xs text-teal-700 font-bold uppercase tracking-wider">Care at your doorstep</p>
                   </div>
                 </div>
 
                 <ul className="space-y-4">
                   {[
-                    '0 Commute: Therapy in the comfort of your room',
-                    '1-on-1 focus: Full attention of your physiotherapist',
+                    'Zero commute: therapy in the comfort of your room',
+                    '1-on-1 focus: full attention of your physiotherapist',
                     'Flexible schedule times fitted to your daily routine',
-                    'Pre-screened & highly vetted professional practitioners',
+                    'Ideal when travel is painful or recovery is early',
                     'GPS-tracked secure bookings with real-time arrival logs'
                   ].map((item, idx) => (
                     <li key={idx} className="flex items-start gap-3">
